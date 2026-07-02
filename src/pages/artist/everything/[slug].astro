@@ -244,8 +244,20 @@ const hasDescription = Boolean(artwork.data.description);
   }
 
   @media (max-width: 560px) {
+    .artwork-detail {
+      --artwork-back-font-size: 0.72rem;
+    }
+
     .artwork-back {
-      font-size: 0.72rem;
+      font-size: var(--artwork-back-font-size);
+    }
+
+    .artwork-figure dt {
+      font-size: 0.6rem;
+    }
+
+    .artwork-figure dd {
+      font-size: var(--artwork-back-font-size);
     }
   }
 </style>
