@@ -15,6 +15,21 @@ export const getStaticPaths = (async () => {
 
 const { artwork } = Astro.props;
 const metadata = getArtworkMetadata(artwork);
+const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryDetails = metadata.map((item) => item.value).join(' / ');
+const enquiryBody = [
+  'Hello Sebastian,',
+  '',
+  'I would like to enquire further about this artwork:',
+  '',
+  artwork.data.title,
+  ...(enquiryDetails ? [enquiryDetails] : []),
+  '',
+  'My query:',
+].join('\n');
+const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
+  `Enquiry about ${artwork.data.title}`
+)}&body=${encodeURIComponent(enquiryBody)}`;
 const hasDescription = Boolean(artwork.data.description);
 ---
 
@@ -50,6 +65,7 @@ const hasDescription = Boolean(artwork.data.description);
             </dl>
           )
         }
+        <a class="artwork-enquiry" href={enquiryHref}>Enquire further</a>
       </figcaption>
     </figure>
 
@@ -107,6 +123,13 @@ const hasDescription = Boolean(artwork.data.description);
     margin: 0;
   }
 
+  .artwork-figure figcaption {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
   .artwork-figure img {
     align-self: start;
     display: block;
@@ -141,6 +164,7 @@ const hasDescription = Boolean(artwork.data.description);
 
   .artwork-figure dt,
   .artwork-figure dd,
+  .artwork-enquiry,
   .artwork-description {
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
       'Helvetica Neue', Arial, sans-serif;
@@ -159,6 +183,27 @@ const hasDescription = Boolean(artwork.data.description);
     font-weight: 300;
     line-height: 1.25;
     margin: 0;
+  }
+
+  .artwork-enquiry {
+    color: #691b17;
+    display: inline-block;
+    font-size: var(--artwork-back-font-size);
+    font-weight: 200;
+    line-height: 1;
+    margin-top: auto;
+    transition: color 180ms ease;
+    width: fit-content;
+  }
+
+  .artwork-enquiry:focus-visible,
+  .artwork-enquiry:hover {
+    color: #000000;
+  }
+
+  .artwork-enquiry:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
   }
 
   .artwork-description {
@@ -185,8 +230,16 @@ const hasDescription = Boolean(artwork.data.description);
       grid-template-columns: 1fr;
     }
 
+    .artwork-figure figcaption {
+      align-self: start;
+    }
+
     .artwork-figure h1 {
       font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+    }
+
+    .artwork-enquiry {
+      margin-top: clamp(1.5rem, 5vw, 2.5rem);
     }
   }
 
