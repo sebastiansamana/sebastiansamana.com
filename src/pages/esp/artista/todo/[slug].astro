@@ -14,7 +14,29 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { artwork } = Astro.props;
-const metadata = getArtworkMetadata(artwork);
+const metadataLabelTranslations: Record<string, string> = {
+  Date: 'Fecha',
+  Medium: 'Técnica',
+  Dimensions: 'Dimensiones',
+};
+const mediumTranslations: Record<string, string> = {
+  Charcoal: 'Carboncillo',
+  'HB Pencil': 'Lápiz HB',
+  Pastels: 'Pasteles',
+  Watercolor: 'Acuarela',
+};
+const translateMedium = (value: string) =>
+  value
+    .split(',')
+    .map((part) => {
+      const medium = part.trim();
+      return mediumTranslations[medium] ?? medium;
+    })
+    .join(', ');
+const metadata = getArtworkMetadata(artwork).map((item) => ({
+  label: metadataLabelTranslations[item.label] ?? item.label,
+  value: item.label === 'Medium' ? translateMedium(item.value) : item.value,
+}));
 const hasDescription = Boolean(artwork.data.description);
 ---
 
