@@ -206,6 +206,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     --artwork-gap: clamp(0.8rem, 1.8vw, 1.35rem);
     --artwork-column-width: clamp(11rem, 23vw, 18rem);
     --artwork-footer-text-color: #919191;
+    --artwork-meta-hover-color: #b75f58;
     --artwork-title-font-size: clamp(0.82rem, 1vw, 0.98rem);
     --artwork-content-width: calc(
       var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-column-width) +
@@ -329,10 +330,13 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   }
 
   .artwork-card a:focus-visible .artwork-card__title,
-  .artwork-card a:focus-visible .artwork-card__meta,
-  .artwork-card a:hover .artwork-card__title,
-  .artwork-card a:hover .artwork-card__meta {
+  .artwork-card a:hover .artwork-card__title {
     color: #691b17;
+  }
+
+  .artwork-card a:focus-visible .artwork-card__meta,
+  .artwork-card a:hover .artwork-card__meta {
+    color: var(--artwork-meta-hover-color);
   }
 
   .artwork-card a:focus-visible {
@@ -384,10 +388,13 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   }
 
   .artwork-index a:focus-visible .artwork-index__title,
-  .artwork-index a:focus-visible .artwork-index__meta,
-  .artwork-index a:hover .artwork-index__title,
-  .artwork-index a:hover .artwork-index__meta {
+  .artwork-index a:hover .artwork-index__title {
     color: #691b17;
+  }
+
+  .artwork-index a:focus-visible .artwork-index__meta,
+  .artwork-index a:hover .artwork-index__meta {
+    color: var(--artwork-meta-hover-color);
   }
 
   .artwork-index a:focus-visible {
