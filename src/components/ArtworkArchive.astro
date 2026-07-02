@@ -120,10 +120,6 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   import Masonry from 'masonry-layout';
 
   (() => {
-    const revealWorksDelayMs = 750;
-    const routeEnterEvent = 'varelism:route-enter';
-    const routeEnteringClass = 'varelism-route-entering';
-
     const setupArchive = () => {
       document.querySelectorAll('[data-artwork-archive]').forEach((archive) => {
         if (!(archive instanceof HTMLElement) || archive.dataset.artworkArchiveReady === 'true') {
@@ -169,20 +165,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
           });
         });
 
-        const reveal = () => {
-          archive.classList.add('is-header-visible');
-          window.setTimeout(() => {
-            archive.classList.add('is-works-visible');
-            masonry?.layout();
-          }, revealWorksDelayMs);
-        };
-
-        if (document.documentElement.classList.contains(routeEnteringClass)) {
-          window.addEventListener(routeEnterEvent, reveal, { once: true });
-          return;
-        }
-
-        reveal();
+        window.requestAnimationFrame(() => masonry?.layout());
       });
     };
 
@@ -228,8 +211,6 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     gap: 1rem;
     justify-content: space-between;
     margin: 0 auto clamp(2rem, 5vw, 4rem);
-    opacity: 0;
-    transition: opacity 450ms ease;
     width: var(--artwork-aligned-width);
   }
 
@@ -263,8 +244,6 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
 
   .artwork-masonry {
     margin: 0 auto;
-    opacity: 0;
-    transition: opacity 450ms ease;
   }
 
   .artwork-column-sizer,
@@ -348,9 +327,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     display: none;
     list-style: none;
     margin: 0 auto;
-    opacity: 0;
     padding: 0;
-    transition: opacity 450ms ease;
     width: var(--artwork-aligned-width);
   }
 
@@ -404,16 +381,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
 
   .artwork-empty {
     margin: 0 auto;
-    opacity: 0;
-    transition: opacity 450ms ease;
     width: var(--artwork-aligned-width);
-  }
-
-  .artwork-archive.is-header-visible .artwork-archive__header,
-  .artwork-archive.is-works-visible .artwork-masonry,
-  .artwork-archive.is-works-visible .artwork-index,
-  .artwork-archive.is-works-visible .artwork-empty {
-    opacity: 1;
   }
 
   [data-archive-view='grid'] [data-archive-view-button='grid'],
