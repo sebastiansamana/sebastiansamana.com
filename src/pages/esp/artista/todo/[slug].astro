@@ -59,25 +59,34 @@ const hasDescription = Boolean(artwork.data.description);
 
 <style>
   :global(.site-shell > main) {
+    --artwork-detail-top-offset: clamp(7rem, 13vh, 8.5rem);
     max-width: none;
-    padding: clamp(7rem, 13vh, 8.5rem) clamp(1rem, 4vw, 3rem) 0;
+    padding: var(--artwork-detail-top-offset) clamp(1rem, 4vw, 3rem) 0;
     width: 100%;
   }
 
   .artwork-detail {
+    --artwork-back-font-size: clamp(0.82rem, 1vw, 0.98rem);
+    --artwork-back-gap: clamp(2rem, 5vw, 4rem);
+    --artwork-detail-viewport-height: 100vh;
+    --artwork-detail-image-max-height: calc(
+      var(--artwork-detail-viewport-height) - var(--artwork-detail-top-offset) -
+        var(--artwork-back-font-size) - var(--artwork-back-gap) - 1rem
+    );
+
     color: #000000;
     margin: 0 auto;
     max-width: 76rem;
-    min-height: calc(100vh - clamp(7rem, 13vh, 8.5rem));
+    min-height: calc(100vh - var(--artwork-detail-top-offset));
     padding-bottom: clamp(2rem, 6vh, 4rem);
   }
 
   .artwork-back {
     display: inline-block;
-    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    font-size: var(--artwork-back-font-size);
     font-weight: 200;
     line-height: 1;
-    margin-bottom: clamp(2rem, 5vw, 4rem);
+    margin-bottom: var(--artwork-back-gap);
     transition: color 180ms ease;
   }
 
@@ -99,10 +108,14 @@ const hasDescription = Boolean(artwork.data.description);
   }
 
   .artwork-figure img {
+    align-self: start;
     display: block;
     height: auto;
+    justify-self: start;
+    max-height: var(--artwork-detail-image-max-height);
     max-width: 100%;
-    width: 100%;
+    object-fit: contain;
+    width: auto;
   }
 
   .artwork-figure h1 {
@@ -156,9 +169,16 @@ const hasDescription = Boolean(artwork.data.description);
     max-width: 42rem;
   }
 
+  @supports (height: 100svh) {
+    .artwork-detail {
+      --artwork-detail-viewport-height: 100svh;
+    }
+  }
+
   @media (max-width: 760px) {
     :global(.site-shell > main) {
-      padding-top: 6.5rem;
+      --artwork-detail-top-offset: 6.5rem;
+      padding-top: var(--artwork-detail-top-offset);
     }
 
     .artwork-figure {
