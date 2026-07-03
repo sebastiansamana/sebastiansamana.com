@@ -6,9 +6,9 @@ interface Props {
 }
 
 const { imageAlt, label, paragraphs } = Astro.props;
-const translationTerms = ['Hasta Mañana', 'Fins Demà'];
+const translationTerms = ['Until Tomorrow', 'Hasta Mañana', 'Fins Demà'];
 const splitTranslationTerms = (paragraph: string) =>
-  paragraph.split(/(Hasta Mañana|Fins Demà)/g);
+  paragraph.split(/(Until Tomorrow|Hasta Mañana|Fins Demà)/g);
 const isTranslationTerm = (text: string) => translationTerms.includes(text);
 ---
 
