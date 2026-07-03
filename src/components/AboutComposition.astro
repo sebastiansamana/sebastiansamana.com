@@ -6,6 +6,10 @@ interface Props {
 }
 
 const { imageAlt, label, paragraphs } = Astro.props;
+const translationTerms = ['Hasta Mañana', 'Fins Demà'];
+const splitTranslationTerms = (paragraph: string) =>
+  paragraph.split(/(Hasta Mañana|Fins Demà)/g);
+const isTranslationTerm = (text: string) => translationTerms.includes(text);
 ---
 
 <section class="about-composition" aria-label={label} data-about-composition>
@@ -23,7 +27,13 @@ const { imageAlt, label, paragraphs } = Astro.props;
   <div class="about-text">
     {
       paragraphs.map((paragraph) => (
-        <p class:list={{ 'about-samana': paragraph === 'Samana.' }}>{paragraph}</p>
+        <p class:list={{ 'about-samana': paragraph === 'Samana.' }}>
+          {
+            splitTranslationTerms(paragraph).map((part) =>
+              isTranslationTerm(part) ? <em>{part}</em> : part
+            )
+          }
+        </p>
       ))
     }
   </div>
