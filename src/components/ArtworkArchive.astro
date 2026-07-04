@@ -120,8 +120,10 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   import Masonry from 'masonry-layout';
 
   (() => {
+    const coarsePointerQuery = '(hover: none), (pointer: coarse)';
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
+    const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
 
     const waitForAnimationFrame = () =>
       new Promise((resolve) => {
@@ -173,6 +175,57 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
       return Promise.all(images.map(waitForImage));
     };
 
+    const bindArtworkTouchStates = (archive) => {
+      archive.querySelectorAll('.artwork-card a').forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement) || link.dataset.artworkTouchStateReady === 'true') {
+          return;
+        }
+
+        link.dataset.artworkTouchStateReady = 'true';
+
+        let activePointerId = null;
+
+        const setActive = () => {
+          link.classList.add('is-touch-active');
+        };
+
+        const clearActive = () => {
+          activePointerId = null;
+          link.classList.remove('is-touch-active');
+        };
+
+        link.addEventListener('pointerdown', (event) => {
+          if (!isCoarsePointer()) return;
+
+          activePointerId = event.pointerId;
+          setActive();
+        });
+
+        link.addEventListener('pointerup', (event) => {
+          if (!isCoarsePointer() || (activePointerId !== null && event.pointerId !== activePointerId)) {
+            return;
+          }
+
+          clearActive();
+        });
+
+        link.addEventListener('pointercancel', clearActive);
+        link.addEventListener('pointerleave', clearActive);
+        link.addEventListener('blur', clearActive);
+        link.addEventListener(
+          'touchstart',
+          () => {
+            if (!isCoarsePointer()) return;
+
+            setActive();
+          },
+          { passive: true }
+        );
+        link.addEventListener('touchend', clearActive, { passive: true });
+        link.addEventListener('touchcancel', clearActive, { passive: true });
+      });
+    };
+
     const setupArchive = () => {
       document.querySelectorAll('[data-artwork-archive]').forEach((archive) => {
         if (!(archive instanceof HTMLElement) || archive.dataset.artworkArchiveBooted === 'true') {
@@ -187,6 +240,8 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
 
         let masonry = null;
         let isRevealed = false;
+
+        bindArtworkTouchStates(archive);
 
         const revealArchive = () => {
           if (isRevealed) return;
@@ -401,23 +456,37 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   }
 
   .artwork-card a:focus-visible .artwork-card__image--hover,
-  .artwork-card a:hover .artwork-card__image--hover {
+  .artwork-card a.is-touch-active .artwork-card__image--hover {
     opacity: 1;
   }
 
   .artwork-card a:focus-visible .artwork-card__title,
-  .artwork-card a:hover .artwork-card__title {
+  .artwork-card a.is-touch-active .artwork-card__title {
     color: #691b17;
   }
 
   .artwork-card a:focus-visible .artwork-card__meta,
-  .artwork-card a:hover .artwork-card__meta {
+  .artwork-card a.is-touch-active .artwork-card__meta {
     color: var(--artwork-meta-hover-color);
   }
 
   .artwork-card a:focus-visible {
     outline: 1px solid #691b17;
     outline-offset: 0.35rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .artwork-card a:hover .artwork-card__image--hover {
+      opacity: 1;
+    }
+
+    .artwork-card a:hover .artwork-card__title {
+      color: #691b17;
+    }
+
+    .artwork-card a:hover .artwork-card__meta {
+      color: var(--artwork-meta-hover-color);
+    }
   }
 
   .artwork-index {
