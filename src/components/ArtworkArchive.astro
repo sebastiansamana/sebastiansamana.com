@@ -120,18 +120,105 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   import Masonry from 'masonry-layout';
 
   (() => {
+    const routeEnterEvent = 'varelism:route-enter';
+    const routeEnteringClass = 'varelism-route-entering';
+
+    const waitForAnimationFrame = () =>
+      new Promise((resolve) => {
+        window.requestAnimationFrame(resolve);
+      });
+
+    const waitForFonts = () => {
+      if (!document.fonts?.ready) return Promise.resolve();
+
+      return document.fonts.ready.catch(() => {});
+    };
+
+    const waitForImage = (image) => {
+      if (!(image instanceof HTMLImageElement) || !image.src) return Promise.resolve();
+
+      if (image.complete && image.naturalWidth > 0) {
+        return image.decode ? image.decode().catch(() => {}) : Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        const done = () => {
+          image.removeEventListener('load', done);
+          image.removeEventListener('error', done);
+          if (image.decode && image.naturalWidth > 0) {
+            image.decode().catch(() => {}).then(resolve);
+            return;
+          }
+          resolve();
+        };
+
+        image.addEventListener('load', done, { once: true });
+        image.addEventListener('error', done, { once: true });
+      });
+    };
+
+    const waitForInitialArtworkImages = (grid) => {
+      if (!(grid instanceof HTMLElement)) return Promise.resolve();
+
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const viewportLead = viewportHeight * 0.15;
+      const images = Array.from(grid.querySelectorAll('.artwork-card__image--base')).filter((image) => {
+        if (!(image instanceof HTMLImageElement)) return false;
+
+        const rect = image.getBoundingClientRect();
+
+        return rect.top < viewportHeight + viewportLead && rect.bottom > -viewportLead;
+      });
+
+      return Promise.all(images.map(waitForImage));
+    };
+
     const setupArchive = () => {
       document.querySelectorAll('[data-artwork-archive]').forEach((archive) => {
-        if (!(archive instanceof HTMLElement) || archive.dataset.artworkArchiveReady === 'true') {
+        if (!(archive instanceof HTMLElement) || archive.dataset.artworkArchiveBooted === 'true') {
           return;
         }
 
-        archive.dataset.artworkArchiveReady = 'true';
+        archive.dataset.artworkArchiveBooted = 'true';
+        archive.setAttribute('aria-busy', 'true');
 
         const grid = archive.querySelector('[data-artwork-masonry]');
         const viewButtons = Array.from(archive.querySelectorAll('[data-archive-view-button]'));
 
         let masonry = null;
+        let isRevealed = false;
+
+        const revealArchive = () => {
+          if (isRevealed) return;
+
+          isRevealed = true;
+          archive.dataset.artworkArchiveReady = 'true';
+          archive.removeAttribute('aria-busy');
+
+          window.requestAnimationFrame(() => {
+            archive.classList.add('is-ready');
+          });
+        };
+
+        const revealWhenRouteAllows = () => {
+          if (!document.documentElement.classList.contains(routeEnteringClass)) {
+            revealArchive();
+            return;
+          }
+
+          window.addEventListener(routeEnterEvent, revealArchive, { once: true });
+        };
+
+        const revealAfterStableLayout = async () => {
+          await waitForFonts();
+          masonry?.layout();
+          await waitForAnimationFrame();
+          masonry?.layout();
+          await waitForInitialArtworkImages(grid);
+          masonry?.layout();
+          await waitForAnimationFrame();
+          revealWhenRouteAllows();
+        };
 
         if (grid instanceof HTMLElement) {
           masonry = new Masonry(grid, {
@@ -166,6 +253,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
         });
 
         window.requestAnimationFrame(() => masonry?.layout());
+        revealAfterStableLayout();
       });
     };
 
@@ -201,8 +289,17 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     margin: 0 auto;
     max-width: 82rem;
     min-height: calc(100vh - clamp(7rem, 13vh, 8.5rem));
+    opacity: 0;
     padding-bottom: clamp(2rem, 6vh, 4rem);
+    pointer-events: none;
+    transition: opacity 450ms ease;
+    will-change: opacity;
     width: 100%;
+  }
+
+  .artwork-archive.is-ready {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .artwork-archive__header {
