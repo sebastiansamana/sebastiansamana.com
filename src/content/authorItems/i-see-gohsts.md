@@ -1,6 +1,6 @@
 ---
-title: "I see gohsts"
-spanishTitle: "Veo fansasmas"
+title: "I See Gohsts"
+spanishTitle: "Veo Fantasmas"
 status: public
 year: "2026"
 date: "6/5/2026"

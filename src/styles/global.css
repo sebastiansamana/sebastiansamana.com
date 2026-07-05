@@ -111,6 +111,18 @@ html.varelism-route-entering main > :not(.home-preloader) {
   visibility: hidden;
 }
 
+[data-varelism-route-reveal] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 450ms ease;
+  will-change: opacity;
+}
+
+[data-varelism-route-reveal].is-route-reveal-ready {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 ::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {

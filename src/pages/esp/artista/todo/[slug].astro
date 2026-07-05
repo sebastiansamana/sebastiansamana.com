@@ -56,7 +56,7 @@ const hasDescription = Boolean(artwork.data.description);
 ---
 
 <BaseLayout title={`${artwork.data.title} | Varelism`} description={artwork.data.description ?? artwork.data.title}>
-  <article class="artwork-detail">
+  <article class="artwork-detail" data-varelism-route-reveal data-varelism-route-reveal-images="true">
     <a class="artwork-back" href="/esp/artista/todo/">Volver</a>
 
     <figure class="artwork-figure">

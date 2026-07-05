@@ -831,6 +831,104 @@ const globalPreloaderPaths = [
         window.addEventListener('popstate', syncHeaderLanguage);
       })();
     </script>
+    <script is:inline>
+      (() => {
+        const routeEnterEvent = 'varelism:route-enter';
+        const routeEnteringClass = 'varelism-route-entering';
+        const revealSelector = '[data-varelism-route-reveal]';
+
+        const waitForAnimationFrame = () =>
+          new Promise((resolve) => {
+            window.requestAnimationFrame(resolve);
+          });
+
+        const waitForFonts = () => {
+          if (!document.fonts?.ready) return Promise.resolve();
+
+          return document.fonts.ready.catch(() => {});
+        };
+
+        const waitForImage = (image) => {
+          if (!(image instanceof HTMLImageElement) || !image.src) return Promise.resolve();
+
+          if (image.complete && image.naturalWidth > 0) {
+            return image.decode ? image.decode().catch(() => {}) : Promise.resolve();
+          }
+
+          return new Promise((resolve) => {
+            const done = () => {
+              image.removeEventListener('load', done);
+              image.removeEventListener('error', done);
+              if (image.decode && image.naturalWidth > 0) {
+                image.decode().catch(() => {}).then(resolve);
+                return;
+              }
+              resolve();
+            };
+
+            image.addEventListener('load', done, { once: true });
+            image.addEventListener('error', done, { once: true });
+          });
+        };
+
+        const waitForRevealImages = (element) => {
+          if (element.dataset.varelismRouteRevealImages !== 'true') return Promise.resolve();
+
+          return Promise.all(Array.from(element.querySelectorAll('img')).map(waitForImage));
+        };
+
+        const setupRouteReveals = () => {
+          document.querySelectorAll(revealSelector).forEach((element) => {
+            if (!(element instanceof HTMLElement) || element.dataset.varelismRouteRevealBooted === 'true') {
+              return;
+            }
+
+            element.dataset.varelismRouteRevealBooted = 'true';
+            element.setAttribute('aria-busy', 'true');
+
+            let isRevealed = false;
+
+            const reveal = () => {
+              if (isRevealed) return;
+
+              isRevealed = true;
+              element.dataset.varelismRouteRevealReady = 'true';
+              element.removeAttribute('aria-busy');
+
+              window.requestAnimationFrame(() => {
+                element.classList.add('is-route-reveal-ready');
+              });
+            };
+
+            const revealWhenRouteAllows = () => {
+              if (!document.documentElement.classList.contains(routeEnteringClass)) {
+                reveal();
+                return;
+              }
+
+              window.addEventListener(routeEnterEvent, reveal, { once: true });
+            };
+
+            const revealAfterStableLayout = async () => {
+              await waitForFonts();
+              await waitForRevealImages(element);
+              await waitForAnimationFrame();
+              await waitForAnimationFrame();
+              revealWhenRouteAllows();
+            };
+
+            revealAfterStableLayout();
+          });
+        };
+
+        setupRouteReveals();
+
+        if (window.__varelismRouteRevealReady) return;
+
+        window.__varelismRouteRevealReady = true;
+        document.addEventListener('astro:page-load', setupRouteReveals);
+      })();
+    </script>
     <title>{title}</title>
   </head>
   <body>
