@@ -1,0 +1,104 @@
+---
+interface Props {
+  label: string;
+  heading: string;
+  archiveHref: string;
+  archiveLabel: string;
+}
+
+const { label, heading, archiveHref, archiveLabel } = Astro.props;
+---
+
+<section class="work-in-progress-page" aria-label={label}>
+  <div class="work-in-progress-page__content">
+    <h1 class="work-in-progress-page__heading">{heading}</h1>
+    <a class="work-in-progress-page__link" href={archiveHref}>{archiveLabel}</a>
+  </div>
+</section>
+
+<style>
+  :global(.site-shell > main) {
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding: 0;
+    position: relative;
+    width: 100%;
+  }
+
+  .work-in-progress-page {
+    color: #000000;
+    display: block;
+    left: 50%;
+    line-height: 1;
+    max-width: calc(100vw - 2rem);
+    position: absolute;
+    text-align: center;
+    top: 50vh;
+    top: 50svh;
+    top: 50dvh;
+    transform: translate(-50%, -50%);
+    width: max-content;
+  }
+
+  .work-in-progress-page__content {
+    display: grid;
+    gap: clamp(0.72rem, 1.45vw, 1.05rem);
+    justify-items: center;
+  }
+
+  .work-in-progress-page__heading {
+    color: inherit;
+    font-family: var(--font-sans);
+    font-size: clamp(1.35rem, 2.1vw, 2.15rem);
+    font-weight: 300;
+    letter-spacing: 0;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .work-in-progress-page__link {
+    color: #691b17;
+    display: block;
+    font-family: var(--font-sans);
+    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    font-weight: 200;
+    letter-spacing: 0;
+    line-height: 1;
+    overflow-wrap: anywhere;
+    transition: color 160ms ease;
+  }
+
+  .work-in-progress-page__link:focus-visible {
+    color: #000000;
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  .work-in-progress-page__link:hover {
+    color: #000000;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .work-in-progress-page__link:active {
+      color: #000000;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .work-in-progress-page__heading {
+      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .work-in-progress-page {
+      max-width: calc(100vw - 1.7rem);
+    }
+
+    .work-in-progress-page__link {
+      font-size: 0.72rem;
+    }
+  }
+</style>

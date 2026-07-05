@@ -1,7 +1,13 @@
 ---
+import WorkInProgressPage from '../../../components/WorkInProgressPage.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Libros | Varelism" description="Libros.">
-  <section aria-label="Libros"></section>
+  <WorkInProgressPage
+    label="Libros"
+    heading="Trabajo en curso..."
+    archiveHref="https://varelism.com/esp/autor/todo/"
+    archiveLabel="Por ahora accede a mi archivo de escritos"
+  />
 </BaseLayout>
