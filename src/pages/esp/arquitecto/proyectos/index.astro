@@ -1,7 +1,13 @@
 ---
+import WorkInProgressPage from '../../../../components/WorkInProgressPage.astro';
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Proyectos | Varelism" description="Proyectos.">
-  <section aria-label="Proyectos"></section>
+  <WorkInProgressPage
+    label="Proyectos"
+    heading="Trabajo en curso..."
+    archiveHref="https://varelism.com/esp/arquitecto/portafolios/"
+    archiveLabel="Por ahora accede a mi archivo de portafolios"
+  />
 </BaseLayout>
