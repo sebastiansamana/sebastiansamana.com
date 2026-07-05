@@ -1,6 +1,6 @@
 ---
 title: "Abuelo"
-status: public
+status: draft
 date: "2025"
 sortYear: 2025
 sortMonth: 7

@@ -1,6 +1,6 @@
 ---
 title: "Man"
-status: public
+status: draft
 date: "2024"
 sortYear: 2024
 sortMonth: 12
