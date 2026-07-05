@@ -1,0 +1,13 @@
+---
+import NotFoundPage from '../../components/NotFoundPage.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="404 | Varelism" description="Página no encontrada.">
+  <NotFoundPage
+    label="Página no encontrada"
+    secondaryText="Página no encontrada"
+    returnHref="/esp"
+    returnLabel="Volver al inicio"
+  />
+</BaseLayout>
