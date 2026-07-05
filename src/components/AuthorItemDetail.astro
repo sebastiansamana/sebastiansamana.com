@@ -1,7 +1,7 @@
 ---
 import { render } from 'astro:content';
 import type { AuthorItem } from '../lib/authorItems';
-import { getAuthorItemMetadata, getAuthorItemTitle } from '../lib/authorItems';
+import { getAuthorItemDetailMetadata, getAuthorItemTitle } from '../lib/authorItems';
 
 interface Props {
   backHref: string;
@@ -11,13 +11,31 @@ interface Props {
 }
 
 const { backHref, backLabel, item, locale = 'en' } = Astro.props;
-const metadata = getAuthorItemMetadata(item, locale);
+const metadata = getAuthorItemDetailMetadata(item, locale);
 const title = getAuthorItemTitle(item, locale);
 const { Content } = await render(item);
 const spanishParagraphs = (item.data.spanishBody ?? '')
   .split(/\n{2,}/)
   .map((paragraph) => paragraph.trim())
   .filter(Boolean);
+const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryDetails = metadata.map((item) => item.value).join(' / ');
+const enquiryBody = [
+  locale === 'es' ? 'Hola Sebastian,' : 'Hello Sebastian,',
+  '',
+  locale === 'es'
+    ? 'Me gustaría consultar más sobre este texto:'
+    : 'I would like to enquire further about this text:',
+  '',
+  title,
+  ...(enquiryDetails ? [enquiryDetails] : []),
+  '',
+  locale === 'es' ? 'Mi consulta:' : 'My query:',
+].join('\n');
+const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
+  locale === 'es' ? `Consulta sobre ${title}` : `Enquiry about ${title}`,
+)}&body=${encodeURIComponent(enquiryBody)}`;
+const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 ---
 
 <article class="author-item-detail">
@@ -27,7 +45,16 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
     <h1>{title}</h1>
     {
       metadata.length > 0 && (
-        <p class="author-item-meta">{metadata.join(' / ')}</p>
+        <dl>
+          {
+            metadata.map((item) => (
+              <div>
+                <dt>{item.label}</dt>
+                <dd>{item.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
       )
     }
   </header>
@@ -39,6 +66,8 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
         : <Content />
     }
   </section>
+
+  <a class="author-item-enquiry" href={enquiryHref}>{enquiryLabel}</a>
 </article>
 
 <style>
@@ -49,6 +78,9 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
   }
 
   .author-item-detail {
+    --author-item-back-font-size: clamp(0.82rem, 1vw, 0.98rem);
+    --author-item-back-gap: clamp(2rem, 5vw, 4rem);
+
     color: #000000;
     margin: 0 auto;
     max-width: 58rem;
@@ -59,10 +91,10 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
 
   .author-item-back {
     display: inline-block;
-    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    font-size: var(--author-item-back-font-size);
     font-weight: 200;
     line-height: 1;
-    margin-bottom: clamp(2rem, 5vw, 4rem);
+    margin-bottom: var(--author-item-back-gap);
     transition: color 180ms ease;
   }
 
@@ -76,11 +108,6 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
     outline-offset: 0.35rem;
   }
 
-  .author-item-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-    padding-bottom: 0.85rem;
-  }
-
   .author-item-header h1 {
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
       'Helvetica Neue', Arial, sans-serif;
@@ -91,20 +118,43 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
     margin: 0;
   }
 
-  .author-item-meta {
+  .author-item-header dl {
+    display: grid;
+    gap: 0.65rem;
+    margin: 1.6rem 0 0;
+  }
+
+  .author-item-header div {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .author-item-header dt,
+  .author-item-header dd,
+  .author-item-body,
+  .author-item-enquiry {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0;
+  }
+
+  .author-item-header dt {
     color: #919191;
-    font-size: 0.82rem;
+    font-size: 0.68rem;
     font-weight: 200;
-    line-height: 1.2;
-    margin: 0.85rem 0 0;
+    line-height: 1;
+  }
+
+  .author-item-header dd {
+    font-size: 0.88rem;
+    font-weight: 300;
+    line-height: 1.25;
+    margin: 0;
   }
 
   .author-item-body {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
     font-size: 1rem;
     font-weight: 200;
-    letter-spacing: 0;
     line-height: 1.58;
     margin-top: clamp(1.6rem, 4vw, 2.8rem);
   }
@@ -119,6 +169,27 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
     margin-bottom: 0;
   }
 
+  .author-item-enquiry {
+    color: #691b17;
+    display: inline-block;
+    font-size: var(--author-item-back-font-size);
+    font-weight: 200;
+    line-height: 1;
+    margin-top: clamp(1.8rem, 5vw, 3.5rem);
+    transition: color 180ms ease;
+    width: fit-content;
+  }
+
+  .author-item-enquiry:focus-visible,
+  .author-item-enquiry:hover {
+    color: #000000;
+  }
+
+  .author-item-enquiry:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
   @media (max-width: 760px) {
     :global(.site-shell > main) {
       padding-top: 6.5rem;
@@ -130,9 +201,16 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
   }
 
   @media (max-width: 560px) {
-    .author-item-back,
-    .author-item-meta {
-      font-size: 0.72rem;
+    .author-item-detail {
+      --author-item-back-font-size: 0.72rem;
+    }
+
+    .author-item-header dt {
+      font-size: 0.6rem;
+    }
+
+    .author-item-header dd {
+      font-size: var(--author-item-back-font-size);
     }
   }
 </style>

@@ -8,8 +8,8 @@ sortYear: 2026
 sortMonth: 6
 sortDay: 5
 orderInDay: 215
-textType: "Dream notes"
-spanishTextType: "Notas de sueños"
+textType: "Notes"
+spanishTextType: "Notas"
 wordCount: "436 words"
 spanishWordCount: "467 palabras"
 spanishBody: >-

@@ -36,3 +36,21 @@ export const getAuthorItemMetadata = (item: AuthorItem, locale: 'en' | 'es' = 'e
 
   return [item.data.year, textType, wordCount].filter(hasValue).map((value) => String(value));
 };
+
+export const getAuthorItemDetailMetadata = (
+  item: AuthorItem,
+  locale: 'en' | 'es' = 'en',
+) => {
+  const textType = locale === 'es' ? item.data.spanishTextType : item.data.textType;
+  const wordCount = locale === 'es' ? item.data.spanishWordCount : item.data.wordCount;
+  const labels =
+    locale === 'es'
+      ? { date: 'Fecha', category: 'Categoría', words: 'Palabras' }
+      : { date: 'Date', category: 'Category', words: 'Words' };
+
+  return [
+    { label: labels.date, value: item.data.date ?? item.data.year },
+    { label: labels.category, value: textType },
+    { label: labels.words, value: wordCount },
+  ].filter((item): item is { label: string; value: string } => hasValue(item.value));
+};
