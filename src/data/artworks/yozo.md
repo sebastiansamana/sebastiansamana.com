@@ -1,6 +1,6 @@
 ---
 title: "Yozo"
-status: draft
+status: public
 date: "2025"
 sortYear: 2025
 sortMonth: 9
