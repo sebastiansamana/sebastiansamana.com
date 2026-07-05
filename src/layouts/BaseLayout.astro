@@ -50,6 +50,16 @@ const getLanguageSwitchHref = (pathname: string) => {
     return slug ? `/esp/arquitecto/proyectos/${slug}/` : '/esp/arquitecto/proyectos/';
   }
 
+  if (normalizedPath.startsWith('/esp/autor/todo/')) {
+    const slug = normalizedPath.slice('/esp/autor/todo/'.length);
+    return slug ? `/author/everything/${slug}/` : '/author/everything/';
+  }
+
+  if (normalizedPath.startsWith('/author/everything/')) {
+    const slug = normalizedPath.slice('/author/everything/'.length);
+    return slug ? `/esp/autor/todo/${slug}/` : '/esp/autor/todo/';
+  }
+
   if (normalizedPath.startsWith('/esp/artista/todo/')) {
     const slug = normalizedPath.slice('/esp/artista/todo/'.length);
     return slug ? `/artist/everything/${slug}/` : '/artist/everything/';
@@ -743,6 +753,16 @@ const globalPreloaderPaths = [
           if (normalizedPath.startsWith('/architect/projects/')) {
             const slug = normalizedPath.slice('/architect/projects/'.length);
             return slug ? `/esp/arquitecto/proyectos/${slug}/` : '/esp/arquitecto/proyectos/';
+          }
+
+          if (normalizedPath.startsWith('/esp/autor/todo/')) {
+            const slug = normalizedPath.slice('/esp/autor/todo/'.length);
+            return slug ? `/author/everything/${slug}/` : '/author/everything/';
+          }
+
+          if (normalizedPath.startsWith('/author/everything/')) {
+            const slug = normalizedPath.slice('/author/everything/'.length);
+            return slug ? `/esp/autor/todo/${slug}/` : '/esp/autor/todo/';
           }
 
           if (normalizedPath.startsWith('/esp/artista/todo/')) {

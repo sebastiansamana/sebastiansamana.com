@@ -1,0 +1,196 @@
+---
+interface AuthorIndexRow {
+  href: string;
+  metadata: string[];
+  title: string;
+}
+
+interface Props {
+  emptyLabel: string;
+  label: string;
+  rows: AuthorIndexRow[];
+}
+
+const { emptyLabel, label, rows } = Astro.props;
+---
+
+<section class="artwork-archive author-index-archive" aria-label={label}>
+  <header class="artwork-archive__header" aria-hidden="true"></header>
+
+  {
+    rows.length > 0 ? (
+      <ol class="artwork-index">
+        {
+          rows.map((row) => (
+            <li>
+              <a href={row.href}>
+                <span class="artwork-index__title">{row.title}</span>
+                {
+                  row.metadata.length > 0 && (
+                    <span class="artwork-index__meta">{row.metadata.join(' / ')}</span>
+                  )
+                }
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    ) : (
+      <p class="artwork-empty">{emptyLabel}</p>
+    )
+  }
+</section>
+
+<style>
+  :global(.site-shell > main) {
+    max-width: none;
+    padding: clamp(7rem, 13vh, 8.5rem) clamp(1rem, 4vw, 3rem) 0;
+    width: 100%;
+  }
+
+  .artwork-archive {
+    --artwork-gap: clamp(0.8rem, 1.8vw, 1.35rem);
+    --artwork-column-width: clamp(11rem, 23vw, 18rem);
+    --artwork-footer-text-color: #919191;
+    --artwork-meta-hover-color: rgba(105, 27, 23, 0.5);
+    --artwork-title-font-size: clamp(0.82rem, 1vw, 0.98rem);
+    --artwork-content-width: calc(
+      var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-column-width) +
+        var(--artwork-column-width) + var(--artwork-gap) + var(--artwork-gap) + var(--artwork-gap)
+    );
+    --artwork-aligned-width: min(100%, var(--artwork-content-width));
+
+    color: #000000;
+    margin: 0 auto;
+    max-width: 82rem;
+    min-height: calc(100vh - clamp(7rem, 13vh, 8.5rem));
+    padding-bottom: clamp(2rem, 6vh, 4rem);
+    width: 100%;
+  }
+
+  .artwork-archive__header {
+    align-items: baseline;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin: 0 auto clamp(2rem, 5vw, 4rem);
+    width: var(--artwork-aligned-width);
+  }
+
+  .artwork-index {
+    display: block;
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    width: var(--artwork-aligned-width);
+  }
+
+  .artwork-index li {
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .artwork-index li:last-child {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .artwork-index a {
+    align-items: baseline;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 0.85rem 0;
+  }
+
+  .artwork-index__title {
+    font-size: 0.98rem;
+    font-weight: 300;
+  }
+
+  .artwork-index__title,
+  .artwork-index__meta {
+    transition: color 180ms ease;
+  }
+
+  .artwork-index__meta,
+  .artwork-empty {
+    color: var(--artwork-footer-text-color);
+    font-size: 0.82rem;
+    font-weight: 200;
+  }
+
+  .artwork-index a:focus-visible .artwork-index__title,
+  .artwork-index a:hover .artwork-index__title {
+    color: #691b17;
+  }
+
+  .artwork-index a:focus-visible .artwork-index__meta,
+  .artwork-index a:hover .artwork-index__meta {
+    color: var(--artwork-meta-hover-color);
+  }
+
+  .artwork-index a:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  .artwork-empty {
+    margin: 0 auto;
+    width: var(--artwork-aligned-width);
+  }
+
+  @media (max-width: 1312px) {
+    .artwork-archive {
+      --artwork-content-width: calc(
+        var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-column-width) +
+          var(--artwork-gap) + var(--artwork-gap)
+      );
+    }
+  }
+
+  @media (max-width: 720px) {
+    :global(.site-shell > main) {
+      padding-top: 6.5rem;
+    }
+
+    .artwork-archive {
+      --artwork-column-width: calc(
+        (
+            100vw - clamp(1rem, 4vw, 3rem) - clamp(1rem, 4vw, 3rem) -
+              var(--artwork-gap) - var(--artwork-gap)
+          ) / 3
+      );
+      --artwork-content-width: calc(
+        var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-column-width) +
+          var(--artwork-gap) + var(--artwork-gap)
+      );
+    }
+
+    .artwork-index a {
+      align-items: flex-start;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .artwork-archive {
+      --artwork-column-width: calc(
+        (100vw - clamp(1rem, 4vw, 3rem) - clamp(1rem, 4vw, 3rem) - var(--artwork-gap)) / 2
+      );
+      --artwork-content-width: calc(
+        var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-gap)
+      );
+      --artwork-title-font-size: 0.72rem;
+    }
+
+    .artwork-archive__header {
+      gap: 0.65rem;
+    }
+
+    .artwork-index__title,
+    .artwork-index__meta {
+      font-size: var(--artwork-title-font-size);
+    }
+  }
+</style>

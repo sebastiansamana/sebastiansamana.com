@@ -67,4 +67,24 @@ const artworks = defineCollection({
   }),
 });
 
-export const collections = { artworks, projects };
+const authorItems = defineCollection({
+  type: 'content',
+  schema: z.object({
+    title: z.string().min(1),
+    spanishTitle: z.string().min(1),
+    status: z.enum(['draft', 'public']).default('draft'),
+    year: blankableString,
+    date: blankableString,
+    sortYear: blankableInteger,
+    sortMonth: blankableInteger,
+    sortDay: blankableInteger,
+    orderInDay: blankableInteger,
+    textType: blankableString,
+    spanishTextType: blankableString,
+    wordCount: blankableString,
+    spanishWordCount: blankableString,
+    spanishBody: blankableString,
+  }),
+});
+
+export const collections = { artworks, authorItems, projects };

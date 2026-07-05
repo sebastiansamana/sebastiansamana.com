@@ -1,7 +1,17 @@
 ---
+import { getCollection } from 'astro:content';
+import AuthorIndexArchive from '../../../components/AuthorIndexArchive.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getAuthorItemMetadata, getAuthorItemTitle, getPublicAuthorItems } from '../../../lib/authorItems';
+
+const items = getPublicAuthorItems(await getCollection('authorItems'));
+const rows = items.map((item) => ({
+  href: `/esp/autor/todo/${item.slug}/`,
+  metadata: getAuthorItemMetadata(item, 'es'),
+  title: getAuthorItemTitle(item, 'es'),
+}));
 ---
 
 <BaseLayout title="Todo | Varelism" description="Todo.">
-  <section aria-label="Todo"></section>
+  <AuthorIndexArchive emptyLabel="Todavía no hay textos públicos." label="Todo" rows={rows} />
 </BaseLayout>

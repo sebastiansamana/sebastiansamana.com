@@ -2,17 +2,17 @@ import type { CollectionEntry } from 'astro:content';
 
 export type Artwork = CollectionEntry<'artworks'>;
 
-const missingSortValue = Number.MAX_SAFE_INTEGER;
+const missingSortValue = Number.MIN_SAFE_INTEGER;
 
 export const isPublicArtwork = (artwork: Artwork) => artwork.data.status === 'public';
 
 export const sortArtworks = (artworks: Artwork[]) =>
   [...artworks].sort((a, b) => {
     const sortKeys = [
-      (a.data.sortYear ?? missingSortValue) - (b.data.sortYear ?? missingSortValue),
-      (a.data.sortMonth ?? missingSortValue) - (b.data.sortMonth ?? missingSortValue),
-      (a.data.sortDay ?? missingSortValue) - (b.data.sortDay ?? missingSortValue),
-      (a.data.orderInYear ?? 0) - (b.data.orderInYear ?? 0),
+      (b.data.sortYear ?? missingSortValue) - (a.data.sortYear ?? missingSortValue),
+      (b.data.sortMonth ?? missingSortValue) - (a.data.sortMonth ?? missingSortValue),
+      (b.data.sortDay ?? missingSortValue) - (a.data.sortDay ?? missingSortValue),
+      (b.data.orderInYear ?? 0) - (a.data.orderInYear ?? 0),
     ];
     const numericResult = sortKeys.find((result) => result !== 0);
 

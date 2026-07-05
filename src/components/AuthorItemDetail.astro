@@ -1,0 +1,138 @@
+---
+import { render } from 'astro:content';
+import type { AuthorItem } from '../lib/authorItems';
+import { getAuthorItemMetadata, getAuthorItemTitle } from '../lib/authorItems';
+
+interface Props {
+  backHref: string;
+  backLabel: string;
+  item: AuthorItem;
+  locale?: 'en' | 'es';
+}
+
+const { backHref, backLabel, item, locale = 'en' } = Astro.props;
+const metadata = getAuthorItemMetadata(item, locale);
+const title = getAuthorItemTitle(item, locale);
+const { Content } = await render(item);
+const spanishParagraphs = (item.data.spanishBody ?? '')
+  .split(/\n{2,}/)
+  .map((paragraph) => paragraph.trim())
+  .filter(Boolean);
+---
+
+<article class="author-item-detail">
+  <a class="author-item-back" href={backHref}>{backLabel}</a>
+
+  <header class="author-item-header">
+    <h1>{title}</h1>
+    {
+      metadata.length > 0 && (
+        <p class="author-item-meta">{metadata.join(' / ')}</p>
+      )
+    }
+  </header>
+
+  <section class="author-item-body">
+    {
+      locale === 'es'
+        ? spanishParagraphs.map((paragraph) => <p>{paragraph}</p>)
+        : <Content />
+    }
+  </section>
+</article>
+
+<style>
+  :global(.site-shell > main) {
+    max-width: none;
+    padding: clamp(7rem, 13vh, 8.5rem) clamp(1rem, 4vw, 3rem) 0;
+    width: 100%;
+  }
+
+  .author-item-detail {
+    color: #000000;
+    margin: 0 auto;
+    max-width: 58rem;
+    min-height: calc(100vh - clamp(7rem, 13vh, 8.5rem));
+    padding-bottom: clamp(2rem, 6vh, 4rem);
+    width: 100%;
+  }
+
+  .author-item-back {
+    display: inline-block;
+    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    font-weight: 200;
+    line-height: 1;
+    margin-bottom: clamp(2rem, 5vw, 4rem);
+    transition: color 180ms ease;
+  }
+
+  .author-item-back:focus-visible,
+  .author-item-back:hover {
+    color: #691b17;
+  }
+
+  .author-item-back:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  .author-item-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    padding-bottom: 0.85rem;
+  }
+
+  .author-item-header h1 {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(1.35rem, 2.1vw, 2.15rem);
+    font-weight: 300;
+    letter-spacing: 0;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .author-item-meta {
+    color: #919191;
+    font-size: 0.82rem;
+    font-weight: 200;
+    line-height: 1.2;
+    margin: 0.85rem 0 0;
+  }
+
+  .author-item-body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 200;
+    letter-spacing: 0;
+    line-height: 1.58;
+    margin-top: clamp(1.6rem, 4vw, 2.8rem);
+  }
+
+  .author-item-body :global(p),
+  .author-item-body p {
+    margin: 0 0 1.18rem;
+  }
+
+  .author-item-body :global(p:last-child),
+  .author-item-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 760px) {
+    :global(.site-shell > main) {
+      padding-top: 6.5rem;
+    }
+
+    .author-item-header h1 {
+      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .author-item-back,
+    .author-item-meta {
+      font-size: 0.72rem;
+    }
+  }
+</style>
