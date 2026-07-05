@@ -1,7 +1,13 @@
 ---
+import WorkInProgressPage from '../components/WorkInProgressPage.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Buy | Varelism" description="Buy.">
-  <section aria-label="Buy"></section>
+  <WorkInProgressPage
+    label="Buy"
+    heading="Nothing to buy..."
+    archiveHref="/"
+    archiveLabel="Return Home"
+  />
 </BaseLayout>
