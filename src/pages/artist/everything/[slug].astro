@@ -2,7 +2,7 @@
 import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { getArtworkMetadata, getPublicArtworks } from '../../../lib/artworks';
+import { getArtworkDetailMetadata, getPublicArtworks } from '../../../lib/artworks';
 
 export const getStaticPaths = (async () => {
   const artworks = getPublicArtworks(await getCollection('artworks'));
@@ -14,7 +14,7 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { artwork } = Astro.props;
-const metadata = getArtworkMetadata(artwork);
+const metadata = getArtworkDetailMetadata(artwork);
 const enquiryEmail = 'bastivarela@icloud.com';
 const enquiryDetails = metadata.map((item) => item.value).join(' / ');
 const enquiryBody = [

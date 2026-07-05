@@ -1,4 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
+import { formatMonthYear, type ContentLocale } from './dateLabels';
 
 export type AuthorItem = CollectionEntry<'authorItems'>;
 
@@ -37,9 +38,17 @@ export const getAuthorItemMetadata = (item: AuthorItem, locale: 'en' | 'es' = 'e
   return [item.data.year, textType, wordCount].filter(hasValue).map((value) => String(value));
 };
 
+export const getAuthorItemDetailDateLabel = (
+  item: AuthorItem,
+  locale: ContentLocale = 'en',
+) =>
+  formatMonthYear(item.data.sortMonth, item.data.sortYear, locale) ??
+  item.data.date ??
+  item.data.year;
+
 export const getAuthorItemDetailMetadata = (
   item: AuthorItem,
-  locale: 'en' | 'es' = 'en',
+  locale: ContentLocale = 'en',
 ) => {
   const textType = locale === 'es' ? item.data.spanishTextType : item.data.textType;
   const wordCount = locale === 'es' ? item.data.spanishWordCount : item.data.wordCount;
@@ -49,7 +58,7 @@ export const getAuthorItemDetailMetadata = (
       : { date: 'Date', category: 'Category', words: 'Words' };
 
   return [
-    { label: labels.date, value: item.data.date ?? item.data.year },
+    { label: labels.date, value: getAuthorItemDetailDateLabel(item, locale) },
     { label: labels.category, value: textType },
     { label: labels.words, value: wordCount },
   ].filter((item): item is { label: string; value: string } => hasValue(item.value));

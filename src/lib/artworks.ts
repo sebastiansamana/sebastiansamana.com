@@ -1,4 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
+import { formatMonthYear, type ContentLocale } from './dateLabels';
 
 export type Artwork = CollectionEntry<'artworks'>;
 
@@ -35,9 +36,24 @@ export const getArtworkDateLabel = (artwork: Artwork) => {
   return [sortDay, sortMonth, sortYear].filter((part) => part !== undefined).join('.');
 };
 
+export const getArtworkDetailDateLabel = (
+  artwork: Artwork,
+  locale: ContentLocale = 'en',
+) => formatMonthYear(artwork.data.sortMonth, artwork.data.sortYear, locale) ?? getArtworkDateLabel(artwork);
+
 export const getArtworkMetadata = (artwork: Artwork) =>
   [
     { label: 'Date', value: getArtworkDateLabel(artwork) },
+    { label: 'Medium', value: artwork.data.medium },
+    { label: 'Dimensions', value: artwork.data.dimensions },
+  ].filter((item): item is { label: string; value: string } => hasValue(item.value));
+
+export const getArtworkDetailMetadata = (
+  artwork: Artwork,
+  locale: ContentLocale = 'en',
+) =>
+  [
+    { label: 'Date', value: getArtworkDetailDateLabel(artwork, locale) },
     { label: 'Medium', value: artwork.data.medium },
     { label: 'Dimensions', value: artwork.data.dimensions },
   ].filter((item): item is { label: string; value: string } => hasValue(item.value));
