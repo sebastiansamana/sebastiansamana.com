@@ -1,7 +1,6 @@
 ---
 interface Props {
   label: string;
-  secondaryText: string;
   returnHref: string;
   returnLabel: string;
   enableSpanishFallback?: boolean;
@@ -9,7 +8,6 @@ interface Props {
 
 const {
   label,
-  secondaryText,
   returnHref,
   returnLabel,
   enableSpanishFallback = false,
@@ -19,7 +17,6 @@ const {
 <section class="not-found-page" aria-label={label} data-not-found-page data-varelism-route-reveal>
   <div class="not-found-page__content">
     <h1 class="not-found-page__code">404</h1>
-    <p class="not-found-page__message" data-not-found-message>{secondaryText}</p>
     <a class="not-found-page__link" href={returnHref} data-not-found-link>{returnLabel}</a>
   </div>
 </section>
@@ -36,14 +33,9 @@ const {
         document.documentElement.lang = 'es';
 
         const page = document.querySelector('[data-not-found-page]');
-        const message = document.querySelector('[data-not-found-message]');
         const link = document.querySelector('[data-not-found-link]');
 
-        page?.setAttribute('aria-label', 'Página no encontrada');
-
-        if (message) {
-          message.textContent = 'Página no encontrada';
-        }
+        page?.setAttribute('aria-label', '404');
 
         if (link?.tagName === 'A') {
           link.setAttribute('href', '/esp');
@@ -96,18 +88,12 @@ const {
     margin: 0;
   }
 
-  .not-found-page__message,
   .not-found-page__link {
     font-family: var(--font-sans);
     font-size: clamp(0.82rem, 1vw, 0.98rem);
     font-weight: 200;
     letter-spacing: 0;
     line-height: 1;
-  }
-
-  .not-found-page__message {
-    color: #000000;
-    margin: 0;
   }
 
   .not-found-page__link {
