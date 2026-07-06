@@ -3,16 +3,21 @@ import './PdfFlipbook.css';
 
 const pdfWorkerUrl = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
-const CACHE_LIMIT = 8;
-const MAX_RENDER_WIDTH = 8192;
-const MIN_RENDER_WIDTH = 1600;
-const RENDER_QUALITY_MULTIPLIER = 2.35;
+const CACHE_LIMIT = 6;
+const QUALITY_SCALE = 2.4;
+const RENDER_MODE = 'pdf-page-texture';
 const TURN_DURATION_MS = 620;
 const QUICK_TURN_DURATION_MS = 240;
-const CURL_SEGMENTS_X = 84;
-const CURL_SEGMENTS_Y = 28;
+const MIN_CURL_SEGMENTS_X = 72;
+const MAX_CURL_SEGMENTS_X = 120;
+const MIN_CURL_SEGMENTS_Y = 44;
+const MAX_CURL_SEGMENTS_Y = 80;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+const smoothstep = (edge0, edge1, value) => {
+  const amount = clamp((value - edge0) / (edge1 - edge0 || 1), 0, 1);
+  return amount * amount * (3 - 2 * amount);
+};
 const easeOutCubic = (value) => 1 - Math.pow(1 - value, 3);
 const easeInOutCubic = (value) =>
   value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
@@ -25,8 +30,16 @@ function uniquePages(pages, pageCount) {
   );
 }
 
-function pageCacheKey(pageNumber, bucket) {
-  return `${pageNumber}:${bucket}`;
+function pageCacheKey(spec) {
+  return [
+    spec.src,
+    spec.pageNumber,
+    spec.cssWidth,
+    spec.cssHeight,
+    spec.dpr,
+    spec.qualityScale,
+    spec.mode,
+  ].join(':');
 }
 
 function getEditableTarget(target) {
@@ -42,6 +55,8 @@ function getEditableTarget(target) {
 export default function PdfFlipbook({
   src,
   title = 'Portfolio',
+  initialPage = 1,
+  onPageChange,
   initialPageAspectRatio = 1.414,
   className = '',
 }) {
@@ -77,11 +92,7 @@ export default function PdfFlipbook({
 
   const bookAspectRatio = useMemo(() => pageAspectRatio, [pageAspectRatio]);
 
-  const visiblePageLabel = useMemo(() => {
-    if (!pageCount) return 'Loading';
-
-    return `${currentPage} / ${pageCount}`;
-  }, [currentPage, pageCount]);
+  const ariaPageLabel = pageCount ? `page ${currentPage} of ${pageCount}` : 'loading';
 
   function normalizePage(pageNumber, count = pageCountRef.current) {
     if (!count) return 1;
@@ -115,6 +126,7 @@ export default function PdfFlipbook({
     const nextPage = normalizePage(pageNumber);
     currentPageRef.current = nextPage;
     setCurrentPage(nextPage);
+    onPageChange?.(nextPage);
     queueVisiblePages(nextPage);
     renderBook();
   }
@@ -166,38 +178,40 @@ export default function PdfFlipbook({
 
     const renderer = rendererRef.current;
     const maxAnisotropy = renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
-    texture.anisotropy = Math.min(4, maxAnisotropy);
+    texture.anisotropy = maxAnisotropy;
 
     return texture;
   }
 
-  function getTargetRenderWidth() {
+  function getRenderSpec(pageNumber) {
     const renderer = rendererRef.current;
     const layout = layoutRef.current;
-    const viewport = viewportRef.current;
-    if (!viewport) return MIN_RENDER_WIDTH;
+    if (!renderer || !layout) return null;
 
-    const rect = viewport.getBoundingClientRect();
-    const dpr = renderer?.getPixelRatio?.() ?? Math.min(window.devicePixelRatio || 1, 2);
-    const pageScreenWidth = layout?.pageScreenWidth || rect.width;
-    const maxTextureSize = renderer?.capabilities?.maxTextureSize || MAX_RENDER_WIDTH;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const cssWidth = Math.max(1, Math.ceil(layout.pageScreenWidth));
+    const cssHeight = Math.max(1, Math.ceil(layout.pageScreenHeight));
+    const renderWidth = Math.ceil(cssWidth * dpr * QUALITY_SCALE);
+    const renderHeight = Math.ceil(cssHeight * dpr * QUALITY_SCALE);
+    const maxTextureSize = renderer.capabilities?.maxTextureSize || 0;
 
-    return Math.round(
-      clamp(pageScreenWidth * dpr * RENDER_QUALITY_MULTIPLIER, MIN_RENDER_WIDTH, Math.min(MAX_RENDER_WIDTH, maxTextureSize)),
-    );
-  }
+    if (maxTextureSize > 0 && (renderWidth > maxTextureSize || renderHeight > maxTextureSize)) {
+      throw new Error(
+        `PDF page ${pageNumber} requires a ${renderWidth}x${renderHeight} texture, which exceeds the WebGL maximum texture size of ${maxTextureSize}. Tiled PDF textures are required for this viewport.`,
+      );
+    }
 
-  function findCachedPage(pageNumber, bucket) {
-    let fallback = null;
-
-    pageCacheRef.current.forEach((entry) => {
-      if (entry.pageNumber !== pageNumber || !entry.texture) return;
-      if (entry.bucket >= bucket * 0.88) {
-        fallback = !fallback || entry.bucket < fallback.bucket ? entry : fallback;
-      }
-    });
-
-    return fallback;
+    return {
+      src,
+      pageNumber,
+      cssWidth,
+      cssHeight,
+      dpr,
+      qualityScale: QUALITY_SCALE,
+      renderWidth,
+      renderHeight,
+      mode: RENDER_MODE,
+    };
   }
 
   async function ensurePageRendered(pageNumber) {
@@ -205,14 +219,10 @@ export default function PdfFlipbook({
     const THREE = threeRef.current;
     if (!pdf || !THREE || pageNumber < 1 || pageNumber > pageCountRef.current) return null;
 
-    const bucket = Math.ceil(getTargetRenderWidth() / 256) * 256;
-    const reusableEntry = findCachedPage(pageNumber, bucket);
-    if (reusableEntry) {
-      reusableEntry.lastUsed = performance.now();
-      return reusableEntry;
-    }
+    const spec = getRenderSpec(pageNumber);
+    if (!spec) return null;
 
-    const cacheKey = pageCacheKey(pageNumber, bucket);
+    const cacheKey = pageCacheKey(spec);
     const cachedEntry = pageCacheRef.current.get(cacheKey);
     if (cachedEntry?.promise) return cachedEntry.promise;
     if (cachedEntry?.texture) {
@@ -222,7 +232,8 @@ export default function PdfFlipbook({
 
     const entry = {
       pageNumber,
-      bucket,
+      cacheKey,
+      spec,
       canvas: null,
       texture: null,
       promise: null,
@@ -233,13 +244,13 @@ export default function PdfFlipbook({
     entry.promise = (async () => {
       const page = await pdf.getPage(pageNumber);
       const naturalViewport = page.getViewport({ scale: 1 });
-      const scale = bucket / naturalViewport.width;
+      const scale = spec.renderWidth / naturalViewport.width;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { alpha: false });
 
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
+      canvas.width = spec.renderWidth;
+      canvas.height = spec.renderHeight;
 
       if (!context) {
         page.cleanup?.();
@@ -280,9 +291,20 @@ export default function PdfFlipbook({
   }
 
   function trimPageCache(protectedPages = getPrefetchPages()) {
-    const protectedSet = new Set(protectedPages);
+    const protectedSet = new Set(
+      protectedPages
+        .map((pageNumber) => {
+          try {
+            const spec = getRenderSpec(pageNumber);
+            return spec ? pageCacheKey(spec) : '';
+          } catch {
+            return '';
+          }
+        })
+        .filter(Boolean),
+    );
     const entries = Array.from(pageCacheRef.current.entries())
-      .filter(([, entry]) => !entry.promise && !protectedSet.has(entry.pageNumber))
+      .filter(([cacheKey]) => !protectedSet.has(cacheKey))
       .sort(([, a], [, b]) => a.lastUsed - b.lastUsed);
 
     while (pageCacheRef.current.size > CACHE_LIMIT && entries.length) {
@@ -292,10 +314,61 @@ export default function PdfFlipbook({
     }
   }
 
+  function cancelStaleRenderTasks(protectedPages = getPrefetchPages()) {
+    const protectedSet = new Set(
+      protectedPages
+        .map((pageNumber) => {
+          try {
+            const spec = getRenderSpec(pageNumber);
+            return spec ? pageCacheKey(spec) : '';
+          } catch {
+            return '';
+          }
+        })
+        .filter(Boolean),
+    );
+
+    pageCacheRef.current.forEach((entry, cacheKey) => {
+      if (!entry.promise || protectedSet.has(cacheKey)) return;
+
+      pageCacheRef.current.delete(cacheKey);
+      disposePageEntry(entry);
+    });
+  }
+
+  function invalidateMismatchedRenderSizes() {
+    let currentSpec = null;
+
+    try {
+      currentSpec = getRenderSpec(currentPageRef.current);
+    } catch {
+      return;
+    }
+
+    if (!currentSpec) return;
+
+    pageCacheRef.current.forEach((entry, cacheKey) => {
+      const spec = entry.spec;
+      const matchesCurrentRenderSize =
+        spec?.src === currentSpec.src &&
+        spec.cssWidth === currentSpec.cssWidth &&
+        spec.cssHeight === currentSpec.cssHeight &&
+        spec.dpr === currentSpec.dpr &&
+        spec.qualityScale === currentSpec.qualityScale &&
+        spec.mode === currentSpec.mode;
+
+      if (matchesCurrentRenderSize) return;
+
+      pageCacheRef.current.delete(cacheKey);
+      disposePageEntry(entry);
+    });
+  }
+
   function queueVisiblePages(anchorPage = currentPageRef.current) {
     const pages = getPrefetchPages(anchorPage);
     if (!pages.length) return;
 
+    cancelStaleRenderTasks(pages);
     const visiblePages = getVisiblePages(anchorPage);
     Promise.all(visiblePages.map((pageNumber) => ensurePageRendered(pageNumber)))
       .then(() => {
@@ -308,14 +381,16 @@ export default function PdfFlipbook({
             Promise.resolve(),
           );
       })
-      .catch(() => {
-        setStatus('Unable to render the PDF pages.');
+      .catch((error) => {
+        setStatus(error instanceof Error ? error.message : 'Unable to render the PDF pages.');
       });
   }
 
   function getCachedTexture(pageNumber) {
-    const bucket = Math.ceil(getTargetRenderWidth() / 256) * 256;
-    const entry = findCachedPage(pageNumber, bucket);
+    const spec = getRenderSpec(pageNumber);
+    if (!spec) return null;
+
+    const entry = pageCacheRef.current.get(pageCacheKey(spec));
     if (!entry?.texture) return null;
 
     entry.lastUsed = performance.now();
@@ -356,71 +431,130 @@ export default function PdfFlipbook({
     sceneObjectsRef.current.push(edge);
   }
 
-  function createTurnShadow(sourceGeometry, turn) {
+  function createPageStack() {
     const THREE = threeRef.current;
     const scene = sceneRef.current;
     const layout = layoutRef.current;
     if (!THREE || !scene || !layout) return;
 
-    const geometry = sourceGeometry.clone();
-    const positions = geometry.attributes.position;
-    const sign = turn.direction === 'forward' ? 1 : -1;
+    const halfWidth = layout.pageWidth / 2;
+    const halfHeight = layout.pageHeight / 2;
 
-    for (let index = 0; index < positions.count; index += 1) {
-      const x = positions.getX(index);
-      const y = positions.getY(index);
-      const lift = Math.max(0, positions.getZ(index));
+    for (let index = 1; index <= 5; index += 1) {
+      const offsetX = index * layout.pageWidth * 0.0032;
+      const offsetY = index * layout.pageHeight * 0.0032;
+      const geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(halfWidth + offsetX, -halfHeight - offsetY, -0.006),
+        new THREE.Vector3(halfWidth + offsetX, halfHeight - offsetY, -0.006),
+        new THREE.Vector3(-halfWidth + offsetX, -halfHeight - offsetY, -0.006),
+        new THREE.Vector3(halfWidth + offsetX, -halfHeight - offsetY, -0.006),
+      ]);
+      const material = new THREE.LineBasicMaterial({
+        color: 0x1b3743,
+        opacity: 0.045,
+        transparent: true,
+        depthWrite: false,
+      });
+      const lines = new THREE.LineSegments(geometry, material);
 
-      positions.setXYZ(index, x - sign * lift * 0.08, y - lift * 0.035, 0.009);
+      lines.renderOrder = -1;
+      scene.add(lines);
+      sceneObjectsRef.current.push(lines);
     }
+  }
 
-    positions.needsUpdate = true;
+  function createTurnShadows(sourceGeometry, turn) {
+    const THREE = threeRef.current;
+    const scene = sceneRef.current;
+    const layout = layoutRef.current;
+    if (!THREE || !scene || !layout) return;
 
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        progress: { value: turn.progress },
-        direction: { value: sign },
-        cornerSign: { value: turn.corner === 'top' ? 1 : turn.corner === 'bottom' ? -1 : 0 },
-      },
-      vertexShader: `
-        varying vec2 vUv;
+    const sign = turn.direction === 'forward' ? 1 : -1;
+    const variants = [
+      { name: 0, order: 1, spreadX: 0.11, spreadY: 0.052 },
+      { name: 1, order: 2, spreadX: 0.035, spreadY: 0.016 },
+      { name: 2, order: 3, spreadX: 0.065, spreadY: 0.024 },
+    ];
 
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float progress;
-        uniform float direction;
-        uniform float cornerSign;
-        varying vec2 vUv;
+    variants.forEach((variant) => {
+      const geometry = sourceGeometry.clone();
+      const positions = geometry.attributes.position;
 
-        void main() {
-          float u = direction > 0.0 ? vUv.x : 1.0 - vUv.x;
-          float wave = sin(progress * 3.14159265);
-          float foldAxis = clamp(progress, 0.02, 0.98);
-          float fold = exp(-pow((u - foldAxis) * 8.5, 2.0));
-          float liftedSheet = smoothstep(0.08, 0.82, u) * wave;
-          float cornerY = cornerSign > 0.0 ? 1.0 : 0.0;
-          float cornerWeight = cornerSign == 0.0 ? 0.35 : pow(1.0 - abs(vUv.y - cornerY), 1.65);
-          float edgeFalloff = smoothstep(0.0, 0.12, u) * (1.0 - smoothstep(0.96, 1.0, u) * 0.18);
-          float alpha = (0.085 * liftedSheet + 0.18 * fold * wave) * edgeFalloff;
+      for (let index = 0; index < positions.count; index += 1) {
+        const x = positions.getX(index);
+        const y = positions.getY(index);
+        const lift = Math.max(0, positions.getZ(index));
 
-          alpha *= mix(0.78, 1.14, cornerWeight);
-          gl_FragColor = vec4(0.0, 0.0, 0.0, clamp(alpha, 0.0, 0.24));
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
+        positions.setXYZ(
+          index,
+          x - sign * lift * variant.spreadX,
+          y - lift * variant.spreadY,
+          0.006 + variant.name * 0.001,
+        );
+      }
+
+      positions.needsUpdate = true;
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          progress: { value: turn.progress },
+          direction: { value: sign },
+          cornerSign: { value: turn.corner === 'top' ? 1 : turn.corner === 'bottom' ? -1 : 0 },
+          variant: { value: variant.name },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform float progress;
+          uniform float direction;
+          uniform float cornerSign;
+          uniform float variant;
+          varying vec2 vUv;
+
+          void main() {
+            float u = direction > 0.0 ? vUv.x : 1.0 - vUv.x;
+            float wave = sin(progress * 3.14159265);
+            float foldAxis = clamp(progress, 0.02, 0.98);
+            float fold = exp(-pow((u - foldAxis) * 9.5, 2.0));
+            float nearFold = exp(-pow((u - foldAxis) * 20.0, 2.0));
+            float liftedSheet = smoothstep(0.04, 0.86, u) * wave;
+            float overlap = smoothstep(0.18, 0.98, u) * (1.0 - smoothstep(0.88, 1.0, u) * 0.28);
+            float cornerY = cornerSign > 0.0 ? 1.0 : 0.0;
+            float cornerWeight = cornerSign == 0.0 ? 0.38 : pow(clamp(1.0 - abs(vUv.y - cornerY), 0.0, 1.0), 1.7);
+            float edgeFalloff = smoothstep(0.0, 0.13, u) * (1.0 - smoothstep(0.985, 1.0, u) * 0.16);
+            float alpha = 0.0;
+
+            if (variant < 0.5) {
+              alpha = (0.055 * liftedSheet + 0.085 * fold * wave) * edgeFalloff;
+              alpha *= mix(0.76, 1.12, cornerWeight);
+            } else if (variant < 1.5) {
+              alpha = nearFold * wave * 0.105;
+              alpha *= smoothstep(0.04, 0.2, u) * (1.0 - smoothstep(0.92, 1.0, u) * 0.4);
+            } else {
+              alpha = overlap * fold * wave * 0.13;
+              alpha *= mix(0.72, 1.2, cornerWeight);
+            }
+
+            gl_FragColor = vec4(0.0, 0.0, 0.0, clamp(alpha, 0.0, 0.22));
+          }
+        `,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.renderOrder = variant.order;
+      scene.add(mesh);
+      sceneObjectsRef.current.push(mesh);
     });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 2;
-    scene.add(mesh);
-    sceneObjectsRef.current.push(mesh);
   }
 
   function createCurlGeometry(turn) {
@@ -428,20 +562,24 @@ export default function PdfFlipbook({
     const layout = layoutRef.current;
     if (!THREE || !layout) return null;
 
+    const segmentsX = Math.round(clamp(layout.pageScreenWidth / 9, MIN_CURL_SEGMENTS_X, MAX_CURL_SEGMENTS_X));
+    const segmentsY = Math.round(clamp(layout.pageScreenHeight / 9, MIN_CURL_SEGMENTS_Y, MAX_CURL_SEGMENTS_Y));
     const geometry = new THREE.PlaneGeometry(
       layout.pageWidth,
       layout.pageHeight,
-      CURL_SEGMENTS_X,
-      CURL_SEGMENTS_Y,
+      segmentsX,
+      segmentsY,
     );
     const positions = geometry.attributes.position;
     const sign = turn.direction === 'forward' ? 1 : -1;
     const pivotX = turn.direction === 'forward' ? -layout.pageWidth / 2 : layout.pageWidth / 2;
     const progress = clamp(turn.progress, 0, 1);
     const wave = Math.sin(Math.PI * progress);
-    const curlStrength = 0.78 * wave;
     const cornerSign = turn.corner === 'top' ? 1 : turn.corner === 'bottom' ? -1 : 0;
     const cornerYNorm = turn.corner === 'top' ? 1 : turn.corner === 'bottom' ? 0 : 0.5;
+    const pointerYNorm = clamp(turn.pointerRatio ?? cornerYNorm, 0, 1);
+    const verticalPull = clamp(turn.verticalPull ?? 0, -0.42, 0.42);
+    const baseFold = clamp(1 - progress * 0.94, 0.035, 0.98);
 
     for (let index = 0; index < positions.count; index += 1) {
       const localX = positions.getX(index);
@@ -451,21 +589,37 @@ export default function PdfFlipbook({
         turn.direction === 'forward'
           ? clamp((localX + layout.pageWidth / 2) / layout.pageWidth, 0, 1)
           : clamp((layout.pageWidth / 2 - localX) / layout.pageWidth, 0, 1);
-      const pageDepth = span * layout.pageWidth;
       const cornerWeight =
         cornerSign === 0 ? 0 : Math.pow(clamp(1 - Math.abs(yNorm - cornerYNorm), 0, 1), 1.65);
+      const pointerWeight = Math.pow(clamp(1 - Math.abs(yNorm - pointerYNorm) * 1.9, 0, 1), 1.45);
       const freeEdgeWeight = Math.pow(span, 1.35);
-      const diagonalLead = cornerSign === 0 ? 0 : cornerWeight * freeEdgeWeight * wave * 0.18;
-      const localProgress = clamp(progress + diagonalLead, 0, 1);
+      const diagonalLead =
+        cornerSign === 0
+          ? pointerWeight * freeEdgeWeight * wave * 0.035
+          : Math.max(cornerWeight, pointerWeight * 0.56) * freeEdgeWeight * wave * 0.16;
+      const fold = clamp(baseFold - diagonalLead, 0.025, 0.985);
+      const transition = 0.115 + wave * 0.035;
+      const curlInfluence = smoothstep(fold - transition, fold + transition, span);
+      const maxDistance = Math.max(layout.pageWidth * 0.035, (1 - fold) * layout.pageWidth);
+      const distancePastFold = Math.max(0, span - fold) * layout.pageWidth;
+      const distanceRatio = clamp(distancePastFold / maxDistance, 0, 1);
       const crossSheetTwist =
-        cornerSign === 0 ? 0 : cornerSign * (yNorm - 0.5) * Math.pow(span, 1.05) * wave * 0.24;
-      const curledAngle = Math.PI * localProgress + curlStrength * Math.pow(span, 0.78) + crossSheetTwist;
-      const edgeLift = wave * Math.sin(Math.PI * span) * layout.pageWidth * 0.025;
+        cornerSign === 0
+          ? (pointerYNorm - 0.5) * Math.pow(span, 1.05) * wave * 0.08
+          : cornerSign * (yNorm - 0.5) * Math.pow(span, 1.05) * wave * 0.26;
+      const foldX = pivotX + sign * fold * layout.pageWidth;
+      const angleMax = Math.PI * (0.86 + progress * 0.62) + crossSheetTwist;
+      const angle = distanceRatio * angleMax;
+      const curledX = foldX + sign * Math.cos(angle) * distancePastFold;
+      const curledZ = Math.max(0, Math.sin(angle)) * distancePastFold * 0.25;
+      const edgeLift = wave * Math.sin(Math.PI * span) * layout.pageWidth * 0.02;
       const cornerLift = cornerWeight * freeEdgeWeight * wave * layout.pageWidth * 0.095;
       const horizontalEdgePull =
         cornerSign === 0
-          ? 0
-          : -cornerSign * cornerWeight * freeEdgeWeight * wave * layout.pageHeight * 0.115;
+          ? verticalPull * pointerWeight * freeEdgeWeight * wave * layout.pageHeight * 0.16
+          : (-cornerSign * cornerWeight * wave * 0.112 + verticalPull * Math.max(cornerWeight, pointerWeight * 0.5) * 0.62) *
+            freeEdgeWeight *
+            layout.pageHeight;
       const adjacentEdgeTension =
         cornerSign === 0
           ? 0
@@ -475,9 +629,10 @@ export default function PdfFlipbook({
             wave *
             layout.pageHeight *
             0.052;
-      const x = pivotX + sign * Math.cos(curledAngle) * pageDepth;
-      const y = localY + horizontalEdgePull + adjacentEdgeTension;
-      const z = 0.014 + Math.max(0, Math.sin(curledAngle) * pageDepth * 0.19) + edgeLift + cornerLift;
+      const curledY = localY + horizontalEdgePull + adjacentEdgeTension;
+      const x = localX + (curledX - localX) * curlInfluence;
+      const y = localY + (curledY - localY) * curlInfluence;
+      const z = (curledZ + edgeLift + cornerLift) * curlInfluence + 0.014 * curlInfluence;
 
       positions.setXYZ(index, x, y, z);
     }
@@ -525,7 +680,7 @@ export default function PdfFlipbook({
     const geometry = createCurlGeometry(turn);
     if (!geometry) return;
 
-    createTurnShadow(geometry, turn);
+    createTurnShadows(geometry, turn);
 
     const frontMaterial = createTurnMaterial(frontTexture, THREE.FrontSide);
     const backMaterial = createTurnMaterial(backTexture, THREE.BackSide);
@@ -552,6 +707,8 @@ export default function PdfFlipbook({
     const basePage = turn ? turn.toPage : currentPageRef.current;
     const pages = getVisiblePages(basePage, pageCountRef.current);
 
+    createPageStack();
+
     pages.forEach((pageNumber) => {
       createStaticPage(pageNumber);
     });
@@ -572,7 +729,7 @@ export default function PdfFlipbook({
     const rect = viewport.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
     renderer.setPixelRatio(dpr);
     renderer.setSize(rect.width, rect.height, false);
 
@@ -608,8 +765,10 @@ export default function PdfFlipbook({
       worldWidth,
       worldHeight,
       pageScreenWidth: rect.width * (pageWidth / worldWidth),
+      pageScreenHeight: rect.height * (pageHeight / worldHeight),
     };
 
+    invalidateMismatchedRenderSizes();
     queueVisiblePages();
     renderBook();
   }
@@ -639,7 +798,7 @@ export default function PdfFlipbook({
       await Promise.all(requiredPages.map((pageNumber) => ensurePageRendered(pageNumber)));
     } catch (error) {
       console.error('PDF flipbook failed to prepare a turn.', error);
-      setStatus('Unable to render the PDF pages.');
+      setStatus(error instanceof Error ? error.message : 'Unable to render the PDF pages.');
       setIsTurning(false);
       pendingTurnRef.current = false;
       return null;
@@ -653,6 +812,8 @@ export default function PdfFlipbook({
       backPage,
       corner: options.corner ?? 'center',
       grabRatio: options.grabRatio ?? 0.5,
+      pointerRatio: options.grabRatio ?? 0.5,
+      verticalPull: 0,
       progress: 0,
     };
 
@@ -674,6 +835,17 @@ export default function PdfFlipbook({
     turnRef.current = null;
     setIsTurning(false);
     renderBook();
+  }
+
+  function settleTurn(turn, duration = QUICK_TURN_DURATION_MS) {
+    const shouldComplete = turn.progress >= 0.5;
+
+    if (shouldComplete) {
+      animateTurn(turn, 1, duration, () => finishTurn(turn));
+      return;
+    }
+
+    animateTurn(turn, 0, duration, cancelTurn);
   }
 
   function animateTurn(turn, targetProgress, duration = TURN_DURATION_MS, onComplete = () => {}) {
@@ -738,6 +910,7 @@ export default function PdfFlipbook({
       const grabRatio = clamp(localY / rect.height, 0, 1);
       const corner = grabRatio < 0.28 ? 'top' : grabRatio > 0.72 ? 'bottom' : 'center';
       const edgeZone = Math.max(56, rect.width * 0.18);
+      const isNaturalSwipe = event.pointerType === 'touch' || event.pointerType === 'pen';
       const canGoNext = getNextPage(1) !== currentPageRef.current;
       const canGoPrevious = getNextPage(-1) !== currentPageRef.current;
       let direction = 0;
@@ -746,9 +919,9 @@ export default function PdfFlipbook({
         direction = 1;
       } else if (localX <= edgeZone && canGoPrevious) {
         direction = -1;
-      } else if (localX >= rect.width / 2 && canGoNext) {
+      } else if (isNaturalSwipe && localX >= rect.width / 2 && canGoNext) {
         direction = 1;
-      } else if (localX < rect.width / 2 && canGoPrevious) {
+      } else if (isNaturalSwipe && localX < rect.width / 2 && canGoPrevious) {
         direction = -1;
       }
 
@@ -760,6 +933,7 @@ export default function PdfFlipbook({
         pointerId: event.pointerId,
         rect,
         startX: event.clientX,
+        startY: event.clientY,
         lastX: event.clientX,
         lastY: event.clientY,
         corner,
@@ -799,6 +973,8 @@ export default function PdfFlipbook({
     event.preventDefault();
     const delta = drag.direction > 0 ? drag.startX - event.clientX : event.clientX - drag.startX;
     drag.turn.grabRatio = clamp((event.clientY - drag.rect.top) / drag.rect.height, 0, 1);
+    drag.turn.pointerRatio = drag.turn.grabRatio;
+    drag.turn.verticalPull = clamp((event.clientY - drag.startY) / drag.rect.height, -0.42, 0.42);
     drag.turn.progress = clamp(delta / (drag.rect.width * 0.42), 0.02, 0.98);
     renderBook();
   }, []);
@@ -812,14 +988,7 @@ export default function PdfFlipbook({
 
     if (!drag.turn) return;
 
-    const shouldComplete = drag.turn.progress > 0.24 || Math.abs(drag.lastX - drag.startX) > drag.rect.width * 0.16;
-
-    if (shouldComplete) {
-      animateTurn(drag.turn, 1, QUICK_TURN_DURATION_MS, () => finishTurn(drag.turn));
-      return;
-    }
-
-    animateTurn(drag.turn, 0, QUICK_TURN_DURATION_MS, cancelTurn);
+    settleTurn(drag.turn);
   }, []);
 
   const handlePointerCancel = useCallback((event) => {
@@ -838,8 +1007,8 @@ export default function PdfFlipbook({
     let isDisposed = false;
     const runId = initRunRef.current + 1;
     initRunRef.current = runId;
-    currentPageRef.current = 1;
-    setCurrentPage(1);
+    currentPageRef.current = Math.max(1, Math.round(initialPage));
+    setCurrentPage(currentPageRef.current);
     setStatus('Loading PDF');
     setIsReady(false);
 
@@ -894,11 +1063,11 @@ export default function PdfFlipbook({
 
         pageAspectRatioRef.current = nextAspectRatio;
         setPageAspectRatio(nextAspectRatio);
-        currentPageRef.current = normalizePage(1, pdf.numPages);
+        currentPageRef.current = normalizePage(initialPage, pdf.numPages);
         setCurrentPage(currentPageRef.current);
         resizeRenderer();
 
-        await ensurePageRendered(1);
+        await ensurePageRendered(currentPageRef.current);
 
         setStatus('');
         setIsReady(true);
@@ -907,7 +1076,7 @@ export default function PdfFlipbook({
       } catch (error) {
         if (!isDisposed) {
           console.error('PDF flipbook failed to initialise.', error);
-          setStatus('Unable to load the PDF.');
+          setStatus(error instanceof Error ? error.message : 'Unable to load the PDF.');
         }
       }
     }
@@ -968,6 +1137,12 @@ export default function PdfFlipbook({
         return;
       }
 
+      if (event.key === 'Escape' && turnRef.current) {
+        event.preventDefault();
+        settleTurn(turnRef.current);
+        return;
+      }
+
       if (event.key === 'ArrowRight' || event.key === 'PageDown') {
         event.preventDefault();
         goNext();
@@ -990,12 +1165,12 @@ export default function PdfFlipbook({
     <section
       className={`pdf-flipbook ${className}`}
       style={{ '--pdf-flipbook-aspect': bookAspectRatio }}
-      aria-label={title}
+      aria-label={`${title} PDF flipbook, ${ariaPageLabel}. Use left and right arrow keys or drag page corners to turn pages.`}
       ref={rootRef}
+      tabIndex={0}
     >
       <header className="pdf-flipbook__header">
         <h1>{title}</h1>
-        <p aria-live="polite">{visiblePageLabel}</p>
       </header>
 
       <div className="pdf-flipbook__stage">
@@ -1005,7 +1180,7 @@ export default function PdfFlipbook({
           data-turning={isTurning ? 'true' : 'false'}
           ref={viewportRef}
           role="img"
-          aria-label={`${title}, ${visiblePageLabel}`}
+          aria-label={`${title}, ${ariaPageLabel}`}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

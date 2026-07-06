@@ -4,6 +4,7 @@
   gap: clamp(0.85rem, 1.6vw, 1.35rem);
   grid-template-rows: auto minmax(0, 1fr);
   min-height: calc(100dvh - clamp(7.2rem, 12vh, 9rem));
+  outline: none;
   width: 100%;
 }
 
@@ -11,12 +12,11 @@
   align-items: end;
   display: flex;
   gap: 1rem;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-height: 1.2rem;
 }
 
-.pdf-flipbook__header h1,
-.pdf-flipbook__header p {
+.pdf-flipbook__header h1 {
   font-family: inherit;
   font-size: clamp(0.72rem, 0.82vw, 0.86rem);
   font-weight: 300;
@@ -24,11 +24,6 @@
   line-height: 1.15;
   margin: 0;
   text-transform: uppercase;
-}
-
-.pdf-flipbook__header p {
-  color: rgba(27, 55, 67, 0.62);
-  white-space: nowrap;
 }
 
 .pdf-flipbook__stage {
@@ -51,17 +46,12 @@
   overflow: visible;
   position: relative;
   touch-action: pan-y pinch-zoom;
-  transition: opacity 220ms ease;
   user-select: none;
   width: min(100%, calc((100dvh - 10.5rem) * var(--pdf-flipbook-aspect, 1.414)));
 }
 
 .pdf-flipbook__viewport:active {
   cursor: grabbing;
-}
-
-.pdf-flipbook__viewport[data-ready='false'] {
-  opacity: 0.72;
 }
 
 .pdf-flipbook__canvas-host,
@@ -113,8 +103,7 @@
 }
 
 @media (max-width: 480px) {
-  .pdf-flipbook__header h1,
-  .pdf-flipbook__header p {
+  .pdf-flipbook__header h1 {
     font-size: 0.66rem;
   }
 
@@ -129,7 +118,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pdf-flipbook__viewport,
   .pdf-flipbook__canvas {
     transition: none;
   }
