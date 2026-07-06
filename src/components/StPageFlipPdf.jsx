@@ -342,9 +342,20 @@ export default function StPageFlipPdf({ pdfUrl, initialPage = 1, ariaLabel = 'Po
           showCover: false,
           mobileScrollSupport: false,
           disableFlipByClick: true,
-          showPageCorners: true,
+          showPageCorners: false,
           swipeDistance: 24,
         });
+
+        const originalUserStop = pageFlip.userStop.bind(pageFlip);
+        // StPageFlip still treats corner clicks as flips; this viewer requires actual drag movement.
+        pageFlip.userStop = (point, isSwipe = false) => {
+          if (pageFlip.isUserTouch && !pageFlip.isUserMove && !isSwipe) {
+            pageFlip.isUserTouch = false;
+            return;
+          }
+
+          originalUserStop(point, isSwipe);
+        };
 
         pageFlipRef.current = pageFlip;
 
