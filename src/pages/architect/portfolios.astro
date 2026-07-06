@@ -1,37 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PdfFlipbook from '../../components/PdfFlipbook.jsx';
-
-const portfolioPdf = '/pdfs/2.2_G1_Sebastian_Varela_Hitscherich.pdf';
 ---
 
-<BaseLayout title="Portfolios | Varelism" description="Architectural portfolios.">
-  <section class="portfolio-flipbook-page" aria-label="Portfolios" data-varelism-route-reveal>
-    <PdfFlipbook
-      client:only="react"
-      src={portfolioPdf}
-      title="2.2 G1 Sebastian Varela Hitscherich"
-      initialPageAspectRatio={1686.61 / 1190.55}
-    />
-  </section>
+<BaseLayout title="Portfolios | Varelism" description="Portfolios.">
+  <section aria-label="Portfolios"></section>
 </BaseLayout>
-
-<style>
-  :global(main) {
-    max-width: none;
-    padding: clamp(6rem, 12vh, 8rem) clamp(0.85rem, 3.2vw, 2.4rem) 0;
-  }
-
-  .portfolio-flipbook-page {
-    margin: 0 auto;
-    max-width: 1460px;
-    min-height: calc(100dvh - clamp(6rem, 12vh, 8rem));
-    width: 100%;
-  }
-
-  @media (max-width: 560px) {
-    :global(main) {
-      padding: 5rem 0.65rem 0;
-    }
-  }
-</style>
