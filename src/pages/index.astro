@@ -511,7 +511,7 @@ const sections = [
         };
       };
 
-      const getStrokeColor = (point, alpha) => {
+      const getTrailColor = (point, alpha) => {
         if (point.tone < 0.018) return `rgba(105, 27, 23, ${alpha * 0.82})`;
         if (point.tone < 0.28) return `rgba(27, 55, 67, ${alpha})`;
         if (point.tone < 0.72) return `rgba(112, 116, 116, ${alpha * 0.9})`;
@@ -525,71 +525,32 @@ const sections = [
 
         if (!length) return;
 
-        const strokeStart = Math.max(1, length - (isCompact ? 96 : 150));
-        const breakDistance = Math.min(width, height) * (isCompact ? 0.2 : 0.18);
-        const strokeRuns = [];
-        let currentRun = [];
-        let previousProjected = null;
+        const step = 1;
+        const accentStart = Math.max(0, length - (isCompact ? 38 : 72));
 
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-
-        for (let index = strokeStart; index < length; index += 1) {
+        for (let index = 0; index < length; index += step) {
           const point = trail[index];
+          const age = index / Math.max(1, length - 1);
           const projected = projectPoint(point, time);
 
           if (projected.x < -4 || projected.y < -4 || projected.x > width + 4 || projected.y > height + 4) {
-            if (currentRun.length > 1) strokeRuns.push(currentRun);
-            currentRun = [];
-            previousProjected = null;
             continue;
           }
 
-          if (
-            previousProjected &&
-            Math.hypot(projected.x - previousProjected.x, projected.y - previousProjected.y) <=
-              breakDistance
-          ) {
-            currentRun.push({ index, point, x: projected.x, y: projected.y });
-          } else {
-            if (currentRun.length > 1) strokeRuns.push(currentRun);
-            currentRun = [{ index, point, x: projected.x, y: projected.y }];
-          }
-
-          previousProjected = projected;
-        }
-
-        if (currentRun.length > 1) strokeRuns.push(currentRun);
-
-        strokeRuns.forEach((run) => {
-          const last = run[run.length - 1];
-          const age = (last.index - strokeStart) / Math.max(1, length - strokeStart);
+          const recent = index >= accentStart ? (index - accentStart) / Math.max(1, length - accentStart) : 0;
           const alpha =
-            (isCompact ? 0.024 : 0.022) +
-            Math.pow(age, 2.1) * (isCompact ? 0.19 : 0.17);
+            (isCompact ? 0.036 : 0.022) +
+            Math.pow(age, isCompact ? 3 : 3.4) * (isCompact ? 0.36 : 0.27) +
+            recent * (isCompact ? 0.22 : 0.15);
 
-          context.beginPath();
-          context.moveTo(run[0].x, run[0].y);
-
-          if (run.length === 2) {
-            context.lineTo(run[1].x, run[1].y);
-          } else {
-            for (let index = 1; index < run.length - 1; index += 1) {
-              const current = run[index];
-              const next = run[index + 1];
-              const midX = (current.x + next.x) / 2;
-              const midY = (current.y + next.y) / 2;
-
-              context.quadraticCurveTo(current.x, current.y, midX, midY);
-            }
-
-            context.lineTo(last.x, last.y);
-          }
-
-          context.lineWidth = (isCompact ? 0.46 : 0.52) + age * (isCompact ? 0.28 : 0.34);
-          context.strokeStyle = getStrokeColor(last.point, alpha);
-          context.stroke();
-        });
+          context.fillStyle = getTrailColor(point, alpha);
+          context.fillRect(
+            Math.round(projected.x * dpr) / dpr,
+            Math.round(projected.y * dpr) / dpr,
+            dotSize,
+            dotSize,
+          );
+        }
 
         const head = trail[length - 1];
 
@@ -597,12 +558,12 @@ const sections = [
 
         const projectedHead = projectPoint(head, time);
 
-        context.fillStyle = 'rgba(27, 55, 67, 0.3)';
+        context.fillStyle = 'rgba(27, 55, 67, 0.24)';
         context.fillRect(
           Math.round(projectedHead.x * dpr) / dpr,
           Math.round(projectedHead.y * dpr) / dpr,
-          dotSize,
-          dotSize,
+          dotSize + 0.5,
+          dotSize + 0.5,
         );
       };
 
@@ -639,9 +600,9 @@ const sections = [
         height = nextHeight;
         dpr = nextDpr;
         isCompact = nextCompact;
-        iterationsPerFrame = isCompact ? 3 : 5;
-        maxTrail = isCompact ? 420 : 680;
-        dotSize = isCompact ? 1.08 : 1.08;
+        iterationsPerFrame = isCompact ? 5 : 7;
+        maxTrail = isCompact ? 560 : 920;
+        dotSize = isCompact ? 1.22 : 1.22;
         fieldScale = Math.min(
           (width * (isCompact ? 0.78 : 0.84)) / selectedPreset.rangeX,
           (height * (isCompact ? 0.48 : 0.66)) / selectedPreset.rangeY,
