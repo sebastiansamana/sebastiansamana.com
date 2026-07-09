@@ -1,0 +1,88 @@
+﻿---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Math Visualisation | Varelism" description="Polynomial map visualisation.">
+  <section class="math-hero" aria-label="Polynomial map visualisation" data-varelism-route-reveal>
+    <canvas
+      class="math-hero__canvas"
+      width="992"
+      height="1772"
+      data-math-hero-canvas
+      aria-hidden="true"
+    ></canvas>
+  </section>
+</BaseLayout>
+
+<script src="/scripts/math-visualisation-canvas.js" defer data-astro-rerun></script>
+
+<style>
+  :global(.site-shell) {
+    background: #ffffff;
+    min-height: 100vh;
+  }
+
+  :global(html),
+  :global(body) {
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  :global(.site-header),
+  :global(.site-footer),
+  :global(astro-dev-toolbar) {
+    display: none;
+  }
+
+  :global(.site-shell > main) {
+    display: grid;
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding: 0;
+    place-items: center;
+    width: 100%;
+  }
+
+  .math-hero {
+    align-items: center;
+    background: #ffffff;
+    display: block;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+    justify-items: center;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .math-hero__canvas {
+    display: block;
+    height: auto;
+    left: 50%;
+    max-height: none;
+    max-width: none;
+    object-fit: contain;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: max(102vw, calc(102dvh * 992 / 1772));
+  }
+
+  @media (max-width: 560px) {
+    .math-hero__canvas {
+      height: auto;
+      max-height: none;
+      max-width: none;
+      transform: translate(-50%, -50%);
+      width: max(116vw, calc(104dvh * 992 / 1772));
+    }
+  }
+</style>
+

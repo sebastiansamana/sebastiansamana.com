@@ -1,0 +1,54 @@
+<div class="math-visualisation-background" aria-hidden="true" data-varelism-math-background>
+  <canvas
+    class="math-visualisation-background__canvas"
+    width="992"
+    height="1772"
+    data-math-hero-canvas
+    data-math-pixel-ratio-cap="1.75"
+    data-math-render-scale-cap="1.9"
+  ></canvas>
+</div>
+
+<script src="/scripts/math-visualisation-canvas.js" defer data-astro-rerun></script>
+
+<style>
+  .math-visualisation-background {
+    background: #ffffff;
+    contain: layout paint style;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: fixed;
+    transform: translateZ(0);
+    width: 100%;
+    z-index: 0;
+  }
+
+  .math-visualisation-background__canvas {
+    display: block;
+    height: auto;
+    left: 50%;
+    max-height: none;
+    max-width: none;
+    opacity: 1;
+    position: absolute;
+    top: 50%;
+    transform: translate3d(-50%, -50%, 0);
+    width: max(112vw, calc(112dvh * 992 / 1772));
+    will-change: transform;
+  }
+
+  :global(.site-shell) {
+    isolation: isolate;
+  }
+
+  :global(.site-shell > main) {
+    position: relative;
+  }
+
+  @media (max-width: 720px) {
+    .math-visualisation-background__canvas {
+      width: max(126vw, calc(116dvh * 992 / 1772));
+    }
+  }
+</style>

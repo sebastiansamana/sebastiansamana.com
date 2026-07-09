@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import MathVisualisationBackground from '../components/MathVisualisationBackground.astro';
 
 const sections = [
   { title: 'Author', href: '/author/' },
@@ -9,6 +10,7 @@ const sections = [
 ---
 
 <BaseLayout title="Varelism" description="Author, architect, and artist.">
+  <MathVisualisationBackground />
   <section class="triptych" aria-label="Varelism sections">
     {sections.map((section) => (
       <div class="triptych-item">
@@ -67,7 +69,9 @@ const sections = [
     min-height: 100svh;
     min-height: 100dvh;
     padding: clamp(1.5rem, 4vh, 3rem) clamp(1.25rem, 6vw, 6rem);
+    position: relative;
     width: min(100%, 1280px);
+    z-index: 1;
   }
 
   .triptych-item {
