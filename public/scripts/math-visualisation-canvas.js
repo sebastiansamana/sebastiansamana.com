@@ -99,7 +99,7 @@
     const width = 992;
     const height = 1772;
     const centerAnchor = [width * 0.5, height * 0.5];
-    const connectIterateStrokes = true;
+    const connectIterateStrokes = false;
     const targetRenderFrameMs = 1000 / 60;
     const sourceStates = [6, 7, 5].map((index) => {
       const [, params, anchor, scaleFactor] = keyframes[index];
@@ -294,6 +294,19 @@
       return Math.max(4.5, Math.min(cap, sample * 1.38));
     };
 
+    const stampCircle = (ctx, point, rgba, radius, blur = 0) => {
+      ctx.fillStyle = rgba;
+      if (blur > 0) {
+        ctx.shadowBlur = blur;
+        ctx.shadowColor = rgba;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.arc(point[0], point[1], radius, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
     const wrapIndex = (index, length) => ((index % length) + length) % length;
 
     const curvatureAt = (screen, index, span = 5) => {
@@ -321,32 +334,54 @@
     const curveWeightAt = (screen, index, span = 6) =>
       clamp((curvatureAt(screen, index, span) - 0.006) / 0.11, 0, 1);
 
+    const localStepAt = (screen, index) => {
+      const current = screen[wrapIndex(index, screen.length)];
+      const previous = screen[wrapIndex(index - 1, screen.length)];
+      const next = screen[wrapIndex(index + 1, screen.length)];
+
+      return Math.max(
+        Math.hypot(current[0] - previous[0], current[1] - previous[1]),
+        Math.hypot(next[0] - current[0], next[1] - current[1]),
+      );
+    };
+
+    const continuityWeightAt = (screen, index, limit) => {
+      const step = localStepAt(screen, index);
+      const longJumpLimit = Math.min(limit, 6.2);
+      if (!Number.isFinite(step) || step > longJumpLimit) return 0;
+
+      const lower = clamp((step - 0.006) / 0.34, 0.45, 1);
+      const upper = clamp((longJumpLimit - step) / Math.max(0.8, longJumpLimit * 0.38), 0, 1);
+
+      return lower * upper;
+    };
+
     const strokeCurvedRibbon = (ctx, screen, pathIndex, alphaMultiplier) => {
       const limit = Math.min(continuityLimit(screen, 16), 18);
       const layers = [
         {
-          alpha: pathIndex < 8 ? 0.13 : 0.074,
-          blur: 2.05,
+          alpha: pathIndex < 8 ? 0.165 : 0.088,
+          blur: 1.85,
           shade: 28 + (pathIndex % 4) * 3,
           step: 4,
-          threshold: 0.044,
-          width: pathIndex < 8 ? 2.15 : 1.32,
+          threshold: 0.082,
+          width: pathIndex < 8 ? 2.35 : 1.45,
         },
         {
-          alpha: pathIndex < 8 ? 0.105 : 0.062,
-          blur: 0.72,
+          alpha: pathIndex < 8 ? 0.13 : 0.072,
+          blur: 0.75,
           shade: 14 + (pathIndex % 4) * 2,
           step: 3,
-          threshold: 0.052,
-          width: pathIndex < 8 ? 0.82 : 0.5,
+          threshold: 0.096,
+          width: pathIndex < 8 ? 0.92 : 0.56,
         },
         {
-          alpha: pathIndex < 8 ? 0.255 : 0.145,
+          alpha: pathIndex < 8 ? 0.36 : 0.19,
           blur: 0.22,
           shade: 2 + (pathIndex % 3),
           step: 3,
-          threshold: 0.064,
-          width: pathIndex < 8 ? 0.52 : 0.34,
+          threshold: 0.112,
+          width: pathIndex < 8 ? 0.62 : 0.4,
         },
       ];
 
@@ -354,13 +389,10 @@
         let open = false;
         let segmentCount = 0;
 
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
         ctx.lineWidth = layer.width;
         ctx.strokeStyle = color(layer.shade, layer.shade, layer.shade, layer.alpha * alphaMultiplier);
         ctx.shadowBlur = layer.blur;
         ctx.shadowColor = ctx.strokeStyle;
-        const layerLimit = Math.max(82, limit * (layer.step + 0.35));
 
         for (let index = layer.step; index < screen.length; index += layer.step) {
           const start = screen[index - layer.step];
@@ -373,11 +405,11 @@
           if (
             !Number.isFinite(jumpA) ||
             !Number.isFinite(jumpB) ||
-            jumpA > layerLimit ||
-            jumpB > layerLimit ||
+            jumpA > limit ||
+            jumpB > limit ||
             curveWeight < layer.threshold
           ) {
-            if (open && segmentCount > 0) ctx.stroke();
+            if (open && segmentCount > 2) ctx.stroke();
             open = false;
             segmentCount = 0;
             continue;
@@ -403,163 +435,13 @@
           }
         }
 
-        if (open && segmentCount > 0) ctx.stroke();
-      });
-    };
-
-    const strokeCurvedWash = (ctx, screen, pathIndex, localDensityAt, alphaMultiplier) => {
-      const limit = Math.min(continuityLimit(screen, 15), 15.5);
-      const layers = [
-        {
-          alpha: pathIndex < 8 ? 0.042 : 0.028,
-          blur: 8.6,
-          shade: 42,
-          step: 5,
-          width: pathIndex < 8 ? 6.4 : 4.1,
-        },
-        {
-          alpha: pathIndex < 8 ? 0.03 : 0.02,
-          blur: 4.2,
-          shade: 24,
-          step: 4,
-          width: pathIndex < 8 ? 3.1 : 2.05,
-        },
-      ];
-
-      layers.forEach((layer) => {
-        let open = false;
-        let segmentCount = 0;
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = layer.width;
-        ctx.shadowBlur = layer.blur;
-        ctx.strokeStyle = color(layer.shade, layer.shade, layer.shade, layer.alpha * alphaMultiplier);
-        ctx.shadowColor = ctx.strokeStyle;
-        const layerLimit = Math.max(96, limit * (layer.step + 0.3));
-
-        for (let index = layer.step; index < screen.length; index += layer.step) {
-          const start = screen[index - layer.step];
-          const control = screen[index - Math.max(1, Math.floor(layer.step * 0.5))];
-          const end = screen[index];
-          const jumpA = Math.hypot(control[0] - start[0], control[1] - start[1]);
-          const jumpB = Math.hypot(end[0] - control[0], end[1] - control[1]);
-          const densityRaw = clamp((localDensityAt(control) - 3.8) / 18, 0, 1);
-          const densityWeight = smoothstep(densityRaw);
-
-          if (
-            !Number.isFinite(jumpA) ||
-            !Number.isFinite(jumpB) ||
-            jumpA > layerLimit ||
-            jumpB > layerLimit ||
-            densityWeight <= 0.012
-          ) {
-            if (open && segmentCount > 0) ctx.stroke();
-            open = false;
-            segmentCount = 0;
-            continue;
-          }
-
-          const midX = (control[0] + end[0]) * 0.5;
-          const midY = (control[1] + end[1]) * 0.5;
-
-          if (!open) {
-            ctx.beginPath();
-            ctx.moveTo(start[0], start[1]);
-            open = true;
-          }
-
-          ctx.quadraticCurveTo(control[0], control[1], midX, midY);
-          segmentCount += 1;
-
-          if (segmentCount >= 52) {
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(midX, midY);
-            segmentCount = 0;
-          }
-        }
-
-        if (open && segmentCount > 0) ctx.stroke();
-      });
-    };
-
-    const strokeFlowLines = (ctx, screen, pathIndex, alphaMultiplier) => {
-      const limit = Math.min(continuityLimit(screen, 13), 14.5);
-      const layers = [
-        {
-          alpha: pathIndex < 8 ? 0.034 : 0.021,
-          blur: 1.35,
-          shade: 38,
-          step: 3,
-          width: pathIndex < 8 ? 1.08 : 0.64,
-        },
-        {
-          alpha: pathIndex < 8 ? 0.052 : 0.032,
-          blur: 0.16,
-          shade: 6 + (pathIndex % 3) * 2,
-          step: 2,
-          width: pathIndex < 8 ? 0.28 : 0.17,
-        },
-      ];
-
-      layers.forEach((layer) => {
-        let open = false;
-        let segmentCount = 0;
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = layer.width;
-        ctx.shadowBlur = layer.blur;
-        ctx.strokeStyle = color(layer.shade, layer.shade, layer.shade, layer.alpha * alphaMultiplier);
-        ctx.shadowColor = ctx.strokeStyle;
-        const layerLimit = Math.max(78, limit * (layer.step + 0.45));
-
-        for (let index = layer.step; index < screen.length; index += layer.step) {
-          const start = screen[index - layer.step];
-          const control = screen[index - Math.max(1, Math.floor(layer.step * 0.5))];
-          const end = screen[index];
-          const jumpA = Math.hypot(control[0] - start[0], control[1] - start[1]);
-          const jumpB = Math.hypot(end[0] - control[0], end[1] - control[1]);
-
-          if (
-            !Number.isFinite(jumpA) ||
-            !Number.isFinite(jumpB) ||
-            jumpA > layerLimit ||
-            jumpB > layerLimit
-          ) {
-            if (open && segmentCount > 0) ctx.stroke();
-            open = false;
-            segmentCount = 0;
-            continue;
-          }
-
-          const midX = (control[0] + end[0]) * 0.5;
-          const midY = (control[1] + end[1]) * 0.5;
-
-          if (!open) {
-            ctx.beginPath();
-            ctx.moveTo(start[0], start[1]);
-            open = true;
-          }
-
-          ctx.quadraticCurveTo(control[0], control[1], midX, midY);
-          segmentCount += 1;
-
-          if (segmentCount >= 96) {
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(midX, midY);
-            segmentCount = 0;
-          }
-        }
-
-        if (open && segmentCount > 0) ctx.stroke();
+        if (open && segmentCount > 2) ctx.stroke();
       });
     };
 
     const drawPaths = (ctx, paths, transform, frame, options = {}) => {
       const alphaMultiplier = options.alphaMultiplier ?? 1;
+      const bodyStep = options.bodyStep ?? 1;
       const screens = paths.map((path) => mapPath(path, transform));
       const cellSize = 18;
       const densityColumns = Math.ceil(width / cellSize) + 2;
@@ -595,9 +477,49 @@
       };
 
       screens.forEach((screen, pathIndex) => {
-        strokeCurvedWash(ctx, screen, pathIndex, localDensityAt, alphaMultiplier);
-        strokeFlowLines(ctx, screen, pathIndex, alphaMultiplier);
+        const pointStride = bodyStep;
+
         if (connectIterateStrokes) strokeCurvedRibbon(ctx, screen, pathIndex, alphaMultiplier);
+
+        for (let i = pathIndex % pointStride; i < screen.length; i += pointStride) {
+          const p = screen[i];
+          if (p[0] < -10 || p[0] > width + 10 || p[1] < -10 || p[1] > height + 10) continue;
+          const curveWeight = curveWeightAt(screen, i, 7);
+          const weight = curveWeight ** 1.08;
+          const densityRaw = clamp((localDensityAt(p) - 5.8) / 12.6, 0, 1);
+          const densityWeight = smoothstep(densityRaw) ** 1.55;
+          if (densityWeight <= 0.012) continue;
+
+          const shade = 2 + 20 * (1 - weight);
+
+          if ((i + pathIndex) % 2 === 0) {
+            stampCircle(
+              ctx,
+              p,
+              color(
+                42,
+                42,
+                42,
+                (pathIndex < 8 ? 0.13 : 0.07) * (0.42 + weight) * densityWeight * alphaMultiplier,
+              ),
+              0.16 + 0.055 * weight,
+              0,
+            );
+          }
+
+          stampCircle(
+            ctx,
+            p,
+            color(
+              shade,
+              shade,
+              shade,
+              (pathIndex < 8 ? 0.34 : 0.19) * (0.28 + weight) * densityWeight * alphaMultiplier,
+            ),
+            0.055 + 0.075 * weight,
+            0,
+          );
+        }
       });
 
       ctx.shadowBlur = 0;
@@ -703,7 +625,7 @@
               deltaMs,
               snapTransform,
             );
-            drawPaths(ctx, paths, transform, frameNumber, { alphaMultiplier: 2.59 });
+            drawPaths(ctx, paths, transform, frameNumber, { alphaMultiplier: 2.59, bodyStep: 1 });
           }
         };
 
