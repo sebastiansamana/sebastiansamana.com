@@ -9,16 +9,20 @@
   ></canvas>
 </div>
 
-<script src="/scripts/math-visualisation-canvas.js" defer data-astro-rerun></script>
+<script src="/scripts/math-visualisation-canvas.js?v=20260709-2" defer data-astro-rerun></script>
 
 <style>
   .math-visualisation-background {
     background: #ffffff;
     contain: layout paint style;
+    height: 100%;
     inset: 0;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
     overflow: hidden;
     pointer-events: none;
-    position: fixed;
+    position: absolute;
     transform: translateZ(0);
     width: 100%;
     z-index: 0;

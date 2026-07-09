@@ -189,7 +189,7 @@
         const source = sourceStates[index % sourceStates.length];
         return {
           anchor: [...centerAnchor],
-          duration: 6.4,
+          duration: 8.2,
           params: [...source.params],
           scaleFactor: 1.08,
           serial,
@@ -222,7 +222,7 @@
           serial += 1;
           return {
             anchor: [...centerAnchor],
-            duration: 6.2 + random() * 4.2,
+            duration: 8 + random() * 5.2,
             params: softenedParams,
             scaleFactor: 0.88 + random() * 0.42,
             serial,
@@ -486,8 +486,9 @@
           if (p[0] < -10 || p[0] > width + 10 || p[1] < -10 || p[1] > height + 10) continue;
           const curveWeight = curveWeightAt(screen, i, 7);
           const weight = curveWeight ** 1.08;
-          const densityWeight = smoothstep(clamp((localDensityAt(p) - 4.8) / 13.6, 0, 1));
-          if (densityWeight <= 0.025) continue;
+          const densityRaw = clamp((localDensityAt(p) - 5.8) / 12.6, 0, 1);
+          const densityWeight = smoothstep(densityRaw) ** 1.55;
+          if (densityWeight <= 0.012) continue;
 
           const shade = 2 + 20 * (1 - weight);
 
@@ -501,7 +502,7 @@
                 42,
                 (pathIndex < 8 ? 0.13 : 0.07) * (0.42 + weight) * densityWeight * alphaMultiplier,
               ),
-              0.36 + 0.12 * weight,
+              0.16 + 0.055 * weight,
               0,
             );
           }
@@ -515,7 +516,7 @@
               shade,
               (pathIndex < 8 ? 0.34 : 0.19) * (0.28 + weight) * densityWeight * alphaMultiplier,
             ),
-            0.15 + 0.17 * weight,
+            0.055 + 0.075 * weight,
             0,
           );
         }
