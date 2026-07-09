@@ -189,7 +189,7 @@
         const source = sourceStates[index % sourceStates.length];
         return {
           anchor: [...centerAnchor],
-          duration: 8.2,
+          duration: 16.4,
           params: [...source.params],
           scaleFactor: 1.08,
           serial,
@@ -222,7 +222,7 @@
           serial += 1;
           return {
             anchor: [...centerAnchor],
-            duration: 8 + random() * 5.2,
+            duration: 16 + random() * 10.4,
             params: softenedParams,
             scaleFactor: 0.88 + random() * 0.42,
             serial,
@@ -625,7 +625,7 @@
               deltaMs,
               snapTransform,
             );
-            drawPaths(ctx, paths, transform, frameNumber, { alphaMultiplier: 1.48, bodyStep: 1 });
+            drawPaths(ctx, paths, transform, frameNumber, { alphaMultiplier: 2.59, bodyStep: 1 });
           }
         };
 
