@@ -75,6 +75,48 @@ const sections = [
 
         const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
 
+        const getColumnPoint = (event) => {
+          const rect = image.getBoundingClientRect();
+          const width = naturalWidth || image.naturalWidth;
+          const height = naturalHeight || image.naturalHeight;
+
+          if (
+            !width ||
+            !height ||
+            rect.width <= 0 ||
+            rect.height <= 0 ||
+            event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom
+          ) {
+            return null;
+          }
+
+          const x = Math.min(
+            width - 1,
+            Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * width)),
+          );
+          const y = Math.min(
+            height - 1,
+            Math.max(0, Math.floor(((event.clientY - rect.top) / rect.height) * height)),
+          );
+
+          return { height, width, x, y };
+        };
+
+        const isColumnFootprint = (point) => {
+          if (!point || !point.width || !point.height) return false;
+
+          const x = point.x / point.width;
+          const y = point.y / point.height;
+          const isTopCap = y >= 100 / 1290 && y <= 120 / 1290 && x >= 131 / 613 && x <= 482 / 613;
+          const isLowerCap = y > 120 / 1290 && y <= 136 / 1290 && x >= 160 / 613 && x <= 453 / 613;
+          const isShaft = y > 136 / 1290 && y <= 1217 / 1290 && x >= 200 / 613 && x <= 411 / 613;
+
+          return isTopCap || isLowerCap || isShaft;
+        };
+
         const setGroupHitState = (isHit) => {
           window.clearTimeout(clearGroupTimer);
           clearGroupTimer = 0;
@@ -132,30 +174,12 @@ const sections = [
             buildHitCanvas();
           }
 
-          if (!context || !naturalWidth || !naturalHeight) return false;
+          const point = getColumnPoint(event);
+          if (!point) return false;
+          if (isColumnFootprint(point)) return true;
+          if (!context) return false;
 
-          const rect = image.getBoundingClientRect();
-
-          if (
-            rect.width <= 0 ||
-            rect.height <= 0 ||
-            event.clientX < rect.left ||
-            event.clientX > rect.right ||
-            event.clientY < rect.top ||
-            event.clientY > rect.bottom
-          ) {
-            return false;
-          }
-
-          const x = Math.min(
-            naturalWidth - 1,
-            Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * naturalWidth)),
-          );
-          const y = Math.min(
-            naturalHeight - 1,
-            Math.max(0, Math.floor(((event.clientY - rect.top) / rect.height) * naturalHeight)),
-          );
-          const [red, green, blue, alpha] = context.getImageData(x, y, 1, 1).data;
+          const [red, green, blue, alpha] = context.getImageData(point.x, point.y, 1, 1).data;
 
           return (
             alpha > alphaThreshold &&
@@ -195,7 +219,7 @@ const sections = [
         };
 
         const isImmediateColumnTap = (event) =>
-          !context && isCoarsePointer() && isPointInsideImageRect(event);
+          !context && isCoarsePointer() && isColumnFootprint(getColumnPoint(event));
 
         prepareFinePointerHitCanvas();
 
