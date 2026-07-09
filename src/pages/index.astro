@@ -20,7 +20,7 @@ const sections = [
             class="column column-base"
             src="/images/Home_Page_Column.png"
             alt=""
-            width="720"
+            width="613"
             height="1290"
             loading="eager"
             fetchpriority="high"
@@ -30,7 +30,7 @@ const sections = [
             class="column column-hover"
             src="/images/Home_Page_Column_Cursor.png"
             alt=""
-            width="720"
+            width="613"
             height="1290"
             loading="eager"
             fetchpriority="high"
@@ -48,7 +48,7 @@ const sections = [
       document.querySelectorAll('.triptych-item').forEach((item) => {
         const link = item.querySelector('.triptych-link');
         const stack = item.querySelector('.column-stack');
-        const image = item.querySelector('.column-base');
+        const image = item.querySelector('.column-hover');
 
         if (
           !(item instanceof HTMLElement) ||
