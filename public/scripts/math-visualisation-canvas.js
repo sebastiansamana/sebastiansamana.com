@@ -100,7 +100,7 @@
     const height = 1772;
     const centerAnchor = [width * 0.5, height * 0.5];
     const connectIterateStrokes = true;
-    const defaultInitialTimelineOffsetMs = 137 * 1000;
+    const defaultInitialTimelineOffsetMs = 144 * 1000;
     const targetRenderFrameMs = 1000 / 60;
     const sourceStates = [6, 7, 5].map((index) => {
       const [, params, anchor, scaleFactor] = keyframes[index];
