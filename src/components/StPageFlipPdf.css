@@ -15,7 +15,6 @@
 
 .st-pdf-viewer__mount {
   display: grid;
-  filter: drop-shadow(0 1.25rem 2.6rem rgba(27, 55, 67, 0.11));
   justify-items: center;
   opacity: 0;
   place-items: center;
