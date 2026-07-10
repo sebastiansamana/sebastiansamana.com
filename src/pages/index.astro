@@ -130,8 +130,10 @@ const sections = [
 
   .column-hover {
     opacity: 0;
+    pointer-events: none;
     position: relative;
     transition: opacity 180ms ease;
+    will-change: opacity;
     z-index: 1;
   }
 
@@ -170,10 +172,6 @@ const sections = [
     color: #691b17;
   }
 
-  .triptych-item:has(.column-hitbox:active) .column-hover {
-    opacity: 1;
-  }
-
   .column-hitbox:active ~ .column-hover {
     opacity: 1;
   }
@@ -206,10 +204,6 @@ const sections = [
   @media (hover: hover) and (pointer: fine) {
     .triptych-item:has(.column-hitbox:hover) h1 {
       color: #691b17;
-    }
-
-    .triptych-item:has(.column-hitbox:hover) .column-hover {
-      opacity: 1;
     }
 
     .column-hitbox:hover ~ .column-hover {
