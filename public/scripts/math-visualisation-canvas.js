@@ -538,12 +538,14 @@
         let lastPaint = 0;
         let animationFrame = 0;
         let segmentDurationMs = 0;
+        let initialSegmentElapsedMs = 0;
         let segmentStart = 0;
         let smoothedTransform = null;
         const targetChooser = createTargetChooser();
         let currentTarget = targetChooser.initial();
         let nextTarget = targetChooser.choose(currentTarget);
         segmentDurationMs = nextTarget.duration * 1000;
+        const initialTimelineOffsetMs = Math.max(0, Number.parseFloat(canvas.dataset.mathInitialOffsetMs || '0'));
         const renderScaleCap = clamp(Number.parseFloat(canvas.dataset.mathRenderScaleCap || '3'), 1, 3);
         const pixelRatioCap = clamp(Number.parseFloat(canvas.dataset.mathPixelRatioCap || '2'), 1, 2);
 
@@ -629,10 +631,26 @@
           }
         };
 
-        const primeCanvas = () => {
-          renderState(interpolateTargets(currentTarget, nextTarget, 0), 0, targetRenderFrameMs, true);
+        const advanceInitialTimeline = (elapsedMs) => {
+          let remainingMs = Math.max(0, elapsedMs);
+
+          while (remainingMs >= segmentDurationMs) {
+            remainingMs -= segmentDurationMs;
+            currentTarget = nextTarget;
+            nextTarget = targetChooser.choose(currentTarget);
+            segmentDurationMs = nextTarget.duration * 1000;
+          }
+
+          initialSegmentElapsedMs = remainingMs;
+          frame = elapsedMs / targetRenderFrameMs;
         };
 
+        const primeCanvas = () => {
+          const phase = clamp(initialSegmentElapsedMs / Math.max(1, segmentDurationMs), 0, 1);
+          renderState(interpolateTargets(currentTarget, nextTarget, phase), frame, targetRenderFrameMs, true);
+        };
+
+        advanceInitialTimeline(initialTimelineOffsetMs);
         resizeCanvas();
         primeCanvas();
 
@@ -643,7 +661,7 @@
         };
 
         const paint = (timestamp) => {
-          if (!segmentStart) segmentStart = timestamp;
+          if (!segmentStart) segmentStart = timestamp - initialSegmentElapsedMs;
 
           const deltaMs = lastPaint ? Math.min(80, timestamp - lastPaint) : targetRenderFrameMs;
 
