@@ -1,0 +1,415 @@
+---
+import type { Portfolio } from '../data/portfolios';
+
+interface Props {
+  portfolios: Portfolio[];
+  detailBasePath?: string;
+}
+
+const { portfolios, detailBasePath = '/architect/portfolios/' } = Astro.props;
+const normalizedDetailBasePath = detailBasePath.endsWith('/') ? detailBasePath : `${detailBasePath}/`;
+const getPortfolioHref = (portfolio: Portfolio) => `${normalizedDetailBasePath}${portfolio.id}/`;
+const getPortfolioMeta = (portfolio: Portfolio) =>
+  [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} pages` : undefined].filter(Boolean).join(' / ');
+---
+
+<section class="portfolio-archive" data-portfolio-archive data-archive-view="grid" aria-label="Portfolios">
+  <header class="portfolio-archive__header">
+    {
+      portfolios.length > 0 && (
+        <div class="portfolio-archive__modes" aria-label="Archive view">
+          <button type="button" data-archive-view-button="grid" aria-pressed="true">Grid</button>
+          <button type="button" data-archive-view-button="list" aria-pressed="false">Index</button>
+        </div>
+      )
+    }
+  </header>
+
+  {
+    portfolios.length > 0 ? (
+      <>
+        <div class="portfolio-grid">
+          {
+            portfolios.map((portfolio) => (
+              <article class="portfolio-card">
+                <a href={getPortfolioHref(portfolio)}>
+                  {
+                    portfolio.coverImage && portfolio.coverImageWidth && portfolio.coverImageHeight && (
+                      <span class="portfolio-card__image-stack">
+                        <img
+                          class="portfolio-card__image"
+                          src={portfolio.coverImage}
+                          alt={portfolio.coverImageAlt ?? portfolio.title}
+                          width={portfolio.coverImageWidth}
+                          height={portfolio.coverImageHeight}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </span>
+                    )
+                  }
+                  <span class="portfolio-card__title">{portfolio.title}</span>
+                  {getPortfolioMeta(portfolio) && <span class="portfolio-card__meta">{getPortfolioMeta(portfolio)}</span>}
+                </a>
+              </article>
+            ))
+          }
+        </div>
+
+        <ol class="portfolio-index">
+          {
+            portfolios.map((portfolio) => (
+              <li>
+                <a href={getPortfolioHref(portfolio)}>
+                  <span class="portfolio-index__title">{portfolio.title}</span>
+                  {getPortfolioMeta(portfolio) && <span class="portfolio-index__meta">{getPortfolioMeta(portfolio)}</span>}
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </>
+    ) : (
+      <p class="portfolio-empty">No portfolios yet.</p>
+    )
+  }
+</section>
+
+<script>
+  (() => {
+    const routeEnterEvent = 'varelism:route-enter';
+    const routeEnteringClass = 'varelism-route-entering';
+
+    const revealArchive = (archive) => {
+      if (!(archive instanceof HTMLElement) || archive.dataset.portfolioArchiveReady === 'true') return;
+
+      archive.dataset.portfolioArchiveReady = 'true';
+      archive.removeAttribute('aria-busy');
+      window.requestAnimationFrame(() => {
+        archive.classList.add('is-ready');
+      });
+    };
+
+    const revealWhenRouteAllows = (archive) => {
+      if (!document.documentElement.classList.contains(routeEnteringClass)) {
+        revealArchive(archive);
+        return;
+      }
+
+      window.addEventListener(routeEnterEvent, () => revealArchive(archive), { once: true });
+    };
+
+    const setupArchive = () => {
+      document.querySelectorAll('[data-portfolio-archive]').forEach((archive) => {
+        if (!(archive instanceof HTMLElement) || archive.dataset.portfolioArchiveBooted === 'true') {
+          return;
+        }
+
+        archive.dataset.portfolioArchiveBooted = 'true';
+        archive.setAttribute('aria-busy', 'true');
+
+        const viewButtons = Array.from(archive.querySelectorAll('[data-archive-view-button]'));
+        const setView = (view) => {
+          archive.dataset.archiveView = view;
+          viewButtons.forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) return;
+            button.setAttribute('aria-pressed', String(button.dataset.archiveViewButton === view));
+          });
+        };
+
+        viewButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            setView(button instanceof HTMLElement && button.dataset.archiveViewButton === 'list' ? 'list' : 'grid');
+          });
+        });
+
+        revealWhenRouteAllows(archive);
+      });
+    };
+
+    setupArchive();
+
+    if (window.__varelismPortfolioArchiveReady) return;
+
+    window.__varelismPortfolioArchiveReady = true;
+    document.addEventListener('astro:page-load', setupArchive);
+  })();
+</script>
+
+<style>
+  :global(.site-shell > main) {
+    max-width: none;
+    padding: clamp(7rem, 13vh, 8.5rem) clamp(1rem, 4vw, 3rem) 0;
+    width: 100%;
+  }
+
+  .portfolio-archive {
+    --portfolio-gap: clamp(0.8rem, 1.8vw, 1.35rem);
+    --portfolio-column-width: clamp(11rem, 23vw, 18rem);
+    --portfolio-footer-text-color: #919191;
+    --portfolio-meta-hover-color: rgba(105, 27, 23, 0.5);
+    --portfolio-title-font-size: clamp(0.82rem, 1vw, 0.98rem);
+    --portfolio-content-width: calc(
+      var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-column-width) +
+        var(--portfolio-column-width) + var(--portfolio-gap) + var(--portfolio-gap) + var(--portfolio-gap)
+    );
+    --portfolio-aligned-width: min(100%, var(--portfolio-content-width));
+
+    color: #000000;
+    margin: 0 auto;
+    max-width: 82rem;
+    min-height: calc(100vh - clamp(7rem, 13vh, 8.5rem));
+    opacity: 0;
+    padding-bottom: clamp(2rem, 6vh, 4rem);
+    pointer-events: none;
+    transition: opacity 450ms ease;
+    width: 100%;
+  }
+
+  .portfolio-archive.is-ready {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .portfolio-archive__header {
+    align-items: baseline;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin: 0 auto clamp(2rem, 5vw, 4rem);
+    width: var(--portfolio-aligned-width);
+  }
+
+  .portfolio-archive__modes {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .portfolio-archive__modes button {
+    background: transparent;
+    border: 0;
+    color: #691b17;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--portfolio-title-font-size);
+    font-weight: 200;
+    line-height: 1;
+    padding: 0;
+    transition: color 180ms ease;
+  }
+
+  .portfolio-archive__modes button:focus-visible,
+  .portfolio-archive__modes button:hover {
+    color: #000000;
+  }
+
+  .portfolio-archive__modes button:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  .portfolio-grid {
+    display: grid;
+    gap: var(--portfolio-gap);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--portfolio-column-width)), var(--portfolio-column-width)));
+    justify-content: center;
+    margin: 0 auto;
+    width: var(--portfolio-aligned-width);
+  }
+
+  .portfolio-card a {
+    display: block;
+  }
+
+  .portfolio-card__image-stack {
+    background: #ffffff;
+    border: 1px solid #f2f2f2;
+    display: grid;
+  }
+
+  .portfolio-card img {
+    display: block;
+    height: auto;
+    pointer-events: none;
+    width: 100%;
+  }
+
+  .portfolio-card__title,
+  .portfolio-card__meta {
+    display: block;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0;
+    line-height: 1.2;
+    transition: color 180ms ease;
+  }
+
+  .portfolio-card__title {
+    font-size: 0.88rem;
+    font-weight: 300;
+    margin-top: 0.65rem;
+  }
+
+  .portfolio-card__meta {
+    color: var(--portfolio-footer-text-color);
+    font-size: 0.72rem;
+    font-weight: 200;
+    margin-top: 0.25rem;
+  }
+
+  .portfolio-card a:focus-visible .portfolio-card__title {
+    color: #691b17;
+  }
+
+  .portfolio-card a:focus-visible .portfolio-card__meta {
+    color: var(--portfolio-meta-hover-color);
+  }
+
+  .portfolio-card a:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .portfolio-card a:hover .portfolio-card__title {
+      color: #691b17;
+    }
+
+    .portfolio-card a:hover .portfolio-card__meta {
+      color: var(--portfolio-meta-hover-color);
+    }
+  }
+
+  .portfolio-index {
+    display: none;
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    width: var(--portfolio-aligned-width);
+  }
+
+  .portfolio-index li {
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .portfolio-index li:last-child {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .portfolio-index a {
+    align-items: baseline;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 0.85rem 0;
+  }
+
+  .portfolio-index__title {
+    font-size: 0.98rem;
+    font-weight: 300;
+  }
+
+  .portfolio-index__title,
+  .portfolio-index__meta {
+    transition: color 180ms ease;
+  }
+
+  .portfolio-index__meta,
+  .portfolio-empty {
+    color: var(--portfolio-footer-text-color);
+    font-size: 0.82rem;
+    font-weight: 200;
+  }
+
+  .portfolio-index a:focus-visible .portfolio-index__title,
+  .portfolio-index a:hover .portfolio-index__title {
+    color: #691b17;
+  }
+
+  .portfolio-index a:focus-visible .portfolio-index__meta,
+  .portfolio-index a:hover .portfolio-index__meta {
+    color: var(--portfolio-meta-hover-color);
+  }
+
+  .portfolio-index a:focus-visible {
+    outline: 1px solid #691b17;
+    outline-offset: 0.35rem;
+  }
+
+  .portfolio-empty {
+    margin: 0 auto;
+    width: var(--portfolio-aligned-width);
+  }
+
+  [data-archive-view='grid'] [data-archive-view-button='grid'],
+  [data-archive-view='list'] [data-archive-view-button='list'] {
+    display: none;
+  }
+
+  [data-archive-view='list'] .portfolio-grid {
+    display: none;
+  }
+
+  [data-archive-view='list'] .portfolio-index {
+    display: block;
+  }
+
+  @media (max-width: 1312px) {
+    .portfolio-archive {
+      --portfolio-content-width: calc(
+        var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-column-width) +
+          var(--portfolio-gap) + var(--portfolio-gap)
+      );
+    }
+  }
+
+  @media (max-width: 720px) {
+    :global(.site-shell > main) {
+      padding-top: 6.5rem;
+    }
+
+    .portfolio-archive {
+      --portfolio-column-width: calc(
+        (
+            100vw - clamp(1rem, 4vw, 3rem) - clamp(1rem, 4vw, 3rem) -
+              var(--portfolio-gap) - var(--portfolio-gap)
+          ) / 3
+      );
+      --portfolio-content-width: calc(
+        var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-column-width) +
+          var(--portfolio-gap) + var(--portfolio-gap)
+      );
+    }
+
+    .portfolio-index a {
+      align-items: flex-start;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .portfolio-archive {
+      --portfolio-column-width: calc(
+        (100vw - clamp(1rem, 4vw, 3rem) - clamp(1rem, 4vw, 3rem) - var(--portfolio-gap)) / 2
+      );
+      --portfolio-content-width: calc(
+        var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-gap)
+      );
+      --portfolio-title-font-size: 0.72rem;
+    }
+
+    .portfolio-archive__header {
+      gap: 0.65rem;
+    }
+
+    .portfolio-card__title,
+    .portfolio-card__meta,
+    .portfolio-index__title,
+    .portfolio-index__meta {
+      font-size: var(--portfolio-title-font-size);
+    }
+  }
+</style>
+

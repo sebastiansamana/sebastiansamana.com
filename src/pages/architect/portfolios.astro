@@ -1,27 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import StPageFlipPdf from '../../components/StPageFlipPdf.jsx';
-
-const portfolioPdfUrl = '/pdfs/2.2_G1_Sebastian_Varela_Hitscherich.pdf';
+import PortfolioArchive from '../../components/PortfolioArchive.astro';
+import { portfolios } from '../../data/portfolios';
 ---
 
 <BaseLayout title="Portfolios | Varelism" description="Portfolios.">
-  <section class="portfolio-flipbook-page" aria-label="Portfolios" data-varelism-route-reveal>
-    <StPageFlipPdf client:only="react" pdfUrl={portfolioPdfUrl} />
-  </section>
+  <PortfolioArchive portfolios={portfolios} />
 </BaseLayout>
-
-<style>
-  :global(.site-shell > main) {
-    max-width: none;
-    padding-left: clamp(1rem, 4vw, 3rem);
-    padding-right: clamp(1rem, 4vw, 3rem);
-  }
-
-  .portfolio-flipbook-page {
-    align-items: center;
-    display: grid;
-    min-height: calc(100svh - clamp(7rem, 13vh, 9rem));
-    width: 100%;
-  }
-</style>
