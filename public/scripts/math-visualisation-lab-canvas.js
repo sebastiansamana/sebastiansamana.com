@@ -100,7 +100,7 @@
     const height = 1772;
     const centerAnchor = [width * 0.5, height * 0.5];
     const connectIterateStrokes = false;
-    const initialTimelineOffsetMs = 90 * 1000;
+    const defaultInitialTimelineOffsetMs = 137 * 1000;
     const targetRenderFrameMs = 1000 / 60;
     const sourceStates = [6, 7, 5].map((index) => {
       const [, params, anchor, scaleFactor] = keyframes[index];
@@ -546,6 +546,10 @@
         let currentTarget = targetChooser.initial();
         let nextTarget = targetChooser.choose(currentTarget);
         segmentDurationMs = nextTarget.duration * 1000;
+        const initialTimelineOffsetMs = Math.max(
+          0,
+          Number.parseFloat(canvas.dataset.mathInitialOffsetMs || `${defaultInitialTimelineOffsetMs}`),
+        );
         const renderScaleCap = clamp(Number.parseFloat(canvas.dataset.mathRenderScaleCap || '3'), 1, 3);
         const pixelRatioCap = clamp(Number.parseFloat(canvas.dataset.mathPixelRatioCap || '2'), 1, 2);
 
