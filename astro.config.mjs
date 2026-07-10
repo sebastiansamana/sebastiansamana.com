@@ -8,4 +8,7 @@ export default defineConfig({
   base: process.env.BASE_PATH || '/',
   integrations: [react()],
   output: 'static',
+  redirects: {
+    '/architect/portfolios/of-consumption-and-participation-in-the-movable-module/': '/architect/portfolios/studio-2-2/',
+  },
 });

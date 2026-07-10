@@ -14,18 +14,62 @@ const { portfolio } = Astro.props;
 const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} pages` : undefined]
   .filter(Boolean)
   .join(' / ');
+const pageAspectRatio =
+  portfolio.coverImageWidth && portfolio.coverImageHeight ? portfolio.coverImageWidth / portfolio.coverImageHeight : 1.414;
 ---
 
 <BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
-  <article class="portfolio-detail" data-varelism-route-reveal>
-    <a class="portfolio-back" href="/architect/portfolios/">Return</a>
-    <PdfScrollViewer client:only="react" pdfUrl={portfolio.pdfUrl} title={portfolio.title} />
+  <article class="portfolio-detail" id="portfolio-detail-top" data-varelism-route-reveal>
+    <header class="portfolio-detail__header">
+      <a class="portfolio-detail__link portfolio-detail__return" href="/architect/portfolios/">Return</a>
+      <h1 class="portfolio-detail__title">{portfolio.title}</h1>
+    </header>
+
+    <PdfScrollViewer
+      client:only="react"
+      pdfUrl={portfolio.pdfUrl}
+      title={portfolio.title}
+      ariaLabel={`${portfolio.title} PDF`}
+      pageCount={portfolio.pageCount}
+      pageAspectRatio={pageAspectRatio}
+    />
+
+    <footer class="portfolio-detail__footer">
+      <a class="portfolio-detail__link portfolio-detail__top" href="#portfolio-detail-top" data-portfolio-back-to-top>
+        Back to top
+      </a>
+    </footer>
   </article>
 </BaseLayout>
+
+<script>
+  (() => {
+    const setupBackToTop = () => {
+      document.querySelectorAll('[data-portfolio-back-to-top]').forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement) || link.dataset.portfolioBackToTopReady === 'true') return;
+
+        link.dataset.portfolioBackToTopReady = 'true';
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+          window.scrollTo({
+            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+            top: 0,
+          });
+        });
+      });
+    };
+
+    setupBackToTop();
+    document.addEventListener('astro:page-load', setupBackToTop);
+  })();
+</script>
 
 <style>
   :global(.site-shell > main) {
     --portfolio-detail-top-offset: clamp(7rem, 13vh, 8.5rem);
+    --portfolio-detail-content-width: min(100%, 92rem);
     max-width: none;
     padding: var(--portfolio-detail-top-offset) clamp(0.75rem, 2.4vw, 2rem) 0;
     width: 100%;
@@ -39,24 +83,56 @@ const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.page
     width: 100%;
   }
 
-  .portfolio-back {
+  .portfolio-detail__header,
+  .portfolio-detail__footer,
+  :global(.portfolio-detail .pdf-scroll-viewer) {
+    margin-left: auto;
+    margin-right: auto;
+    width: var(--portfolio-detail-content-width);
+  }
+
+  .portfolio-detail__header {
+    align-items: baseline;
+    display: flex;
+    gap: clamp(0.9rem, 2vw, 1.45rem);
+    margin-bottom: clamp(1rem, 2.5vw, 1.8rem);
+  }
+
+  .portfolio-detail__title,
+  .portfolio-detail__link {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    letter-spacing: 0;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .portfolio-detail__title {
+    color: #000000;
+    font-weight: 300;
+    min-width: 0;
+  }
+
+  .portfolio-detail__link {
     color: #691b17;
     display: inline-block;
-    font-size: clamp(0.82rem, 1vw, 0.98rem);
     font-weight: 200;
-    line-height: 1;
-    margin-bottom: clamp(2rem, 4vw, 3rem);
     transition: color 180ms ease;
   }
 
-  .portfolio-back:focus-visible,
-  .portfolio-back:hover {
+  .portfolio-detail__link:focus-visible,
+  .portfolio-detail__link:hover {
     color: #000000;
   }
 
-  .portfolio-back:focus-visible {
+  .portfolio-detail__link:focus-visible {
     outline: 1px solid #691b17;
     outline-offset: 0.35rem;
+  }
+
+  .portfolio-detail__footer {
+    margin-top: clamp(1.2rem, 3vw, 2.5rem);
   }
 
   @supports (height: 100svh) {
@@ -73,9 +149,14 @@ const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.page
       padding-top: var(--portfolio-detail-top-offset);
     }
 
-    .portfolio-back {
+    .portfolio-detail__header {
+      gap: 0.75rem;
+      margin-bottom: clamp(0.85rem, 4vw, 1.35rem);
+    }
+
+    .portfolio-detail__title,
+    .portfolio-detail__link {
       font-size: 0.72rem;
-      margin-bottom: clamp(1.5rem, 5vw, 2.5rem);
     }
   }
 </style>
