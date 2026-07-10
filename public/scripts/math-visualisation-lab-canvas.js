@@ -26,7 +26,7 @@
       [0.16, -0.92],
     ];
 
-    for (let ring = 0; ring < 1; ring += 1) {
+    for (let ring = 0; ring < 3; ring += 1) {
       const radius = 0.14 + ring * 0.22;
       const count = 8 + ring * 5;
 
@@ -99,7 +99,7 @@
     const width = 992;
     const height = 1772;
     const centerAnchor = [width * 0.5, height * 0.5];
-    const connectIterateStrokes = false;
+    const connectIterateStrokes = true;
     const defaultInitialTimelineOffsetMs = 137 * 1000;
     const targetRenderFrameMs = 1000 / 60;
     const sourceStates = [6, 7, 5].map((index) => {
@@ -117,6 +117,17 @@
     };
     const lerp = (a, b, t) => a + (b - a) * t;
     const color = (r, g, b, alpha) => `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${alpha})`;
+    const varelismRed = [106, 28, 23];
+    const redInk = (shade, alpha) => {
+      const lift = clamp(shade / 32, 0, 1);
+
+      return color(
+        lerp(varelismRed[0], 156, lift),
+        lerp(varelismRed[1], 54, lift),
+        lerp(varelismRed[2], 47, lift),
+        alpha,
+      );
+    };
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
     const orbitFromSeed = (params, seed) => {
@@ -125,13 +136,13 @@
       let y = seed[1];
       const points = [];
 
-      for (let n = 0; n < 520; n += 1) {
+      for (let n = 0; n < 680; n += 1) {
         const nextX = a + b * x + c * x * x + d * x * y + e * y + f * y * y;
         const nextY = g + h * x + i * x * x + j * x * y + k * y + l * y * y;
         x = nextX;
         y = nextY;
         if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 12 || Math.abs(y) > 12) break;
-        if (n >= 18) points.push([x, y]);
+        if (n >= 24) points.push([x, y]);
       }
 
       return points.length > 12 ? points : [];
@@ -264,13 +275,13 @@
 
       const quantile = (values, ratio) =>
         values[Math.min(values.length - 1, Math.max(0, Math.floor((values.length - 1) * ratio)))];
-      const minX = quantile(xs, 0.008);
-      const minY = quantile(ys, 0.008);
-      const maxX = quantile(xs, 0.992);
-      const maxY = quantile(ys, 0.992);
+      const minX = quantile(xs, 0.014);
+      const minY = quantile(ys, 0.014);
+      const maxX = quantile(xs, 0.986);
+      const maxY = quantile(ys, 0.986);
       const center = [(minX + maxX) * 0.5, (minY + maxY) * 0.5];
       const span = Math.max(maxX - minX, maxY - minY, 0.000001);
-      const scale = (760 * scaleFactor) / span;
+      const scale = (742 * scaleFactor) / span;
 
       return { center, scale, anchor };
     };
@@ -361,28 +372,28 @@
       const limit = Math.min(continuityLimit(screen, 16), 18);
       const layers = [
         {
-          alpha: pathIndex < 8 ? 0.165 : 0.088,
-          blur: 1.85,
-          shade: 28 + (pathIndex % 4) * 3,
-          step: 4,
-          threshold: 0.082,
-          width: pathIndex < 8 ? 2.35 : 1.45,
-        },
-        {
-          alpha: pathIndex < 8 ? 0.13 : 0.072,
-          blur: 0.75,
+          alpha: pathIndex < 8 ? 0.018 : 0.01,
+          blur: 0.82,
           shade: 14 + (pathIndex % 4) * 2,
-          step: 3,
-          threshold: 0.096,
-          width: pathIndex < 8 ? 0.92 : 0.56,
+          step: 4,
+          threshold: 0.092,
+          width: pathIndex < 8 ? 0.68 : 0.42,
         },
         {
-          alpha: pathIndex < 8 ? 0.36 : 0.19,
-          blur: 0.22,
-          shade: 2 + (pathIndex % 3),
+          alpha: pathIndex < 8 ? 0.045 : 0.026,
+          blur: 0.24,
+          shade: 6 + (pathIndex % 4),
           step: 3,
-          threshold: 0.112,
-          width: pathIndex < 8 ? 0.62 : 0.4,
+          threshold: 0.106,
+          width: pathIndex < 8 ? 0.32 : 0.22,
+        },
+        {
+          alpha: pathIndex < 8 ? 0.105 : 0.06,
+          blur: 0.22,
+          shade: pathIndex % 2,
+          step: 3,
+          threshold: 0.122,
+          width: pathIndex < 8 ? 0.16 : 0.12,
         },
       ];
 
@@ -391,7 +402,7 @@
         let segmentCount = 0;
 
         ctx.lineWidth = layer.width;
-        ctx.strokeStyle = color(layer.shade, layer.shade, layer.shade, layer.alpha * alphaMultiplier);
+        ctx.strokeStyle = redInk(layer.shade, layer.alpha * alphaMultiplier);
         ctx.shadowBlur = layer.blur;
         ctx.shadowColor = ctx.strokeStyle;
 
@@ -444,38 +455,90 @@
       const alphaMultiplier = options.alphaMultiplier ?? 1;
       const bodyStep = options.bodyStep ?? 1;
       const pointScale = options.pointScale ?? 1;
+      const pointSizeMultiplier = options.pointSizeMultiplier ?? 1;
+      const pointAlphaOverride = Number.isFinite(options.pointAlphaOverride)
+        ? clamp(options.pointAlphaOverride, 0, 1)
+        : null;
       const screens = paths.map((path) => mapPath(path, transform));
       const cellSize = 18;
       const densityColumns = Math.ceil(width / cellSize) + 2;
       const densityRows = Math.ceil(height / cellSize) + 2;
       const density = new Uint16Array(densityColumns * densityRows);
-      const densityCell = (point) => [
-        clamp(Math.floor(point[0] / cellSize) + 1, 0, densityColumns - 1),
-        clamp(Math.floor(point[1] / cellSize) + 1, 0, densityRows - 1),
-      ];
+      const densityIndexAt = (point) => {
+        const column = clamp(Math.floor(point[0] / cellSize) + 1, 0, densityColumns - 1);
+        const row = clamp(Math.floor(point[1] / cellSize) + 1, 0, densityRows - 1);
+
+        return row * densityColumns + column;
+      };
 
       screens.forEach((screen) => {
         screen.forEach((point) => {
           if (point[0] < -24 || point[0] > width + 24 || point[1] < -24 || point[1] > height + 24) return;
-          const [column, row] = densityCell(point);
-          density[row * densityColumns + column] += 1;
+          density[densityIndexAt(point)] += 1;
         });
       });
 
-      const localDensityAt = (point) => {
-        const [column, row] = densityCell(point);
-        let total = 0;
+      const localDensity = new Float32Array(density.length);
 
-        for (let y = -1; y <= 1; y += 1) {
-          for (let x = -1; x <= 1; x += 1) {
-            const currentColumn = clamp(column + x, 0, densityColumns - 1);
-            const currentRow = clamp(row + y, 0, densityRows - 1);
-            const weight = x === 0 && y === 0 ? 1 : 0.42;
-            total += density[currentRow * densityColumns + currentColumn] * weight;
+      for (let row = 0; row < densityRows; row += 1) {
+        for (let column = 0; column < densityColumns; column += 1) {
+          let total = 0;
+
+          for (let y = -1; y <= 1; y += 1) {
+            for (let x = -1; x <= 1; x += 1) {
+              const currentColumn = clamp(column + x, 0, densityColumns - 1);
+              const currentRow = clamp(row + y, 0, densityRows - 1);
+              const weight = x === 0 && y === 0 ? 1 : 0.42;
+              total += density[currentRow * densityColumns + currentColumn] * weight;
+            }
           }
+
+          localDensity[row * densityColumns + column] = total;
+        }
+      }
+
+      const localDensityAt = (point) => {
+        return localDensity[densityIndexAt(point)];
+      };
+
+      const pointBatches = new Map();
+      const addCircleToBatch = (point, shade, alpha, radius) => {
+        const alphaBucket = clamp(Math.round(alpha * 240), 0, 240);
+        if (alphaBucket < 1 || radius <= 0) return;
+
+        const shadeBucket = clamp(Math.round(shade), 0, 255);
+        const radiusBucket = Math.max(1, Math.round(radius * 200));
+        const key = `${shadeBucket}:${alphaBucket}:${radiusBucket}`;
+        let batch = pointBatches.get(key);
+
+        if (!batch) {
+          batch = {
+            alpha: alphaBucket / 240,
+            points: [],
+            radius: radiusBucket / 200,
+            shade: shadeBucket,
+          };
+          pointBatches.set(key, batch);
         }
 
-        return total;
+        batch.points.push(point[0], point[1]);
+      };
+
+      const flushCircleBatches = () => {
+        ctx.shadowBlur = 0;
+
+        pointBatches.forEach((batch) => {
+          const { alpha, points, radius, shade } = batch;
+          ctx.fillStyle = redInk(shade, alpha);
+          ctx.beginPath();
+
+          for (let index = 0; index < points.length; index += 2) {
+            ctx.moveTo(points[index] + radius, points[index + 1]);
+            ctx.arc(points[index], points[index + 1], radius, 0, Math.PI * 2);
+          }
+
+          ctx.fill();
+        });
       };
 
       screens.forEach((screen, pathIndex) => {
@@ -488,42 +551,33 @@
           if (p[0] < -10 || p[0] > width + 10 || p[1] < -10 || p[1] > height + 10) continue;
           const curveWeight = curveWeightAt(screen, i, 7);
           const weight = curveWeight ** 1.08;
-          const densityRaw = clamp((localDensityAt(p) - 5.8) / 12.6, 0, 1);
-          const densityWeight = smoothstep(densityRaw) ** 1.55;
-          if (densityWeight <= 0.012) continue;
+          const densityRaw = clamp((localDensityAt(p) - 4.4) / 11, 0, 1);
+          const densityWeight = smoothstep(densityRaw) ** 1.42;
+          if (densityWeight <= 0.006) continue;
 
-          const shade = 2 + 20 * (1 - weight);
+          const shade = 1 + 9 * (1 - weight);
 
           if ((i + pathIndex) % 2 === 0) {
-            stampCircle(
-              ctx,
+            addCircleToBatch(
               p,
-              color(
-                42,
-                42,
-                42,
+              12,
+              pointAlphaOverride ??
                 (pathIndex < 8 ? 0.13 : 0.07) * (0.42 + weight) * densityWeight * alphaMultiplier,
-              ),
-              (0.16 + 0.055 * weight) * pointScale,
-              0,
+              (0.16 + 0.055 * weight) * pointScale * pointSizeMultiplier,
             );
           }
 
-          stampCircle(
-            ctx,
+          addCircleToBatch(
             p,
-            color(
-              shade,
-              shade,
-              shade,
+            shade,
+            pointAlphaOverride ??
               (pathIndex < 8 ? 0.34 : 0.19) * (0.28 + weight) * densityWeight * alphaMultiplier,
-            ),
-            (0.055 + 0.075 * weight) * pointScale,
-            0,
+            (0.055 + 0.075 * weight) * pointScale * pointSizeMultiplier,
           );
         }
       });
 
+      flushCircleBatches();
       ctx.shadowBlur = 0;
     };
 
@@ -540,8 +594,7 @@
         let lastPaint = 0;
         let animationFrame = 0;
         let segmentDurationMs = 0;
-        let initialSegmentElapsedMs = 0;
-        let segmentStart = 0;
+        let segmentElapsedMs = 0;
         let smoothedTransform = null;
         const targetChooser = createTargetChooser();
         let currentTarget = targetChooser.initial();
@@ -599,10 +652,10 @@
             return smoothedTransform;
           }
 
-          const frameDelta = Math.min(deltaMs, 80);
-          const anchorAmount = 1 - Math.exp(-frameDelta / 420);
-          const centerAmount = 1 - Math.exp(-frameDelta / 440);
-          const scaleAmount = 1 - Math.exp(-frameDelta / 560);
+          const frameDelta = Math.min(deltaMs, 48);
+          const anchorAmount = 1 - Math.exp(-frameDelta / 720);
+          const centerAmount = 1 - Math.exp(-frameDelta / 760);
+          const scaleAmount = 1 - Math.exp(-frameDelta / 940);
           const settle = (current, target, amount, deadband = 0) => {
             const diff = target - current;
             if (Math.abs(diff) <= deadband) return current;
@@ -615,10 +668,10 @@
               settle(smoothedTransform.anchor[1], desired.anchor[1], anchorAmount, 0.08),
             ],
             center: [
-              settle(smoothedTransform.center[0], desired.center[0], centerAmount, 0.0004),
-              settle(smoothedTransform.center[1], desired.center[1], centerAmount, 0.0004),
+              settle(smoothedTransform.center[0], desired.center[0], centerAmount, 0.001),
+              settle(smoothedTransform.center[1], desired.center[1], centerAmount, 0.001),
             ],
-            scale: settle(smoothedTransform.scale, desired.scale, scaleAmount, 0.18),
+            scale: settle(smoothedTransform.scale, desired.scale, scaleAmount, 0.36),
           };
 
           return smoothedTransform;
@@ -639,6 +692,8 @@
               alphaMultiplier: 2.59,
               bodyStep: 1,
               pointScale: currentPointScale(),
+              pointAlphaOverride: 1,
+              pointSizeMultiplier: 0.68,
             });
           }
         };
@@ -653,13 +708,13 @@
             segmentDurationMs = nextTarget.duration * 1000;
           }
 
-          initialSegmentElapsedMs = remainingMs;
+          segmentElapsedMs = remainingMs;
           frame = elapsedMs / targetRenderFrameMs;
         };
 
-        const primeCanvas = () => {
-          const phase = clamp(initialSegmentElapsedMs / Math.max(1, segmentDurationMs), 0, 1);
-          renderState(interpolateTargets(currentTarget, nextTarget, phase), frame, targetRenderFrameMs, true);
+        const primeCanvas = (snapTransform = true) => {
+          const phase = clamp(segmentElapsedMs / Math.max(1, segmentDurationMs), 0, 1);
+          renderState(interpolateTargets(currentTarget, nextTarget, phase), frame, targetRenderFrameMs, snapTransform);
         };
 
         advanceInitialTimeline(initialTimelineOffsetMs);
@@ -668,29 +723,28 @@
 
         const onResize = () => {
           if (resizeCanvas()) {
-            primeCanvas();
+            primeCanvas(false);
           }
         };
 
         const paint = (timestamp) => {
-          if (!segmentStart) segmentStart = timestamp - initialSegmentElapsedMs;
-
-          const deltaMs = lastPaint ? Math.min(80, timestamp - lastPaint) : targetRenderFrameMs;
+          const deltaMs = lastPaint ? clamp(timestamp - lastPaint, 0, 48) : targetRenderFrameMs;
 
           if (resizeCanvas()) {
-            primeCanvas();
+            primeCanvas(false);
           }
 
           frame += deltaMs / targetRenderFrameMs;
+          segmentElapsedMs += deltaMs;
 
-          while (timestamp - segmentStart >= segmentDurationMs) {
+          while (segmentElapsedMs >= segmentDurationMs) {
+            segmentElapsedMs -= segmentDurationMs;
             currentTarget = nextTarget;
             nextTarget = targetChooser.choose(currentTarget);
-            segmentStart += segmentDurationMs;
             segmentDurationMs = nextTarget.duration * 1000;
           }
 
-          const phase = clamp((timestamp - segmentStart) / Math.max(1, segmentDurationMs), 0, 1);
+          const phase = clamp(segmentElapsedMs / Math.max(1, segmentDurationMs), 0, 1);
           const state = interpolateTargets(currentTarget, nextTarget, phase);
 
           renderState(state, frame, deltaMs);
