@@ -9,13 +9,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       width="992"
       height="1772"
       data-math-lab-canvas
+      data-math-desktop-point-scale="0.72"
       data-math-initial-offset-ms="137000"
       aria-hidden="true"
     ></canvas>
   </section>
 </BaseLayout>
 
-<script src="/scripts/math-visualisation-lab-canvas.js?v=20260710-offset137" defer data-astro-rerun></script>
+<script src="/scripts/math-visualisation-lab-canvas.js?v=20260710-offset137-point72" defer data-astro-rerun></script>
 
 <style>
   :global(.site-shell) {
@@ -72,6 +73,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     object-fit: contain;
     position: absolute;
     top: 50%;
+    transform-origin: center center;
     transform: translate(-50%, -50%);
     width: max(102vw, calc(102dvh * 992 / 1772));
   }
@@ -83,6 +85,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       max-width: none;
       transform: translate(-50%, -50%);
       width: max(116vw, calc(104dvh * 992 / 1772));
+    }
+  }
+
+  @media (max-width: 640px) and (orientation: portrait) {
+    .math-lab__canvas {
+      transform: translate(-50%, -50%) rotate(90deg);
+      width: max(104dvh, calc(118vw * 992 / 1772));
     }
   }
 </style>

@@ -442,6 +442,7 @@
     const drawPaths = (ctx, paths, transform, frame, options = {}) => {
       const alphaMultiplier = options.alphaMultiplier ?? 1;
       const bodyStep = options.bodyStep ?? 1;
+      const pointScale = options.pointScale ?? 1;
       const screens = paths.map((path) => mapPath(path, transform));
       const cellSize = 18;
       const densityColumns = Math.ceil(width / cellSize) + 2;
@@ -502,7 +503,7 @@
                 42,
                 (pathIndex < 8 ? 0.13 : 0.07) * (0.42 + weight) * densityWeight * alphaMultiplier,
               ),
-              0.16 + 0.055 * weight,
+              (0.16 + 0.055 * weight) * pointScale,
               0,
             );
           }
@@ -516,7 +517,7 @@
               shade,
               (pathIndex < 8 ? 0.34 : 0.19) * (0.28 + weight) * densityWeight * alphaMultiplier,
             ),
-            0.055 + 0.075 * weight,
+            (0.055 + 0.075 * weight) * pointScale,
             0,
           );
         }
@@ -548,6 +549,9 @@
         const initialTimelineOffsetMs = Math.max(0, Number.parseFloat(canvas.dataset.mathInitialOffsetMs || '0'));
         const renderScaleCap = clamp(Number.parseFloat(canvas.dataset.mathRenderScaleCap || '3'), 1, 3);
         const pixelRatioCap = clamp(Number.parseFloat(canvas.dataset.mathPixelRatioCap || '2'), 1, 2);
+        const desktopPointScale = clamp(Number.parseFloat(canvas.dataset.mathDesktopPointScale || '1'), 0.2, 1);
+        const desktopPointMedia = window.matchMedia?.('(min-width: 1024px)') ?? { matches: false };
+        const currentPointScale = () => (desktopPointMedia.matches ? desktopPointScale : 1);
 
         const configureContext = () => {
           ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
@@ -627,7 +631,11 @@
               deltaMs,
               snapTransform,
             );
-            drawPaths(ctx, paths, transform, frameNumber, { alphaMultiplier: 2.59, bodyStep: 1 });
+            drawPaths(ctx, paths, transform, frameNumber, {
+              alphaMultiplier: 2.59,
+              bodyStep: 1,
+              pointScale: currentPointScale(),
+            });
           }
         };
 

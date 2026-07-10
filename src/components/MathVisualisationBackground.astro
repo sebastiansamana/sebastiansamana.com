@@ -4,13 +4,14 @@
     width="992"
     height="1772"
     data-math-hero-canvas
+    data-math-desktop-point-scale="0.72"
     data-math-initial-offset-ms="137000"
     data-math-pixel-ratio-cap="1.75"
     data-math-render-scale-cap="1.9"
   ></canvas>
 </div>
 
-<script src="/scripts/math-visualisation-canvas.js?v=20260710-offset137" defer data-astro-rerun></script>
+<script src="/scripts/math-visualisation-canvas.js?v=20260710-offset137-point72" defer data-astro-rerun></script>
 
 <style>
   .math-visualisation-background {
@@ -38,6 +39,7 @@
     opacity: 1;
     position: absolute;
     top: 50%;
+    transform-origin: center center;
     transform: translate3d(-50%, -50%, 0);
     width: max(112vw, calc(112dvh * 992 / 1772));
     will-change: transform;
@@ -54,6 +56,13 @@
   @media (max-width: 720px) {
     .math-visualisation-background__canvas {
       width: max(126vw, calc(116dvh * 992 / 1772));
+    }
+  }
+
+  @media (max-width: 640px) and (orientation: portrait) {
+    .math-visualisation-background__canvas {
+      transform: translate3d(-50%, -50%, 0) rotate(90deg);
+      width: max(104dvh, calc(118vw * 992 / 1772));
     }
   }
 </style>
