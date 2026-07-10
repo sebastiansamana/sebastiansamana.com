@@ -357,6 +357,25 @@ export default function StPageFlipPdf({ pdfUrl, initialPage = 1, ariaLabel = 'Po
             return;
           }
 
+          if (pageFlip.isUserTouch && pageFlip.isUserMove) {
+            const calculation = pageFlip.getFlipController().getCalculation();
+
+            if (calculation) {
+              const backDirection = 1;
+              const corner = calculation.getCorner();
+              const isBackTurn = calculation.getDirection() === backDirection;
+
+              pageFlip.isUserTouch = false;
+              pageFlip.isUserMove = false;
+              if (isBackTurn) {
+                pageFlip.flipPrev(corner);
+              } else {
+                pageFlip.flipNext(corner);
+              }
+              return;
+            }
+          }
+
           originalUserStop(point, isSwipe);
         };
 
