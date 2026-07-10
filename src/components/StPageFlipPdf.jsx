@@ -150,6 +150,7 @@ export default function StPageFlipPdf({ pdfUrl, initialPage = 1, ariaLabel = 'Po
     generationRef.current = generation;
     setReady(false);
     setStatus('Rendering PDF');
+    let backfaceObserver = null;
 
     const cancelRenderTasks = (keepPages = null) => {
       for (const [pageNumber, task] of renderTasksRef.current.entries()) {
@@ -173,6 +174,8 @@ export default function StPageFlipPdf({ pdfUrl, initialPage = 1, ariaLabel = 'Po
     };
 
     const clearBook = () => {
+      backfaceObserver?.disconnect();
+      backfaceObserver = null;
       cancelRenderTasks();
 
       for (const pageNumber of Array.from(pageUrlsRef.current.keys())) {
@@ -356,6 +359,26 @@ export default function StPageFlipPdf({ pdfUrl, initialPage = 1, ariaLabel = 'Po
 
           originalUserStop(point, isSwipe);
         };
+
+        const syncBlankBackface = () => {
+          const flippingZIndex = String(pageFlip.getSettings().startZIndex + 5);
+
+          root.querySelectorAll('.st-pdf-page').forEach((page) => {
+            const isMovingPage =
+              page.style.display === 'block' &&
+              page.style.zIndex === flippingZIndex &&
+              !page.classList.contains('--simple');
+
+            page.classList.toggle('is-blank-backface', isMovingPage);
+          });
+        };
+
+        backfaceObserver = new MutationObserver(syncBlankBackface);
+        backfaceObserver.observe(root, {
+          attributeFilter: ['class', 'style'],
+          attributes: true,
+          subtree: true,
+        });
 
         pageFlipRef.current = pageFlip;
 
