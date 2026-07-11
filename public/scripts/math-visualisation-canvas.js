@@ -601,7 +601,6 @@
         let resizePending = false;
         let layoutWidth = 0;
         let layoutHeight = 0;
-        let interactionPauseUntil = 0;
         let segmentDurationMs = 0;
         let segmentElapsedMs = 0;
         let smoothedTransform = null;
@@ -786,14 +785,7 @@
 
           initializationTimer = window.setTimeout(initializeCanvas, 160);
         };
-        const pauseForViewportInteraction = () => {
-          interactionPauseUntil = Math.max(interactionPauseUntil, window.performance.now() + 160);
-        };
-        const onResize = () => {
-          pauseForViewportInteraction();
-          requestResize();
-        };
-        const onScroll = () => pauseForViewportInteraction();
+        const onResize = () => requestResize();
 
         scheduleInitialization();
 
@@ -815,12 +807,6 @@
           frame += deltaMs / targetRenderFrameMs;
           segmentElapsedMs += deltaMs;
 
-          if (timestamp < interactionPauseUntil) {
-            lastPaint = timestamp;
-            animationFrame = window.requestAnimationFrame(paint);
-            return;
-          }
-
           while (segmentElapsedMs >= segmentDurationMs) {
             segmentElapsedMs -= segmentDurationMs;
             currentTarget = nextTarget;
@@ -839,19 +825,11 @@
         };
 
         window.addEventListener('resize', onResize);
-        window.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('touchstart', onScroll, { passive: true });
-        window.addEventListener('touchmove', onScroll, { passive: true });
-        window.addEventListener('wheel', onScroll, { passive: true });
         window.visualViewport?.addEventListener('resize', onResize);
         animationFrame = window.requestAnimationFrame(paint);
 
         document.addEventListener('astro:before-swap', () => {
           window.removeEventListener('resize', onResize);
-          window.removeEventListener('scroll', onScroll);
-          window.removeEventListener('touchstart', onScroll);
-          window.removeEventListener('touchmove', onScroll);
-          window.removeEventListener('wheel', onScroll);
           window.visualViewport?.removeEventListener('resize', onResize);
           window.cancelAnimationFrame(animationFrame);
           window.cancelAnimationFrame(resizeFrame);
