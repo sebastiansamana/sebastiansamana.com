@@ -4,22 +4,37 @@ import type { Portfolio } from '../data/portfolios';
 interface Props {
   portfolios: Portfolio[];
   detailBasePath?: string;
+  ariaLabel?: string;
+  archiveViewLabel?: string;
+  emptyLabel?: string;
+  gridLabel?: string;
+  indexLabel?: string;
+  pageLabel?: string;
 }
 
-const { portfolios, detailBasePath = '/architect/portfolios/' } = Astro.props;
+const {
+  portfolios,
+  detailBasePath = '/architect/portfolios/',
+  ariaLabel = 'Portfolios',
+  archiveViewLabel = 'Archive view',
+  emptyLabel = 'No portfolios yet.',
+  gridLabel = 'Grid',
+  indexLabel = 'Index',
+  pageLabel = 'pages',
+} = Astro.props;
 const normalizedDetailBasePath = detailBasePath.endsWith('/') ? detailBasePath : `${detailBasePath}/`;
 const getPortfolioHref = (portfolio: Portfolio) => `${normalizedDetailBasePath}${portfolio.id}/`;
 const getPortfolioMeta = (portfolio: Portfolio) =>
-  [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} pages` : undefined].filter(Boolean).join(' / ');
+  [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} ${pageLabel}` : undefined].filter(Boolean).join(' / ');
 ---
 
-<section class="portfolio-archive" data-portfolio-archive data-archive-view="grid" aria-label="Portfolios">
+<section class="portfolio-archive" data-portfolio-archive data-archive-view="grid" aria-label={ariaLabel}>
   <header class="portfolio-archive__header">
     {
       portfolios.length > 0 && (
-        <div class="portfolio-archive__modes" aria-label="Archive view">
-          <button type="button" data-archive-view-button="grid" aria-pressed="true">Grid</button>
-          <button type="button" data-archive-view-button="list" aria-pressed="false">Index</button>
+        <div class="portfolio-archive__modes" aria-label={archiveViewLabel}>
+          <button type="button" data-archive-view-button="grid" aria-pressed="true">{gridLabel}</button>
+          <button type="button" data-archive-view-button="list" aria-pressed="false">{indexLabel}</button>
         </div>
       )
     }
@@ -37,7 +52,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                     portfolio.coverImage && portfolio.coverImageWidth && portfolio.coverImageHeight && (
                       <span class="portfolio-card__image-stack">
                         <img
-                          class="portfolio-card__image"
+                          class="portfolio-card__image portfolio-card__image--base"
                           src={portfolio.coverImage}
                           alt={portfolio.coverImageAlt ?? portfolio.title}
                           width={portfolio.coverImageWidth}
@@ -45,6 +60,20 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                           loading="lazy"
                           decoding="async"
                         />
+                        {
+                          portfolio.coverHoverImage && (
+                            <img
+                              class="portfolio-card__image portfolio-card__image--hover"
+                              src={portfolio.coverHoverImage}
+                              alt=""
+                              width={portfolio.coverImageWidth}
+                              height={portfolio.coverImageHeight}
+                              loading="lazy"
+                              decoding="async"
+                              aria-hidden="true"
+                            />
+                          )
+                        }
                       </span>
                     )
                   }
@@ -70,7 +99,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
         </ol>
       </>
     ) : (
-      <p class="portfolio-empty">No portfolios yet.</p>
+      <p class="portfolio-empty">{emptyLabel}</p>
     )
   }
 </section>
@@ -225,13 +254,20 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     background: #ffffff;
     border: 1px solid #f2f2f2;
     display: grid;
+    overflow: hidden;
   }
 
-  .portfolio-card img {
+  .portfolio-card__image {
     display: block;
+    grid-area: 1 / 1;
     height: auto;
     pointer-events: none;
+    transition: opacity 180ms ease;
     width: 100%;
+  }
+
+  .portfolio-card__image--hover {
+    opacity: 0;
   }
 
   .portfolio-card__title,
@@ -261,6 +297,14 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     color: #691b17;
   }
 
+  .portfolio-card a:focus-visible .portfolio-card__image--base {
+    opacity: 0;
+  }
+
+  .portfolio-card a:focus-visible .portfolio-card__image--hover {
+    opacity: 1;
+  }
+
   .portfolio-card a:focus-visible .portfolio-card__meta {
     color: var(--portfolio-meta-hover-color);
   }
@@ -277,6 +321,14 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
     .portfolio-card a:hover .portfolio-card__meta {
       color: var(--portfolio-meta-hover-color);
+    }
+
+    .portfolio-card a:hover .portfolio-card__image--base {
+      opacity: 0;
+    }
+
+    .portfolio-card a:hover .portfolio-card__image--hover {
+      opacity: 1;
     }
   }
 
@@ -412,4 +464,3 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     }
   }
 </style>
-

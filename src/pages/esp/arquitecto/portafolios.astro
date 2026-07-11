@@ -1,7 +1,18 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PortfolioArchive from '../../../components/PortfolioArchive.astro';
+import { portfolios } from '../../../data/portfolios';
 ---
 
 <BaseLayout title="Portafolios | Varelism" description="Portafolios.">
-  <section aria-label="Portafolios"></section>
+  <PortfolioArchive
+    portfolios={portfolios}
+    detailBasePath="/esp/arquitecto/portafolios/"
+    ariaLabel="Portafolios"
+    archiveViewLabel="Vista de archivo"
+    gridLabel="Cuadricula"
+    indexLabel="Indice"
+    pageLabel="paginas"
+    emptyLabel="No hay portafolios todavia."
+  />
 </BaseLayout>

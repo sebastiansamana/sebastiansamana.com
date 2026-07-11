@@ -62,6 +62,7 @@ const sections = [
   .triptych {
     --column-hover-ease: var(--varelism-column-hover-ease);
     --column-hover-ms: var(--varelism-column-hover-ms);
+    --column-image-hover-ms: var(--varelism-image-swap-ms);
     align-items: center;
     display: grid;
     gap: clamp(1.5rem, 6vw, 7rem);
@@ -131,7 +132,7 @@ const sections = [
     height: auto;
     max-width: 100%;
     pointer-events: none;
-    transition: opacity var(--column-hover-ms) var(--column-hover-ease);
+    transition: opacity var(--column-image-hover-ms) var(--column-hover-ease);
     width: 100%;
     will-change: opacity;
   }
@@ -148,7 +149,7 @@ const sections = [
     pointer-events: none;
     position: relative;
     transform: translateZ(0);
-    transition: opacity var(--column-hover-ms) var(--column-hover-ease);
+    transition: opacity var(--column-image-hover-ms) var(--column-hover-ease);
     will-change: opacity;
     z-index: 1;
   }
