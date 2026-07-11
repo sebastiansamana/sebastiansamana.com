@@ -1,10 +1,14 @@
 ---
+import MathVisualisationBackground from './MathVisualisationBackground.astro';
+
 interface Props {
   label: string;
 }
 
 const { label } = Astro.props;
 ---
+
+<MathVisualisationBackground />
 
 <section class="contact-page" aria-label={label} data-contact-page>
   <a class="contact-email" href="mailto:bastivarela@icloud.com">bastivarela@icloud.com</a>
@@ -117,6 +121,7 @@ const { label } = Astro.props;
     transform: translate(calc(-50% + var(--contact-viewport-offset, 0px)), -50%);
     transition: opacity 450ms ease;
     width: max-content;
+    z-index: 1;
   }
 
   .contact-page.is-visible {

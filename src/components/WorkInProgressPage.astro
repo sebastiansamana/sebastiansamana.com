@@ -1,4 +1,6 @@
 ---
+import MathVisualisationBackground from './MathVisualisationBackground.astro';
+
 interface Props {
   label: string;
   heading: string;
@@ -8,6 +10,8 @@ interface Props {
 
 const { label, heading, archiveHref, archiveLabel } = Astro.props;
 ---
+
+<MathVisualisationBackground />
 
 <section class="work-in-progress-page" aria-label={label}>
   <div class="work-in-progress-page__content">
@@ -40,6 +44,7 @@ const { label, heading, archiveHref, archiveLabel } = Astro.props;
     top: 50dvh;
     transform: translate(-50%, -50%);
     width: max-content;
+    z-index: 1;
   }
 
   .work-in-progress-page__content {

@@ -1,4 +1,6 @@
 ---
+import MathVisualisationBackground from './MathVisualisationBackground.astro';
+
 interface Props {
   label: string;
   enableSpanishFallback?: boolean;
@@ -9,6 +11,8 @@ const {
   enableSpanishFallback = false,
 } = Astro.props;
 ---
+
+<MathVisualisationBackground />
 
 <section class="not-found-page" aria-label={label} data-not-found-page data-varelism-route-reveal>
   <div class="not-found-page__content">
@@ -59,6 +63,7 @@ const {
     top: 50dvh;
     transform: translate(-50%, -50%);
     width: max-content;
+    z-index: 1;
   }
 
   .not-found-page__content {
