@@ -38,7 +38,7 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
 const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 ---
 
-<article class="author-item-detail" data-varelism-route-reveal>
+<article class="author-item-detail" data-author-item-detail data-varelism-route-reveal>
   <a class="author-item-back" href={backHref}>{backLabel}</a>
 
   <header class="author-item-header">
@@ -67,8 +67,50 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
   </section>
 
-  <a class="author-item-enquiry" href={enquiryHref}>{enquiryLabel}</a>
+  <footer class="author-item-footer">
+    <a class="author-item-enquiry" href={enquiryHref} data-author-item-content-end>{enquiryLabel}</a>
+    <button class="author-item-top" type="button" data-author-back-to-top hidden>
+      {locale === 'es' ? 'Volver arriba' : 'Back to top'}
+    </button>
+  </footer>
 </article>
+
+<script>
+  (() => {
+    const setupAuthorBackToTop = () => {
+      document.querySelectorAll('[data-author-item-detail]').forEach((detail) => {
+        if (!(detail instanceof HTMLElement) || detail.dataset.authorBackToTopReady === 'true') return;
+
+        const contentEnd = detail.querySelector('[data-author-item-content-end]');
+        const button = detail.querySelector('[data-author-back-to-top]');
+
+        if (!(contentEnd instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return;
+
+        detail.dataset.authorBackToTopReady = 'true';
+
+        const syncVisibility = () => {
+          const contentBottom = contentEnd.getBoundingClientRect().bottom + window.scrollY;
+          button.hidden = contentBottom <= window.innerHeight + 1;
+        };
+
+        button.addEventListener('click', () => {
+          const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+          window.scrollTo({
+            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+            top: 0,
+          });
+        });
+        window.addEventListener('resize', syncVisibility, { passive: true });
+        document.fonts?.ready.then(syncVisibility);
+        syncVisibility();
+      });
+    };
+
+    setupAuthorBackToTop();
+    document.addEventListener('astro:page-load', setupAuthorBackToTop);
+  })();
+</script>
 
 <style>
   :global(.site-shell > main) {
@@ -133,7 +175,8 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   .author-item-header dt,
   .author-item-header dd,
   .author-item-body,
-  .author-item-enquiry {
+  .author-item-enquiry,
+  .author-item-top {
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
       'Helvetica Neue', Arial, sans-serif;
     letter-spacing: 0;
@@ -170,25 +213,47 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     margin-bottom: 0;
   }
 
-  .author-item-enquiry {
+  .author-item-footer {
+    align-items: baseline;
+    display: flex;
+    gap: clamp(1rem, 3vw, 2rem);
+    justify-content: space-between;
+    margin-top: clamp(1.8rem, 5vw, 3.5rem);
+  }
+
+  .author-item-enquiry,
+  .author-item-top {
     color: #691b17;
-    display: inline-block;
     font-size: var(--author-item-back-font-size);
     font-weight: 200;
     line-height: 1;
-    margin-top: clamp(1.8rem, 5vw, 3.5rem);
     transition: color 180ms ease;
     width: fit-content;
   }
 
   .author-item-enquiry:focus-visible,
-  .author-item-enquiry:hover {
+  .author-item-enquiry:hover,
+  .author-item-top:focus-visible,
+  .author-item-top:hover {
     color: #000000;
   }
 
-  .author-item-enquiry:focus-visible {
+  .author-item-enquiry:focus-visible,
+  .author-item-top:focus-visible {
     outline: 1px solid #691b17;
     outline-offset: 0.35rem;
+  }
+
+  .author-item-top {
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .author-item-top[hidden] {
+    display: none;
   }
 
   @media (max-width: 760px) {

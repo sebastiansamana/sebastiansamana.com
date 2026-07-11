@@ -14,6 +14,23 @@ const { portfolio } = Astro.props;
 const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} páginas` : undefined]
   .filter(Boolean)
   .join(' / ');
+const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryDetails = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} páginas dobles` : undefined]
+  .filter(Boolean)
+  .join(' / ');
+const enquiryBody = [
+  'Hola Sebastian,',
+  '',
+  'Me gustaría consultar más sobre este portafolio:',
+  '',
+  portfolio.title,
+  ...(enquiryDetails ? [enquiryDetails] : []),
+  '',
+  'Mi consulta:',
+].join('\n');
+const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
+  `Consulta sobre ${portfolio.title}`,
+)}&body=${encodeURIComponent(enquiryBody)}`;
 ---
 
 <BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
@@ -48,6 +65,7 @@ const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.page
     />
 
     <footer class="portfolio-detail__footer">
+      <a class="portfolio-detail__link portfolio-detail__enquiry" href={enquiryHref}>Consultar más</a>
       <button class="portfolio-detail__link portfolio-detail__top" type="button" data-portfolio-back-to-top>
         Volver arriba
       </button>
@@ -139,6 +157,10 @@ const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.page
   }
 
   .portfolio-detail__footer {
+    align-items: baseline;
+    display: flex;
+    gap: clamp(1rem, 3vw, 2rem);
+    justify-content: space-between;
     margin-top: clamp(1.2rem, 3vw, 2.5rem);
   }
 
