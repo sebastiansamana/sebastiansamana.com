@@ -14,14 +14,18 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
 
 <section class="about-composition" aria-label={label} data-about-composition>
   <figure class="about-portrait">
-    <img
-      src="/images/about_me_v2.png"
-      alt={imageAlt}
-      width="1254"
-      height="1254"
-      loading="eager"
-      decoding="async"
-    />
+    <picture>
+      <source srcset="/images/about_me_v2.webp" type="image/webp" />
+      <img
+        src="/images/about_me_v2.png"
+        alt={imageAlt}
+        width="1254"
+        height="1254"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
+    </picture>
   </figure>
 
   <div class="about-text">
@@ -45,6 +49,31 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
 
+    const waitForPortrait = async (image) => {
+      if (!(image instanceof HTMLImageElement)) return false;
+
+      if (!image.complete) {
+        const loaded = await new Promise((resolve) => {
+          image.addEventListener('load', () => resolve(true), { once: true });
+          image.addEventListener('error', () => resolve(false), { once: true });
+        });
+
+        if (!loaded) return false;
+      }
+
+      if (image.naturalWidth === 0) return false;
+
+      if (typeof image.decode === 'function') {
+        try {
+          await image.decode();
+        } catch {
+          // A completed image is still safe to reveal when decode() is unavailable mid-navigation.
+        }
+      }
+
+      return image.complete && image.naturalWidth > 0;
+    };
+
     const revealAbout = () => {
       const composition = document.querySelector('[data-about-composition]');
 
@@ -54,9 +83,18 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
 
       composition.dataset.aboutRevealBooted = 'true';
 
-      const reveal = () => {
-        composition.classList.add('is-portrait-visible');
+      const reveal = async () => {
+        const portrait = composition.querySelector('.about-portrait img');
+        const portraitIsReady = await waitForPortrait(portrait);
+
+        if (!composition.isConnected) return;
+
+        if (portraitIsReady) {
+          composition.classList.add('is-portrait-visible');
+        }
+
         window.setTimeout(() => {
+          if (!composition.isConnected) return;
           composition.classList.add('is-text-visible');
         }, revealTextDelayMs);
       };
@@ -103,6 +141,11 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
     height: auto;
     max-width: 100%;
     object-fit: contain;
+    width: 100%;
+  }
+
+  .about-portrait picture {
+    display: block;
     width: 100%;
   }
 
