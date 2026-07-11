@@ -595,16 +595,19 @@
         let animationFrame = 0;
         let resizeFrame = 0;
         let resizeTimer = 0;
+        let initializationTimer = 0;
+        let initializationIdleCallback = 0;
+        let isInitialized = false;
         let resizePending = false;
         let layoutWidth = 0;
         let layoutHeight = 0;
+        let interactionPauseUntil = 0;
         let segmentDurationMs = 0;
         let segmentElapsedMs = 0;
         let smoothedTransform = null;
         const targetChooser = createTargetChooser();
-        let currentTarget = targetChooser.initial();
-        let nextTarget = targetChooser.choose(currentTarget);
-        segmentDurationMs = nextTarget.duration * 1000;
+        let currentTarget = null;
+        let nextTarget = null;
         const initialTimelineOffsetMs = Math.max(
           0,
           Number.parseFloat(canvas.dataset.mathInitialOffsetMs || `${defaultInitialTimelineOffsetMs}`),
@@ -736,6 +739,7 @@
           if (!resizePending) return;
 
           resizePending = false;
+          if (!isInitialized) return;
           if (resizeCanvas()) {
             primeCanvas(false);
           }
@@ -756,14 +760,51 @@
           }, 100);
         };
 
-        advanceInitialTimeline(initialTimelineOffsetMs);
-        resizeCanvas();
-        primeCanvas();
+        const initializeCanvas = () => {
+          if (isInitialized) return;
 
-        const onResize = () => requestResize();
+          initializationTimer = 0;
+          initializationIdleCallback = 0;
+          currentTarget = targetChooser.initial();
+          nextTarget = targetChooser.choose(currentTarget);
+          segmentDurationMs = nextTarget.duration * 1000;
+          advanceInitialTimeline(initialTimelineOffsetMs);
+          resizeCanvas();
+          primeCanvas();
+          isInitialized = true;
+        };
+        const scheduleInitialization = () => {
+          if (!shouldPauseForPreloader()) {
+            initializeCanvas();
+            return;
+          }
+
+          if (typeof window.requestIdleCallback === 'function') {
+            initializationIdleCallback = window.requestIdleCallback(initializeCanvas, { timeout: 1000 });
+            return;
+          }
+
+          initializationTimer = window.setTimeout(initializeCanvas, 160);
+        };
+        const pauseForViewportInteraction = () => {
+          interactionPauseUntil = Math.max(interactionPauseUntil, window.performance.now() + 160);
+        };
+        const onResize = () => {
+          pauseForViewportInteraction();
+          requestResize();
+        };
+        const onScroll = () => pauseForViewportInteraction();
+
+        scheduleInitialization();
 
         const paint = (timestamp) => {
           const deltaMs = lastPaint ? clamp(timestamp - lastPaint, 0, 48) : targetRenderFrameMs;
+
+          if (!isInitialized) {
+            lastPaint = timestamp;
+            animationFrame = window.requestAnimationFrame(paint);
+            return;
+          }
 
           if (shouldPauseForPreloader()) {
             lastPaint = timestamp;
@@ -773,6 +814,12 @@
 
           frame += deltaMs / targetRenderFrameMs;
           segmentElapsedMs += deltaMs;
+
+          if (timestamp < interactionPauseUntil) {
+            lastPaint = timestamp;
+            animationFrame = window.requestAnimationFrame(paint);
+            return;
+          }
 
           while (segmentElapsedMs >= segmentDurationMs) {
             segmentElapsedMs -= segmentDurationMs;
@@ -792,15 +839,27 @@
         };
 
         window.addEventListener('resize', onResize);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('touchstart', onScroll, { passive: true });
+        window.addEventListener('touchmove', onScroll, { passive: true });
+        window.addEventListener('wheel', onScroll, { passive: true });
         window.visualViewport?.addEventListener('resize', onResize);
         animationFrame = window.requestAnimationFrame(paint);
 
         document.addEventListener('astro:before-swap', () => {
           window.removeEventListener('resize', onResize);
+          window.removeEventListener('scroll', onScroll);
+          window.removeEventListener('touchstart', onScroll);
+          window.removeEventListener('touchmove', onScroll);
+          window.removeEventListener('wheel', onScroll);
           window.visualViewport?.removeEventListener('resize', onResize);
           window.cancelAnimationFrame(animationFrame);
           window.cancelAnimationFrame(resizeFrame);
           window.clearTimeout(resizeTimer);
+          window.clearTimeout(initializationTimer);
+          if (initializationIdleCallback && typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(initializationIdleCallback);
+          }
         }, { once: true });
       });
     };
