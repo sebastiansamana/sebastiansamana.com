@@ -594,7 +594,10 @@
         let lastPaint = 0;
         let animationFrame = 0;
         let resizeFrame = 0;
+        let resizeTimer = 0;
         let resizePending = false;
+        let layoutWidth = 0;
+        let layoutHeight = 0;
         let segmentDurationMs = 0;
         let segmentElapsedMs = 0;
         let smoothedTransform = null;
@@ -610,6 +613,7 @@
         const pixelRatioCap = clamp(Number.parseFloat(canvas.dataset.mathPixelRatioCap || '2'), 1, 2);
         const desktopPointScale = clamp(Number.parseFloat(canvas.dataset.mathDesktopPointScale || '1'), 0.2, 1);
         const desktopPointMedia = window.matchMedia?.('(min-width: 1024px)') ?? { matches: false };
+        const mobileRenderMedia = window.matchMedia?.('(max-width: 640px)') ?? { matches: false };
         const currentPointScale = () => (desktopPointMedia.matches ? desktopPointScale : 1);
         const shouldPauseForPreloader = () =>
           Boolean(canvas.closest('[data-varelism-math-background]')) &&
@@ -622,12 +626,17 @@
         };
 
         const resizeCanvas = () => {
-          const rect = canvas.getBoundingClientRect();
-          const displayScale = Math.max(rect.width / width, rect.height / height, 1);
-          const pixelRatio = Math.min(window.devicePixelRatio || 1, pixelRatioCap);
+          const nextLayoutWidth = canvas.offsetWidth || width;
+          const nextLayoutHeight = canvas.offsetHeight || height;
+          const displayScale = Math.max(nextLayoutWidth / width, nextLayoutHeight / height, 1);
+          const effectivePixelRatioCap = mobileRenderMedia.matches ? Math.min(pixelRatioCap, 1) : pixelRatioCap;
+          const pixelRatio = Math.min(window.devicePixelRatio || 1, effectivePixelRatioCap);
           const targetScale = Math.round(Math.min(renderScaleCap, displayScale * pixelRatio) * 4) / 4;
           const nextWidth = Math.max(width, Math.round(width * targetScale));
           const nextHeight = Math.max(height, Math.round(height * targetScale));
+
+          layoutWidth = nextLayoutWidth;
+          layoutHeight = nextLayoutHeight;
 
           if (canvas.width === nextWidth && canvas.height === nextHeight && renderScale === targetScale) {
             return false;
@@ -733,10 +742,18 @@
         };
 
         const requestResize = () => {
-          resizePending = true;
-          if (resizeFrame) return;
+          const nextLayoutWidth = canvas.offsetWidth || width;
+          const nextLayoutHeight = canvas.offsetHeight || height;
+          if (nextLayoutWidth === layoutWidth && nextLayoutHeight === layoutHeight) return;
 
-          resizeFrame = window.requestAnimationFrame(flushResize);
+          resizePending = true;
+          if (resizeTimer) window.clearTimeout(resizeTimer);
+
+          resizeTimer = window.setTimeout(() => {
+            resizeTimer = 0;
+            if (resizeFrame) return;
+            resizeFrame = window.requestAnimationFrame(flushResize);
+          }, 100);
         };
 
         advanceInitialTimeline(initialTimelineOffsetMs);
@@ -783,6 +800,7 @@
           window.visualViewport?.removeEventListener('resize', onResize);
           window.cancelAnimationFrame(animationFrame);
           window.cancelAnimationFrame(resizeFrame);
+          window.clearTimeout(resizeTimer);
         }, { once: true });
       });
     };

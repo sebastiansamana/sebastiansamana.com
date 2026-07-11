@@ -9,7 +9,61 @@
   ></canvas>
 </div>
 
-<script src="/scripts/math-visualisation-canvas.js?v=20260711-varelism-red-smooth-point68-offset146-resize-stable" defer data-astro-rerun></script>
+<script src="/scripts/math-visualisation-canvas.js?v=20260711-varelism-red-smooth-point68-offset146-resize-efficient" defer data-astro-rerun></script>
+
+<script is:inline data-astro-rerun>
+  (() => {
+    const runtimeKey = '__varelismHomeViewport';
+    window[runtimeKey]?.dispose?.();
+
+    const background = document.querySelector('[data-varelism-math-background]');
+    const main = background?.closest('main');
+    if (!(main instanceof HTMLElement)) return;
+
+    let stableWidth = 0;
+    let stableOrientation = '';
+    const getOrientation = () => (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+    const isMobileViewport = () => window.matchMedia('(max-width: 760px)').matches;
+    const syncViewportHeight = ({ force = false } = {}) => {
+      const nextWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const nextOrientation = getOrientation();
+
+      if (
+        !force &&
+        isMobileViewport() &&
+        nextWidth === stableWidth &&
+        nextOrientation === stableOrientation
+      ) {
+        return;
+      }
+
+      stableWidth = nextWidth;
+      stableOrientation = nextOrientation;
+      main.style.setProperty(
+        '--home-viewport-height',
+        `${window.innerHeight || document.documentElement.clientHeight || 1}px`,
+      );
+    };
+    const forceSyncViewportHeight = () => syncViewportHeight({ force: true });
+
+    syncViewportHeight({ force: true });
+    window.addEventListener('resize', syncViewportHeight);
+    window.addEventListener('orientationchange', forceSyncViewportHeight);
+    window.visualViewport?.addEventListener('resize', syncViewportHeight);
+
+    const dispose = () => {
+      window.removeEventListener('resize', syncViewportHeight);
+      window.removeEventListener('orientationchange', forceSyncViewportHeight);
+      window.visualViewport?.removeEventListener('resize', syncViewportHeight);
+      main.style.removeProperty('--home-viewport-height');
+      document.removeEventListener('astro:before-swap', dispose);
+      if (window[runtimeKey]?.dispose === dispose) delete window[runtimeKey];
+    };
+
+    window[runtimeKey] = { dispose };
+    document.addEventListener('astro:before-swap', dispose, { once: true });
+  })();
+</script>
 
 <style>
   .math-visualisation-background {
@@ -17,9 +71,7 @@
     contain: layout style;
     height: 100%;
     inset: 0;
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100lvh;
+    min-height: var(--home-viewport-height, 100svh);
     overflow: visible;
     pointer-events: none;
     position: absolute;

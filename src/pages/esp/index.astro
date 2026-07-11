@@ -52,9 +52,7 @@ const sections = [
   :global(.site-shell > main) {
     display: grid;
     max-width: none;
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
+    min-height: var(--home-viewport-height, 100svh);
     padding: 0;
     place-items: center;
   }
@@ -69,9 +67,7 @@ const sections = [
     grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-items: center;
     margin: 0 auto;
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
+    min-height: var(--home-viewport-height, 100svh);
     padding: clamp(1.5rem, 4vh, 3rem) clamp(1.25rem, 6vw, 6rem);
     position: relative;
     width: min(100%, 1280px);

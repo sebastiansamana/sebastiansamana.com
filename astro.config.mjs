@@ -6,6 +6,9 @@ import react from '@astrojs/react';
 export default defineConfig({
   site: 'https://varelism.com',
   base: process.env.BASE_PATH || '/',
+  build: {
+    inlineStylesheets: 'always',
+  },
   integrations: [react()],
   output: 'static',
   redirects: {

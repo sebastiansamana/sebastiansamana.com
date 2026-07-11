@@ -164,6 +164,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_optimized.glb`;
       let stableViewportOrientation = '';
       const getViewportOrientation = () =>
         window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+      const isMobileViewport = () => window.matchMedia('(max-width: 760px)').matches;
       const isSmallLandscapeViewport = () =>
         window.matchMedia('(orientation: landscape) and (max-width: 1180px)').matches;
       const syncArchitectViewportHeight = ({ force = false } = {}) => {
@@ -174,7 +175,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_optimized.glb`;
 
         if (
           !force &&
-          isSmallLandscapeViewport() &&
+          (isMobileViewport() || isSmallLandscapeViewport()) &&
           nextWidth === stableViewportWidth &&
           nextOrientation === stableViewportOrientation
         ) {
@@ -1313,70 +1314,17 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_optimized.glb`;
           }
         };
 
-        const hasVisibleTexturedFrame = () => {
-          const gl = renderer.getContext();
-          const drawingWidth = gl.drawingBufferWidth;
-          const drawingHeight = gl.drawingBufferHeight;
-
-          if (!drawingWidth || !drawingHeight) return false;
-
-          const pixelCount = drawingWidth * drawingHeight;
-          const pixels = new Uint8Array(pixelCount * 4);
-
-          try {
-            gl.readPixels(0, 0, drawingWidth, drawingHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-          } catch {
-            return true;
-          }
-
-          const sampleStride = Math.max(1, Math.floor(pixelCount / 150000));
-          const sampledPixelCount = Math.ceil(pixelCount / sampleStride);
-          const minVisiblePixels = Math.max(24, Math.floor(sampledPixelCount * 0.0015));
-          let visiblePixels = 0;
-          let nonWhitePixels = 0;
-
-          for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += sampleStride) {
-            const offset = pixelIndex * 4;
-            const alpha = pixels[offset + 3];
-
-            if (alpha < 96) continue;
-
-            visiblePixels += 1;
-
-            if (
-              pixels[offset] < 244 ||
-              pixels[offset + 1] < 244 ||
-              pixels[offset + 2] < 244
-            ) {
-              nonWhitePixels += 1;
-            }
-          }
-
-          return (
-            visiblePixels >= minVisiblePixels &&
-            nonWhitePixels >= Math.max(8, Math.floor(visiblePixels * 0.025))
-          );
-        };
-
         const waitForFirstVisibleTexturedFrame = () =>
           new Promise((resolve) => {
-            const checkFrame = () => {
+            window.requestAnimationFrame(() => {
               if (hasDisposed) {
                 resolve();
                 return;
               }
 
               renderScene();
-
-              if (hasVisibleTexturedFrame()) {
-                window.requestAnimationFrame(resolve);
-                return;
-              }
-
-              window.requestAnimationFrame(checkFrame);
-            };
-
-            window.requestAnimationFrame(checkFrame);
+              window.requestAnimationFrame(resolve);
+            });
           });
 
         const positionSpatialLinksBelowModel = () => {
