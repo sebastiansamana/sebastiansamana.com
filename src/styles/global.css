@@ -5,6 +5,7 @@
   --varelism-route-fade-ms: 450ms;
   --varelism-route-fade-ease: ease;
   --varelism-column-hover-ms: 180ms;
+  --varelism-column-image-hover-ms: 320ms;
   --varelism-column-hover-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --varelism-image-swap-ms: 120ms;
   --varelism-image-swap-ease: cubic-bezier(0.22, 1, 0.36, 1);
