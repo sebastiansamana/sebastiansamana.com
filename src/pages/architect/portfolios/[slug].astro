@@ -22,10 +22,10 @@ const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.page
       <a class="portfolio-detail__link portfolio-detail__return" href="/architect/portfolios/">Return</a>
       <a
         class="portfolio-detail__link portfolio-detail__document"
-        href={portfolio.pdfUrl}
+        href={`/architect/portfolios/${portfolio.id}/pdf/`}
         target="_blank"
         rel="noopener"
-        aria-label={`Open ${portfolio.title} as the original tagged PDF`}
+        aria-label={`Open ${portfolio.title} in the Varelism PDF viewer`}
       >
         Open PDF
       </a>

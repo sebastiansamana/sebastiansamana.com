@@ -27,7 +27,7 @@ export const portfolios: Portfolio[] = [
   {
     id: 'studio-2-2',
     title: 'Studio 2.2',
-    pdfUrl: '/pdfs/2.2_G1_Sebastian_Varela_Hitscherich.pdf',
+    pdfUrl: '/pdfs/studio-2-2.pdf',
     pdfPreviewImage: '/images/portfolios/2-2-g1-sebastian-varela-hitscherich-cover.png',
     pdfPreviewImageWidth: 1200,
     pdfPreviewImageHeight: 847,

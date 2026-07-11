@@ -33,6 +33,7 @@ const {
 
 const safePageCount = Number.isFinite(pageCount) && pageCount > 0 ? Math.floor(pageCount) : 1;
 const fallbackAspectRatio = 1.414;
+const pageViewportHeight = 72;
 const pages = Array.from({ length: safePageCount }, (_, index) => {
   const configuredAspectRatio = pageAspectRatios[index];
   const aspectRatio =
@@ -42,6 +43,7 @@ const pages = Array.from({ length: safePageCount }, (_, index) => {
 
   return {
     aspectRatio,
+    fitWidth: aspectRatio * pageViewportHeight,
     number: index + 1,
   };
 });
@@ -65,12 +67,12 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
 
   <div class="pdf-scroll-viewer__pages">
     {
-      pages.map(({ aspectRatio, number }) => (
+      pages.map(({ aspectRatio, fitWidth, number }) => (
         <figure
           class="pdf-scroll-viewer__page"
           data-pdf-page
           data-page-number={number}
-          style={`--pdf-page-aspect-ratio: ${aspectRatio}`}
+          style={`--pdf-page-aspect-ratio: ${aspectRatio}; --pdf-page-fit-width: ${fitWidth}vh; --pdf-page-fit-width-small: ${fitWidth}svh`}
           aria-label={`${pageLabel} ${number} / ${safePageCount}`}
         >
           {number === 1 && previewImage ? (
@@ -201,6 +203,8 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
         const baseViewport = page.getViewport({ scale: 1 });
         const pageAspectRatio = baseViewport.width / baseViewport.height;
         pageElement.style.setProperty('--pdf-page-aspect-ratio', String(pageAspectRatio));
+        pageElement.style.setProperty('--pdf-page-fit-width', `${pageAspectRatio * 72}vh`);
+        pageElement.style.setProperty('--pdf-page-fit-width-small', `${pageAspectRatio * 72}svh`);
 
         const cssWidth = pageElement.clientWidth;
         if (cssWidth <= 0) return;
@@ -514,14 +518,15 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     border: 1px solid #f2f2f2;
     contain: layout paint style;
     display: grid;
+    justify-self: center;
     margin: 0;
     overflow: hidden;
     position: relative;
     scroll-margin-top: clamp(6.5rem, 12vh, 8.5rem);
-    width: 100%;
+    width: min(100%, var(--pdf-page-fit-width, 100%));
   }
 
-  .pdf-scroll-viewer__canvas,
+  :global(.pdf-scroll-viewer__canvas),
   .pdf-scroll-viewer__preview {
     display: block;
     grid-area: 1 / 1;
@@ -530,7 +535,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     width: 100%;
   }
 
-  .pdf-scroll-viewer__canvas {
+  :global(.pdf-scroll-viewer__canvas) {
     opacity: 0;
   }
 
@@ -539,7 +544,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     transition: opacity 160ms ease;
   }
 
-  .pdf-scroll-viewer__page.is-rendered .pdf-scroll-viewer__canvas {
+  .pdf-scroll-viewer__page.is-rendered :global(.pdf-scroll-viewer__canvas) {
     opacity: 1;
   }
 
@@ -635,6 +640,12 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     .pdf-scroll-viewer__page-status,
     .pdf-scroll-viewer__preview {
       transition: none;
+    }
+  }
+
+  @supports (height: 100svh) {
+    .pdf-scroll-viewer__page {
+      width: min(100%, var(--pdf-page-fit-width-small, var(--pdf-page-fit-width, 100%)));
     }
   }
 </style>

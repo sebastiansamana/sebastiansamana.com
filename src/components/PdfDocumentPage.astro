@@ -1,0 +1,55 @@
+---
+interface Props {
+  title: string;
+  pdfUrl: string;
+  lang?: 'en' | 'es';
+  fallbackLabel?: string;
+  openLabel?: string;
+}
+
+const {
+  title,
+  pdfUrl,
+  lang = 'en',
+  fallbackLabel = 'This browser could not display the PDF.',
+  openLabel = 'Open studio-2-2.pdf',
+} = Astro.props;
+const documentTitle = `${title} | Varelism`;
+const viewerUrl = `${pdfUrl}#view=FitH&toolbar=1&navpanes=0`;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={`${title} architecture portfolio.`} />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <title>{documentTitle}</title>
+  </head>
+  <body>
+    <iframe src={viewerUrl} title={`${title} PDF`} allowfullscreen>
+      <p>{fallbackLabel} <a href={pdfUrl}>{openLabel}</a></p>
+    </iframe>
+  </body>
+</html>
+
+<style is:global>
+  html,
+  body {
+    background: #ffffff;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  iframe {
+    background: #ffffff;
+    border: 0;
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+</style>

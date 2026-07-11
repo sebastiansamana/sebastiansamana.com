@@ -1,0 +1,21 @@
+---
+import type { GetStaticPaths } from 'astro';
+import PdfDocumentPage from '../../../../../components/PdfDocumentPage.astro';
+import { portfolios } from '../../../../../data/portfolios';
+
+export const getStaticPaths = (() =>
+  portfolios.map((portfolio) => ({
+    params: { slug: portfolio.id },
+    props: { portfolio },
+  }))) satisfies GetStaticPaths;
+
+const { portfolio } = Astro.props;
+---
+
+<PdfDocumentPage
+  title={portfolio.title}
+  pdfUrl={portfolio.pdfUrl}
+  lang="es"
+  fallbackLabel="Este navegador no pudo mostrar el PDF."
+  openLabel="Abrir studio-2-2.pdf"
+/>
