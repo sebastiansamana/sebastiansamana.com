@@ -31,7 +31,7 @@ const enquiryBody = [
 const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
   `Enquiry about ${portfolio.title}`,
 )}&body=${encodeURIComponent(enquiryBody)}`;
-const pdfViewerHref = `${portfolio.pdfUrl}#page=1&view=Fit&zoom=page-fit`;
+const pdfViewerHref = `${portfolio.pdfUrl}?favicon=v3#page=1&view=Fit&zoom=page-fit`;
 ---
 
 <BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
