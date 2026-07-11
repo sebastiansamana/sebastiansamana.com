@@ -896,6 +896,14 @@ const globalPreloaderPaths = [
         };
 
         const setupRouteReveals = () => {
+          const main = document.querySelector('main');
+          const hasPageSpecificReveal = main?.querySelector(revealSelector);
+          const hasHomePreloader = main?.querySelector('[data-home-preloader]');
+
+          if (main instanceof HTMLElement && !hasPageSpecificReveal && !hasHomePreloader) {
+            main.setAttribute('data-varelism-route-reveal', '');
+          }
+
           document.querySelectorAll(revealSelector).forEach((element) => {
             if (!(element instanceof HTMLElement) || element.dataset.varelismRouteRevealBooted === 'true') {
               return;
