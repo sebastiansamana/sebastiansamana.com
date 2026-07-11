@@ -593,6 +593,8 @@
         let frame = 0;
         let lastPaint = 0;
         let animationFrame = 0;
+        let resizeFrame = 0;
+        let resizePending = false;
         let segmentDurationMs = 0;
         let segmentElapsedMs = 0;
         let smoothedTransform = null;
@@ -720,15 +722,28 @@
           renderState(interpolateTargets(currentTarget, nextTarget, phase), frame, targetRenderFrameMs, snapTransform);
         };
 
-        advanceInitialTimeline(initialTimelineOffsetMs);
-        resizeCanvas();
-        primeCanvas();
+        const flushResize = () => {
+          resizeFrame = 0;
+          if (!resizePending) return;
 
-        const onResize = () => {
+          resizePending = false;
           if (resizeCanvas()) {
             primeCanvas(false);
           }
         };
+
+        const requestResize = () => {
+          resizePending = true;
+          if (resizeFrame) return;
+
+          resizeFrame = window.requestAnimationFrame(flushResize);
+        };
+
+        advanceInitialTimeline(initialTimelineOffsetMs);
+        resizeCanvas();
+        primeCanvas();
+
+        const onResize = () => requestResize();
 
         const paint = (timestamp) => {
           const deltaMs = lastPaint ? clamp(timestamp - lastPaint, 0, 48) : targetRenderFrameMs;
@@ -737,10 +752,6 @@
             lastPaint = timestamp;
             animationFrame = window.requestAnimationFrame(paint);
             return;
-          }
-
-          if (resizeCanvas()) {
-            primeCanvas(false);
           }
 
           frame += deltaMs / targetRenderFrameMs;
@@ -771,6 +782,7 @@
           window.removeEventListener('resize', onResize);
           window.visualViewport?.removeEventListener('resize', onResize);
           window.cancelAnimationFrame(animationFrame);
+          window.cancelAnimationFrame(resizeFrame);
         }, { once: true });
       });
     };

@@ -9,7 +9,7 @@
   ></canvas>
 </div>
 
-<script src="/scripts/math-visualisation-canvas.js?v=20260711-varelism-red-smooth-point68-offset146-preloader-pause" defer data-astro-rerun></script>
+<script src="/scripts/math-visualisation-canvas.js?v=20260711-varelism-red-smooth-point68-offset146-resize-stable" defer data-astro-rerun></script>
 
 <style>
   .math-visualisation-background {
@@ -19,7 +19,7 @@
     inset: 0;
     min-height: 100vh;
     min-height: 100svh;
-    min-height: 100dvh;
+    min-height: 100lvh;
     overflow: visible;
     pointer-events: none;
     position: absolute;
@@ -39,7 +39,7 @@
     top: 50%;
     transform-origin: center center;
     transform: translate3d(-50%, -50%, 0);
-    width: max(102vw, calc(102dvh * 992 / 1772));
+    width: max(102vw, calc(102lvh * 992 / 1772));
     will-change: transform;
   }
 
@@ -58,14 +58,14 @@
 
   @media (max-width: 560px) {
     .math-visualisation-background__canvas {
-      width: max(116vw, calc(104dvh * 992 / 1772));
+      width: max(116vw, calc(104lvh * 992 / 1772));
     }
   }
 
   @media (max-width: 640px) and (orientation: portrait) {
     .math-visualisation-background__canvas {
       transform: translate3d(-50%, -50%, 0) rotate(90deg);
-      width: max(104dvh, calc(118vw * 992 / 1772));
+      width: max(104lvh, calc(118vw * 992 / 1772));
     }
   }
 </style>
