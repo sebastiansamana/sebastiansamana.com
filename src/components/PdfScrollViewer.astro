@@ -33,7 +33,6 @@ const {
 
 const safePageCount = Number.isFinite(pageCount) && pageCount > 0 ? Math.floor(pageCount) : 1;
 const fallbackAspectRatio = 1.414;
-const pageViewportHeight = 72;
 const pages = Array.from({ length: safePageCount }, (_, index) => {
   const configuredAspectRatio = pageAspectRatios[index];
   const aspectRatio =
@@ -43,7 +42,6 @@ const pages = Array.from({ length: safePageCount }, (_, index) => {
 
   return {
     aspectRatio,
-    fitWidth: aspectRatio * pageViewportHeight,
     number: index + 1,
   };
 });
@@ -67,12 +65,12 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
 
   <div class="pdf-scroll-viewer__pages">
     {
-      pages.map(({ aspectRatio, fitWidth, number }) => (
+      pages.map(({ aspectRatio, number }) => (
         <figure
           class="pdf-scroll-viewer__page"
           data-pdf-page
           data-page-number={number}
-          style={`--pdf-page-aspect-ratio: ${aspectRatio}; --pdf-page-fit-width: ${fitWidth}vh; --pdf-page-fit-width-small: ${fitWidth}svh`}
+          style={`--pdf-page-aspect-ratio: ${aspectRatio}`}
           aria-label={`${pageLabel} ${number} / ${safePageCount}`}
         >
           {number === 1 && previewImage ? (
@@ -203,8 +201,6 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
         const baseViewport = page.getViewport({ scale: 1 });
         const pageAspectRatio = baseViewport.width / baseViewport.height;
         pageElement.style.setProperty('--pdf-page-aspect-ratio', String(pageAspectRatio));
-        pageElement.style.setProperty('--pdf-page-fit-width', `${pageAspectRatio * 72}vh`);
-        pageElement.style.setProperty('--pdf-page-fit-width-small', `${pageAspectRatio * 72}svh`);
 
         const cssWidth = pageElement.clientWidth;
         if (cssWidth <= 0) return;
@@ -523,7 +519,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     overflow: hidden;
     position: relative;
     scroll-margin-top: clamp(6.5rem, 12vh, 8.5rem);
-    width: min(100%, var(--pdf-page-fit-width, 100%));
+    width: 100%;
   }
 
   :global(.pdf-scroll-viewer__canvas),
@@ -643,9 +639,4 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     }
   }
 
-  @supports (height: 100svh) {
-    .pdf-scroll-viewer__page {
-      width: min(100%, var(--pdf-page-fit-width-small, var(--pdf-page-fit-width, 100%)));
-    }
-  }
 </style>
