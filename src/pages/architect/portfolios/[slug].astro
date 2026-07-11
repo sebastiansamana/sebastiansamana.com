@@ -35,9 +35,9 @@ const pageAspectRatio =
     />
 
     <footer class="portfolio-detail__footer">
-      <a class="portfolio-detail__link portfolio-detail__top" href="#portfolio-detail-top" data-portfolio-back-to-top>
+      <button class="portfolio-detail__link portfolio-detail__top" type="button" data-portfolio-back-to-top>
         Back to top
-      </a>
+      </button>
     </footer>
   </article>
 </BaseLayout>
@@ -45,12 +45,11 @@ const pageAspectRatio =
 <script>
   (() => {
     const setupBackToTop = () => {
-      document.querySelectorAll('[data-portfolio-back-to-top]').forEach((link) => {
-        if (!(link instanceof HTMLAnchorElement) || link.dataset.portfolioBackToTopReady === 'true') return;
+      document.querySelectorAll('[data-portfolio-back-to-top]').forEach((button) => {
+        if (!(button instanceof HTMLButtonElement) || button.dataset.portfolioBackToTopReady === 'true') return;
 
-        link.dataset.portfolioBackToTopReady = 'true';
-        link.addEventListener('click', (event) => {
-          event.preventDefault();
+        button.dataset.portfolioBackToTopReady = 'true';
+        button.addEventListener('click', () => {
           const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
           window.scrollTo({
@@ -133,6 +132,14 @@ const pageAspectRatio =
 
   .portfolio-detail__footer {
     margin-top: clamp(1.2rem, 3vw, 2.5rem);
+  }
+
+  .portfolio-detail__top {
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
   }
 
   @supports (height: 100svh) {
