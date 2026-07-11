@@ -1,6 +1,6 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import PdfScrollViewer from '../../../../components/PdfScrollViewer.jsx';
+import PdfScrollViewer from '../../../../components/PdfScrollViewer.astro';
 import { portfolios } from '../../../../data/portfolios';
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 
@@ -11,26 +11,40 @@ export const getStaticPaths = (() =>
   }))) satisfies GetStaticPaths;
 
 const { portfolio } = Astro.props;
-const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} paginas` : undefined]
+const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} páginas` : undefined]
   .filter(Boolean)
   .join(' / ');
-const pageAspectRatio =
-  portfolio.coverImageWidth && portfolio.coverImageHeight ? portfolio.coverImageWidth / portfolio.coverImageHeight : 1.414;
 ---
 
 <BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
   <article class="portfolio-detail" id="portfolio-detail-top" data-varelism-route-reveal>
     <header class="portfolio-detail__header">
       <a class="portfolio-detail__link portfolio-detail__return" href="/esp/arquitecto/portafolios/">Volver</a>
+      <a
+        class="portfolio-detail__link portfolio-detail__document"
+        href={portfolio.pdfUrl}
+        target="_blank"
+        rel="noopener"
+        aria-label={`Abrir ${portfolio.title} como el PDF original etiquetado`}
+      >
+        Abrir PDF
+      </a>
     </header>
 
     <PdfScrollViewer
-      client:only="react"
       pdfUrl={portfolio.pdfUrl}
       title={portfolio.title}
       ariaLabel={`${portfolio.title} PDF`}
       pageCount={portfolio.pageCount}
-      pageAspectRatio={pageAspectRatio}
+      pageAspectRatios={portfolio.pageAspectRatios}
+      previewImage={portfolio.pdfPreviewImage}
+      previewImageWidth={portfolio.pdfPreviewImageWidth}
+      previewImageHeight={portfolio.pdfPreviewImageHeight}
+      pageLabel="Página"
+      loadingLabel="Preparando el portafolio en alta resolución"
+      fallbackLabel="No se pudo cargar el visor del portafolio."
+      openPdfLabel="Abrir el PDF original"
+      pageErrorLabel="No se pudo mostrar esta página."
     />
 
     <footer class="portfolio-detail__footer">
@@ -94,6 +108,7 @@ const pageAspectRatio =
     align-items: baseline;
     display: flex;
     gap: clamp(0.9rem, 2vw, 1.45rem);
+    justify-content: space-between;
     margin-bottom: var(--portfolio-back-gap);
   }
 
