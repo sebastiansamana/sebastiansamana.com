@@ -22,7 +22,6 @@ const pageAspectRatio =
   <article class="portfolio-detail" id="portfolio-detail-top" data-varelism-route-reveal>
     <header class="portfolio-detail__header">
       <a class="portfolio-detail__link portfolio-detail__return" href="/esp/arquitecto/portafolios/">Volver</a>
-      <h1 class="portfolio-detail__title">{portfolio.title}</h1>
     </header>
 
     <PdfScrollViewer
@@ -75,6 +74,7 @@ const pageAspectRatio =
   }
 
   .portfolio-detail {
+    --portfolio-back-gap: clamp(2rem, 5vw, 4rem);
     color: #000000;
     margin: 0 auto;
     min-height: calc(100vh - var(--portfolio-detail-top-offset));
@@ -94,10 +94,9 @@ const pageAspectRatio =
     align-items: baseline;
     display: flex;
     gap: clamp(0.9rem, 2vw, 1.45rem);
-    margin-bottom: clamp(1rem, 2.5vw, 1.8rem);
+    margin-bottom: var(--portfolio-back-gap);
   }
 
-  .portfolio-detail__title,
   .portfolio-detail__link {
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
       'Helvetica Neue', Arial, sans-serif;
@@ -105,12 +104,6 @@ const pageAspectRatio =
     letter-spacing: 0;
     line-height: 1;
     margin: 0;
-  }
-
-  .portfolio-detail__title {
-    color: #000000;
-    font-weight: 300;
-    min-width: 0;
   }
 
   .portfolio-detail__link {
@@ -158,10 +151,9 @@ const pageAspectRatio =
 
     .portfolio-detail__header {
       gap: 0.75rem;
-      margin-bottom: clamp(0.85rem, 4vw, 1.35rem);
+      margin-bottom: clamp(2rem, 7vw, 3rem);
     }
 
-    .portfolio-detail__title,
     .portfolio-detail__link {
       font-size: 0.72rem;
     }
