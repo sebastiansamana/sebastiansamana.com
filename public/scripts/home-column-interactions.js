@@ -74,7 +74,7 @@
 
   const onPointerLeave = (event) => {
     if (!event.target?.closest?.(triggerSelector)) return;
-    clearItem(getItem(event.target), 'is-column-hovering', 140);
+    clearItem(getItem(event.target), 'is-column-hovering');
   };
 
   const onPointerDown = (event) => {

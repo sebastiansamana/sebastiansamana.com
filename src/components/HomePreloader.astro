@@ -493,9 +493,9 @@ const {
 
         return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : Math.round(fallback);
       };
-      const requestedImageFadeMs = getDuration('imageFadeMs', 380 * timingScale);
-      const requestedWhiteHoldMs = getDuration('whiteHoldMs', 240 * timingScale);
-      const requestedOverlayFadeMs = getDuration('overlayFadeMs', 460 * timingScale);
+      const requestedImageFadeMs = getDuration('imageFadeMs', 240 * timingScale);
+      const requestedWhiteHoldMs = getDuration('whiteHoldMs', 0);
+      const requestedOverlayFadeMs = getDuration('overlayFadeMs', 450 * timingScale);
       const isActivePath = activePaths.some((path) => isSamePath(path, window.location.pathname));
       const forcePreloader = isForcedByPendingNavigation(activePaths);
       const handoffState = getPendingHandoffState(activePaths);
@@ -578,12 +578,11 @@ const {
         if (!document.documentElement.classList.contains(initialHomePreloaderClass)) return;
 
         document.documentElement.classList.add(initialHomeRevealClass);
-        window.requestAnimationFrame(() => {
-          document.documentElement.classList.remove(initialHomePreloaderClass);
-          window.setTimeout(() => {
-            document.documentElement.classList.remove(initialHomeRevealClass);
-          }, 520);
-        });
+        document.documentElement.getBoundingClientRect();
+        document.documentElement.classList.remove(initialHomePreloaderClass);
+        window.setTimeout(() => {
+          document.documentElement.classList.remove(initialHomeRevealClass);
+        }, Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--varelism-route-fade-ms')) || 450);
       };
 
       const removeOverlay = () => {
@@ -664,6 +663,7 @@ const {
         overlay.classList.add('is-image-fading');
         setTimer(() => {
           overlay.classList.add('is-overlay-fading');
+          revealInitialHomeShell();
           setTimer(removeOverlay, overlayFadeMs);
         }, imageFadeMs + whiteHoldMs);
       };
@@ -900,8 +900,8 @@ const {
     top: var(--home-preloader-anchor-y, 0px);
     touch-action: pan-y pinch-zoom;
     transition:
-      opacity var(--home-preloader-overlay-fade-ms, 460ms) cubic-bezier(0.22, 1, 0.36, 1),
-      visibility var(--home-preloader-overlay-fade-ms, 460ms) linear;
+      opacity var(--home-preloader-overlay-fade-ms, var(--varelism-route-fade-ms, 450ms)) var(--varelism-route-fade-ease, ease),
+      visibility var(--home-preloader-overlay-fade-ms, var(--varelism-route-fade-ms, 450ms)) linear;
     visibility: hidden;
     will-change: opacity;
     width: 100vw;
@@ -943,7 +943,7 @@ const {
     object-fit: contain;
     opacity: 0;
     pointer-events: none;
-    transition: opacity var(--home-preloader-image-fade-ms, 380ms) cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity var(--home-preloader-image-fade-ms, 240ms) var(--varelism-route-fade-ease, ease);
     transform: translateZ(0);
     user-select: none;
     visibility: hidden;

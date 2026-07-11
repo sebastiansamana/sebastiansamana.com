@@ -2,6 +2,10 @@
   --bg: #ffffff;
   --ink: #1b3743;
   --content: 960px;
+  --varelism-route-fade-ms: 450ms;
+  --varelism-route-fade-ease: ease;
+  --varelism-column-hover-ms: 180ms;
+  --varelism-column-hover-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
 }
@@ -82,7 +86,7 @@ html.home-preloader-initial-home-active .site-footer,
 html.home-preloader-initial-home-revealing .site-header,
 html.home-preloader-initial-home-revealing main > :not(.home-preloader),
 html.home-preloader-initial-home-revealing .site-footer {
-  transition: opacity 420ms ease;
+  transition: opacity var(--varelism-route-fade-ms) var(--varelism-route-fade-ease);
   will-change: opacity;
 }
 
@@ -114,7 +118,7 @@ html.varelism-route-entering main > :not(.home-preloader) {
 [data-varelism-route-reveal] {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 450ms ease;
+  transition: opacity var(--varelism-route-fade-ms) var(--varelism-route-fade-ease);
   will-change: opacity;
 }
 

@@ -45,7 +45,7 @@ const sections = [
       </div>
     ))}
   </section>
-  <script src="/scripts/home-column-interactions.js?v=20260710-smooth-column-press" defer data-astro-rerun></script>
+  <script src="/scripts/home-column-interactions.js?v=20260711-responsive-column-hover" defer data-astro-rerun></script>
 </BaseLayout>
 
 <style>
@@ -60,7 +60,8 @@ const sections = [
   }
 
   .triptych {
-    --column-hover-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --column-hover-ease: var(--varelism-column-hover-ease);
+    --column-hover-ms: var(--varelism-column-hover-ms);
     align-items: center;
     display: grid;
     gap: clamp(1.5rem, 6vw, 7rem);
@@ -108,7 +109,7 @@ const sections = [
     line-height: 1;
     margin: 0;
     text-align: center;
-    transition: color 240ms var(--column-hover-ease);
+    transition: color var(--column-hover-ms) var(--column-hover-ease);
   }
 
   .column-stack {
@@ -130,7 +131,7 @@ const sections = [
     height: auto;
     max-width: 100%;
     pointer-events: none;
-    transition: opacity 260ms var(--column-hover-ease);
+    transition: opacity var(--column-hover-ms) var(--column-hover-ease);
     width: 100%;
     will-change: opacity;
   }
@@ -147,7 +148,7 @@ const sections = [
     pointer-events: none;
     position: relative;
     transform: translateZ(0);
-    transition: opacity 260ms var(--column-hover-ease);
+    transition: opacity var(--column-hover-ms) var(--column-hover-ease);
     will-change: opacity;
     z-index: 1;
   }

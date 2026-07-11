@@ -609,6 +609,9 @@
         const desktopPointScale = clamp(Number.parseFloat(canvas.dataset.mathDesktopPointScale || '1'), 0.2, 1);
         const desktopPointMedia = window.matchMedia?.('(min-width: 1024px)') ?? { matches: false };
         const currentPointScale = () => (desktopPointMedia.matches ? desktopPointScale : 1);
+        const shouldPauseForPreloader = () =>
+          Boolean(canvas.closest('[data-varelism-math-background]')) &&
+          document.documentElement.classList.contains('home-preloader-active');
 
         const configureContext = () => {
           ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
@@ -729,6 +732,12 @@
 
         const paint = (timestamp) => {
           const deltaMs = lastPaint ? clamp(timestamp - lastPaint, 0, 48) : targetRenderFrameMs;
+
+          if (shouldPauseForPreloader()) {
+            lastPaint = timestamp;
+            animationFrame = window.requestAnimationFrame(paint);
+            return;
+          }
 
           if (resizeCanvas()) {
             primeCanvas(false);
