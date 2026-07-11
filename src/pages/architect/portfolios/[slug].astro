@@ -31,6 +31,7 @@ const enquiryBody = [
 const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
   `Enquiry about ${portfolio.title}`,
 )}&body=${encodeURIComponent(enquiryBody)}`;
+const pdfViewerHref = `${portfolio.pdfUrl}#page=1&view=Fit&zoom=page-fit`;
 ---
 
 <BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
@@ -39,10 +40,10 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
       <a class="portfolio-detail__link portfolio-detail__return" href="/architect/portfolios/">Return</a>
       <a
         class="portfolio-detail__link portfolio-detail__document"
-        href={`/architect/portfolios/${portfolio.id}/pdf/`}
+        href={pdfViewerHref}
         target="_blank"
         rel="noopener"
-        aria-label={`Open ${portfolio.title} in the Varelism PDF viewer`}
+        aria-label={`Open ${portfolio.title} PDF in a new tab`}
       >
         Open PDF
       </a>
