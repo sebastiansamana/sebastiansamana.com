@@ -40,7 +40,9 @@ const pdfViewerHref = `/esp/arquitecto/portafolios/${portfolio.id}/pdf/?viewer=v
       <a class="portfolio-detail__link portfolio-detail__return" href="/esp/arquitecto/portafolios/">Volver</a>
       <a
         class="portfolio-detail__link portfolio-detail__document"
-        href={pdfViewerHref}
+        href={portfolio.pdfUrl}
+        data-native-pdf-href={portfolio.pdfUrl}
+        data-desktop-pdf-href={pdfViewerHref}
         target="_blank"
         rel="noopener"
         aria-label={`Abrir el PDF ${portfolio.title} en una pestaña nueva`}
@@ -75,7 +77,20 @@ const pdfViewerHref = `/esp/arquitecto/portafolios/${portfolio.id}/pdf/?viewer=v
 </BaseLayout>
 
 <script>
+  import { shouldOpenPdfNatively } from '../../../../scripts/pdf-device.js';
+
   (() => {
+    const setupPdfLinks = () => {
+      const useNativeViewer = shouldOpenPdfNatively();
+
+      document.querySelectorAll('[data-native-pdf-href][data-desktop-pdf-href]').forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) return;
+
+        const href = useNativeViewer ? link.dataset.nativePdfHref : link.dataset.desktopPdfHref;
+        if (href) link.href = href;
+      });
+    };
+
     const setupBackToTop = () => {
       document.querySelectorAll('[data-portfolio-back-to-top]').forEach((button) => {
         if (!(button instanceof HTMLButtonElement) || button.dataset.portfolioBackToTopReady === 'true') return;
@@ -92,7 +107,9 @@ const pdfViewerHref = `/esp/arquitecto/portafolios/${portfolio.id}/pdf/?viewer=v
       });
     };
 
+    setupPdfLinks();
     setupBackToTop();
+    document.addEventListener('astro:page-load', setupPdfLinks);
     document.addEventListener('astro:page-load', setupBackToTop);
   })();
 </script>

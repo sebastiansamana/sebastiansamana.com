@@ -500,7 +500,7 @@ Key behavior:
 - At 760px the detail reduces main padding/link text; otherwise pages remain full viewer width.
 - The content width is `min(100%, 92rem)`.
 
-The inline viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. “Open PDF” links directly to the original `pdfUrl` in a new native browser tab, preserving its vector text/linework and original embedded imagery. The auxiliary `/pdf/` routes also iframe the original PDF, although the current detail header bypasses them and opens the raw file.
+The inline viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. The detail header keeps the original `pdfUrl` as its progressive-enhancement destination. On mobile, tablet, iPadOS desktop-user-agent, and touch-first devices, “Open PDF” therefore opens the original file in the browser's native PDF viewer. Fine-pointer desktop browsers enhance the link to the branded auxiliary `/pdf/` route, which iframes the original PDF. The auxiliary route also redirects mobile/tablet devices to the raw `pdfUrl`, so direct or stale wrapper links cannot trap Safari inside an iframe. Both paths preserve the PDF's vector text/linework and original embedded imagery.
 
 Never turn PDF pages into website JPEGs as the source, never replace `pdfUrl` with a raster export, and never overwrite the source merely to reduce transfer size.
 
@@ -532,7 +532,7 @@ Lifecycle:
 4. Both details currently pass the same `pdfUrl`, page count, ratios, and preview to PDF.js.
 5. English/Spanish UI labels, return link, enquiry wording, and page ARIA labels differ; title and PDF do not.
 6. Page placeholders follow the configured ratios and PDF.js verifies all 39 pages before ready state.
-7. Native “Open PDF” serves the unchanged original.
+7. Native mobile/tablet “Open PDF” serves the unchanged original; desktop keeps the branded iframe wrapper.
 8. The build copied the PDF byte-identically.
 9. Live audit at 1440px and 390px loaded 39 pages, showed no console errors, and paired the same slug across languages.
 

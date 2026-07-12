@@ -19,7 +19,7 @@ const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=1&navpanes=0`
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} data-native-pdf-url={pdfUrl}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -28,6 +28,14 @@ const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=1&navpanes=0`
     <link rel="icon" href="/favicon.ico?v=4" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
     <title>{documentTitle}</title>
+    <script>
+      import { shouldOpenPdfNatively } from '../scripts/pdf-device.js';
+
+      const nativePdfUrl = document.documentElement.dataset.nativePdfUrl;
+      if (nativePdfUrl && shouldOpenPdfNatively()) {
+        window.location.replace(nativePdfUrl);
+      }
+    </script>
   </head>
   <body>
     <iframe src={viewerUrl} title={`${title} PDF`} allowfullscreen>
