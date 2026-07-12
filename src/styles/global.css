@@ -318,8 +318,8 @@ main {
 
 .site-footer img {
   display: block;
+  filter: brightness(0);
   height: auto;
-  opacity: 0.78;
   width: 1.15rem;
 }
 
