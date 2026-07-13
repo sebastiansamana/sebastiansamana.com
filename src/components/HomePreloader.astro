@@ -11,7 +11,7 @@ interface Props {
   whiteHoldMs?: number;
 }
 
-const videoSrc = '/images/Logo_Animation_Preloader.mp4';
+// Keep the loader image-based so it cannot be promoted to a separate video overlay plane.
 const fallbackSrc = '/images/Logo_Animation_Preloader.webp';
 const {
   activePaths = ['/', '/index.html'],
@@ -37,23 +37,10 @@ const {
   data-ready-events={readyEvents}
   data-session-key={sessionKey}
   data-timing-scale={timingScale}
-  data-video-src={videoSrc}
   data-fallback-src={fallbackSrc}
   data-white-hold-ms={whiteHoldMs}
   aria-hidden="true"
 >
-  <video
-    class="home-preloader__media"
-    defaultMuted
-    muted
-    playsinline
-    webkit-playsinline
-    preload="none"
-    disablePictureInPicture
-    controlsList="nodownload noplaybackrate noremoteplayback"
-    aria-hidden="true"
-    tabindex="-1"
-  ></video>
   <img
     class="home-preloader__fallback"
     alt=""
@@ -517,6 +504,7 @@ const {
       const overlayFadeMs = isNavigationPreloader ? Math.min(requestedOverlayFadeMs, 180) : requestedOverlayFadeMs;
       let hasRemoved = false;
       let cleanupVideo = () => {};
+      let cleanupFallbackLoad = () => {};
       let cleanupHandoffCompletion = () => {};
       const timers = new Set();
       const fallbackCycleDurationMs = Math.ceil(window.__varelismPreloaderCycleDurationMs || 3067) + 180;
@@ -551,6 +539,7 @@ const {
 
       const cleanupOverlay = () => {
         cleanupVideo();
+        cleanupFallbackLoad();
         cleanupHandoffCompletion();
         timers.forEach((timer) => window.clearTimeout(timer));
         timers.clear();
@@ -572,6 +561,21 @@ const {
         if (activeFallback instanceof HTMLImageElement && overlayFallbackSrc && !activeFallback.getAttribute('src')) {
           activeFallback.src = overlayFallbackSrc;
         }
+      };
+
+      const restartFallbackAnimation = () => {
+        const activeFallback = overlay.querySelector('.home-preloader__fallback');
+
+        if (!(activeFallback instanceof HTMLImageElement) || !overlayFallbackSrc) return null;
+
+        const freshFallback = activeFallback.cloneNode(false);
+
+        if (!(freshFallback instanceof HTMLImageElement)) return null;
+
+        freshFallback.removeAttribute('src');
+        activeFallback.replaceWith(freshFallback);
+        freshFallback.src = overlayFallbackSrc;
+        return freshFallback;
       };
 
       const revealInitialHomeShell = () => {
@@ -695,11 +699,47 @@ const {
       const startFallbackCycle = () => {
         if (hasRemoved || isHiding || hasMetMediaMoment) return;
 
+        cleanupFallbackLoad();
+        const currentFallback = overlay.querySelector('.home-preloader__fallback');
+        const activeFallback = hasStartedMediaCycle
+          ? restartFallbackAnimation()
+          : currentFallback instanceof HTMLImageElement
+            ? currentFallback
+            : null;
+
         isFallbackActive = true;
         isAwaitingVideoStart = false;
         hasStartedMediaCycle = true;
-        showPreloaderFallback(overlay);
-        scheduleMediaCycleCompletion(fallbackCycleDurationMs);
+
+        const beginFallbackCycle = (shouldRevealImage) => {
+          cleanupFallbackLoad();
+          if (hasRemoved || isHiding || hasMetMediaMoment) return;
+          if (shouldRevealImage) showPreloaderFallback(overlay);
+          scheduleMediaCycleCompletion(fallbackCycleDurationMs);
+        };
+
+        if (!(activeFallback instanceof HTMLImageElement)) {
+          beginFallbackCycle(false);
+          return;
+        }
+
+        const onLoad = () => beginFallbackCycle(true);
+        const onError = () => beginFallbackCycle(false);
+        cleanupFallbackLoad = () => {
+          activeFallback.removeEventListener('load', onLoad);
+          activeFallback.removeEventListener('error', onError);
+          cleanupFallbackLoad = () => {};
+        };
+        activeFallback.addEventListener('load', onLoad, { once: true });
+        activeFallback.addEventListener('error', onError, { once: true });
+
+        if (activeFallback.complete) {
+          if (activeFallback.naturalWidth > 0) {
+            onLoad();
+          } else {
+            onError();
+          }
+        }
       };
 
       const completeMediaCycleOrReplay = () => {
@@ -816,7 +856,7 @@ const {
         if (!handoffState) {
           startVideoCycle();
         }
-      } else {
+      } else if (!handoffState) {
         startFallbackCycle();
       }
 
