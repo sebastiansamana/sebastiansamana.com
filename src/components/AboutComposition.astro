@@ -31,7 +31,11 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
   <div class="about-text">
     {
       paragraphs.map((paragraph) => (
-        <p class:list={{ 'about-samana': paragraph === 'Samana.' }}>
+        <p
+          class:list={{
+            'about-samana': paragraph === 'Samana.' || paragraph === 'Samaná.',
+          }}
+        >
           {
             splitTranslationTerms(paragraph).map((part) =>
               isTranslationTerm(part) ? <em>{part}</em> : part
