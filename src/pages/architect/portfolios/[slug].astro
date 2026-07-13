@@ -14,7 +14,7 @@ const { portfolio } = Astro.props;
 const description = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} pages` : undefined]
   .filter(Boolean)
   .join(' / ');
-const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryEmail = 'sebastian.samana@icloud.com';
 const enquiryDetails = [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} spreads` : undefined]
   .filter(Boolean)
   .join(' / ');
@@ -34,7 +34,7 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
 const pdfViewerHref = `/architect/portfolios/${portfolio.id}/pdf/?viewer=v4`;
 ---
 
-<BaseLayout title={`${portfolio.title} | Varelism`} description={description || portfolio.title}>
+<BaseLayout title={`${portfolio.title} | Samana`} description={description || portfolio.title}>
   <article class="portfolio-detail" id="portfolio-detail-top" data-varelism-route-reveal>
     <header class="portfolio-detail__header">
       <a class="portfolio-detail__link portfolio-detail__return" href="/architect/portfolios/">Return</a>

@@ -97,7 +97,7 @@ const shouldPreloadLightFont = !isHomeRoute && !isArchitectLandingRoute;
 const siteNavLabel = isSpanishRoute ? 'Navegación del sitio' : 'Site navigation';
 const primaryNavLabel = isSpanishRoute ? 'Navegación principal' : 'Primary navigation';
 const homeHref = isSpanishRoute ? '/esp' : '/';
-const homeLabel = isSpanishRoute ? 'Inicio de Varelism' : 'Varelism home';
+const homeLabel = isSpanishRoute ? 'Inicio de Samana' : 'Samana home';
 const languageSwitchLabel = isSpanishRoute ? 'eng' : 'esp';
 const languageSwitchHref = getLanguageSwitchHref(Astro.url.pathname);
 const contactHref = isSpanishRoute ? '/esp/contacto/' : '/contact/';
@@ -845,7 +845,7 @@ const globalPreloaderPaths = [
           nav?.setAttribute('aria-label', isSpanish ? 'Navegación principal' : 'Primary navigation');
 
           updateLink('[data-nav-home]', {
-            ariaLabel: isSpanish ? 'Inicio de Varelism' : 'Varelism home',
+            ariaLabel: isSpanish ? 'Inicio de Samana' : 'Samana home',
             href: isSpanish ? '/esp' : '/',
           });
           updateLink('[data-nav-language]', {
@@ -997,7 +997,7 @@ const globalPreloaderPaths = [
             <img
               class="image-swap__base"
               src="/images/Samana_Logo_Text.png"
-              alt="Varelism"
+              alt="Sebastian Samana"
               width="1095"
               height="398"
             />
@@ -1050,7 +1050,7 @@ const globalPreloaderPaths = [
         <slot />
       </main>
       <footer class="site-footer">
-        <p>&copy; 2026 Varelism</p>
+        <p>&copy; 2026 Sebastian Samana</p>
       </footer>
     </div>
   </body>

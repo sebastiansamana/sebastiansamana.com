@@ -37,7 +37,7 @@ const metadata = getArtworkDetailMetadata(artwork, 'es').map((item) => ({
   label: metadataLabelTranslations[item.label] ?? item.label,
   value: item.label === 'Medium' ? translateMedium(item.value) : item.value,
 }));
-const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryEmail = 'sebastian.samana@icloud.com';
 const enquiryDetails = metadata.map((item) => item.value).join(' / ');
 const enquiryBody = [
   'Hola Sebastian,',
@@ -55,7 +55,7 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
 const hasDescription = Boolean(artwork.data.description);
 ---
 
-<BaseLayout title={`${artwork.data.title} | Varelism`} description={artwork.data.description ?? artwork.data.title}>
+<BaseLayout title={`${artwork.data.title} | Samana`} description={artwork.data.description ?? artwork.data.title}>
   <article class="artwork-detail" data-varelism-route-reveal data-varelism-route-reveal-images="true">
     <a class="artwork-back" href="/esp/pintor/todo/">Volver</a>
 

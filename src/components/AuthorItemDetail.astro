@@ -18,7 +18,7 @@ const spanishParagraphs = (item.data.spanishBody ?? '')
   .split(/\n{2,}/)
   .map((paragraph) => paragraph.trim())
   .filter(Boolean);
-const enquiryEmail = 'bastivarela@icloud.com';
+const enquiryEmail = 'sebastian.samana@icloud.com';
 const enquiryDetails = metadata.map((item) => item.value).join(' / ');
 const enquiryBody = [
   locale === 'es' ? 'Hola Sebastian,' : 'Hello Sebastian,',

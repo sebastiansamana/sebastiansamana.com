@@ -214,7 +214,7 @@ Responsive behavior:
 ### Detail-derived behavior
 
 - Return/Volver links are fixed by the localized route.
-- Enquiries are generated mailto links to `bastivarela@icloud.com` with localized greeting, subject, title, and visible metadata.
+- Enquiries are generated mailto links to `sebastian.samana@icloud.com` with localized greeting, subject, title, and visible metadata.
 - Back-to-top is derived, not configured. It remains hidden when the content endpoint fits within the initial viewport and appears for a longer page; scrolling is smooth unless reduced motion is preferred.
 - Archive/detail reveal behavior is provided by `data-varelism-route-reveal` and the global transition code. Do not modify it.
 
@@ -372,8 +372,8 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 - Image markup appears only when `image`, `imageWidth`, and `imageHeight` are all present/truthy.
 - Desktop detail is image plus a 13-18rem metadata column; it becomes one column at 760px and reduces text again at 560px.
 - `description` is one plain paragraph below the figure. No Markdown body or gallery exists.
-- Enquiry mailto is derived for `bastivarela@icloud.com` and includes title plus visible date/medium/dimensions, not location/description.
-- Detail SEO is `<title> | Varelism` and description-or-title fallback.
+- Enquiry mailto is derived for `sebastian.samana@icloud.com` and includes title plus visible date/medium/dimensions, not location/description.
+- Detail SEO is `<title> | Samana` and description-or-title fallback.
 
 ### Existing-item trace
 

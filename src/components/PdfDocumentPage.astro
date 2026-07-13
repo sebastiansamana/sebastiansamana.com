@@ -16,7 +16,7 @@ const {
   openLabel = 'Open studio-2-2.pdf',
   indexable = true,
 } = Astro.props;
-const documentTitle = `${title} PDF | Varelism`;
+const documentTitle = `${title} PDF | Samana`;
 const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=1&navpanes=0`;
 const normalizedPath = Astro.url.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '') || '/';
 const canonicalPath = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
