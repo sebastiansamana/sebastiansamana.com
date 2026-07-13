@@ -14,7 +14,11 @@ const { project } = Astro.props;
 const { Content } = await render(project);
 ---
 
-<BaseLayout title={`${project.data.title} | Architect`} description={project.data.excerpt}>
+<BaseLayout
+  title={`${project.data.title} | Architect`}
+  description={project.data.excerpt}
+  indexable={false}
+>
   <article class="project-detail">
     <header class="detail-header section fade-up">
       <p class="eyebrow">Architect</p>

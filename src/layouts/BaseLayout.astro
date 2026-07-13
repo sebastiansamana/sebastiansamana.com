@@ -6,9 +6,10 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  indexable?: boolean;
 }
 
-const { title, description = 'Website under construction.' } = Astro.props;
+const { title, description = 'Website under construction.', indexable = true } = Astro.props;
 const normalizeRoutePath = (pathname: string) => {
   const withoutIndex = pathname.replace(/\/index\.html$/, '') || '/';
 
@@ -87,6 +88,8 @@ const getLanguageSwitchHref = (pathname: string) => {
   return englishToSpanishRoutes.get(normalizedPath) ?? '/esp';
 };
 const normalizedPath = normalizeRoutePath(Astro.url.pathname);
+const canonicalPath = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
+const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href;
 const isSpanishRoute = normalizedPath === '/esp' || normalizedPath.startsWith('/esp/');
 const isHomeRoute = normalizedPath === '/' || normalizedPath === '/esp';
 const isArchitectLandingRoute = normalizedPath === '/architect' || normalizedPath === '/esp/arquitecto';
@@ -118,6 +121,9 @@ const globalPreloaderPaths = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {indexable && <link rel="canonical" href={canonicalUrl} />}
+    {indexable && <meta property="og:url" content={canonicalUrl} />}
+    {!indexable && <meta name="robots" content="noindex" />}
     <link rel="icon" href="/favicon.ico?v=3" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
     {

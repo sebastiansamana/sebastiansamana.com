@@ -110,19 +110,21 @@ Important: `public/` is copied independently of record status. A draft artwork w
 
 ### Metadata, SEO, and structured data
 
-`BaseLayout.astro:6-11` accepts only `title` and `description`. It emits:
+`BaseLayout.astro` accepts `title`, `description`, and a global `indexable` control. Indexable routes emit:
 
 - `<html lang="en|es">`
 - a standard meta description
+- a self-referencing canonical URL
+- a matching Open Graph URL
 - a document title
 
-The audit found no canonical links, `hreflang`, Open Graph tags, Twitter tags, robots overrides, sitemap integration, or JSON-LD/structured data. `astro.config.mjs` defines `site: 'https://varelism.com'`, but no canonical is emitted. Do not solicit or add unsupported SEO/canonical fields during population.
+Canonical and Open Graph URLs are derived globally from `Astro.site`; there are no per-record SEO overrides. `@astrojs/sitemap` generates the canonical sitemap, and `public/robots.txt` advertises it. The site still has no `hreflang`, Twitter tags, or JSON-LD/structured data. Do not solicit or add unsupported per-record SEO/canonical fields during population.
 
 ### Assets and deployment
 
 - Literal content asset URLs are rooted at `/images/...` and `/pdfs/...`.
 - PDF.js WebAssembly support is served from `public/pdfjs/wasm/` and must remain in place.
-- `public/CNAME` is `varelism.com`.
+- This custom GitHub Actions Pages workflow does not require a repository `CNAME` file; the custom domain is controlled in GitHub Pages Settings during cutover.
 - GitHub Actions uses Node 20, `npm ci`, and `npm run build` with `BASE_PATH` (`.github/workflows/deploy.yml:18-45`).
 - A push to `main` triggers deployment. Local population work must stop before push unless the user expressly authorizes it.
 - The production PDF copy is byte-identical to the file placed in `public/pdfs/`; the audited PDF had matching source/build SHA-256 values.

@@ -2,7 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Math Visualisation Lab | Varelism" description="Temporary isolated polynomial map visualisation lab.">
+<BaseLayout
+  title="Math Visualisation Lab | Varelism"
+  description="Temporary isolated polynomial map visualisation lab."
+  indexable={false}
+>
   <section class="math-lab" aria-label="Math visualisation lab" data-varelism-route-reveal>
     <canvas
       class="math-lab__canvas"

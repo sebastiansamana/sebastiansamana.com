@@ -12,4 +12,4 @@ export const getStaticPaths = (() =>
 const { portfolio } = Astro.props;
 ---
 
-<PdfDocumentPage title={portfolio.title} pdfUrl={portfolio.pdfUrl} />
+<PdfDocumentPage title={portfolio.title} pdfUrl={portfolio.pdfUrl} indexable={false} />

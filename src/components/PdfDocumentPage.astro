@@ -5,6 +5,7 @@ interface Props {
   lang?: 'en' | 'es';
   fallbackLabel?: string;
   openLabel?: string;
+  indexable?: boolean;
 }
 
 const {
@@ -13,9 +14,13 @@ const {
   lang = 'en',
   fallbackLabel = 'This browser could not display the PDF.',
   openLabel = 'Open studio-2-2.pdf',
+  indexable = true,
 } = Astro.props;
 const documentTitle = `${title} PDF | Varelism`;
 const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=1&navpanes=0`;
+const normalizedPath = Astro.url.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '') || '/';
+const canonicalPath = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
+const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href;
 ---
 
 <!doctype html>
@@ -24,6 +29,9 @@ const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=1&navpanes=0`
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={`${title} architecture portfolio.`} />
+    {indexable && <link rel="canonical" href={canonicalUrl} />}
+    {indexable && <meta property="og:url" content={canonicalUrl} />}
+    {!indexable && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/favicon.ico?v=4" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />

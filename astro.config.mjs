@@ -1,15 +1,52 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
+
+const sitemapRedirectPrefixes = ['/author', '/esp/autor', '/artist', '/esp/artista'];
+const sitemapExcludedPaths = new Set([
+  '/404.html',
+  '/esp/404',
+  '/booklist',
+  '/books',
+  '/memories',
+  '/math-visualisation-lab',
+  '/architect/portfolios/of-consumption-and-participation-in-the-movable-module',
+]);
+const sitemapExcludedPatterns = [
+  /^\/(?:architect\/portfolios|esp\/arquitecto\/portafolios)\/[^/]+\/pdf$/,
+  /^\/(?:architect\/projects|esp\/arquitecto\/proyectos)\/[^/]+$/,
+];
+
+const normalizeSitemapPath = (pathname) => {
+  if (pathname === '/') return '/';
+
+  return pathname.replace(/\/+$/, '');
+};
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://varelism.com',
+  site: 'https://sebastiansamana.com',
   base: process.env.BASE_PATH || '/',
   build: {
     inlineStylesheets: 'always',
   },
-  integrations: [react()],
+  integrations: [
+    react(),
+    sitemap({
+      filter: (page) => {
+        const pathname = normalizeSitemapPath(new URL(page).pathname);
+
+        return (
+          !sitemapExcludedPaths.has(pathname) &&
+          !sitemapExcludedPatterns.some((pattern) => pattern.test(pathname)) &&
+          !sitemapRedirectPrefixes.some(
+            (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+          )
+        );
+      },
+    }),
+  ],
   output: 'static',
   redirects: {
     '/author/': '/writer/',
