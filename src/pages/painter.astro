@@ -1,90 +1,1676 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-const paintings = [
-  {
-    title: 'Night Wall',
-    medium: 'Oil on linen',
-    year: '2025',
-    image: 'https://images.unsplash.com/photo-1577083552431-6e5fd01988f1?auto=format&fit=crop&w=1600&q=80',
-  },
-  {
-    title: 'Ground Plane, Rain',
-    medium: 'Oil on board',
-    year: '2024',
-    image: 'https://images.unsplash.com/photo-1579965342575-16428a7c8881?auto=format&fit=crop&w=1600&q=80',
-  },
-  {
-    title: 'Soft Facade Study',
-    medium: 'Acrylic on paper',
-    year: '2024',
-    image: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=1600&q=80',
-  },
-];
 ---
 
-<BaseLayout title="Painter | Sebastian Samana" description="Painting practice.">
-  <section class="section fade-up">
-    <p class="eyebrow">Painter</p>
-    <h1 class="page-title">Paintings as parallel research.</h1>
-    <p class="page-intro">The painting practice studies light, edge, and atmosphere outside project timelines.</p>
-  </section>
+<BaseLayout title="Painter | Varelism" description="Painter.">
+  <section class="artist-stage" data-artist-stage aria-label="Painter">
+    <svg class="artist-connector" data-artist-connector aria-hidden="true" focusable="false">
+      <path
+        data-artist-connector-path
+        fill="none"
+        stroke="#000000"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="0.28"
+        vector-effect="non-scaling-stroke"
+      ></path>
+    </svg>
 
-  <section class="section painting-grid">
-    {paintings.map((work, index) => (
-      <article class="work fade-up stagger" style={`--delay:${index * 0.08}s`}>
-        <div class="image-frame">
-          <img src={work.image} alt={work.title} loading="lazy" />
-        </div>
-        <div class="work-meta">
-          <h2>{work.title}</h2>
-          <p>{work.medium} · {work.year}</p>
-        </div>
-      </article>
-    ))}
+    <nav class="artist-links" aria-label="Painter sections">
+      <a class="artist-link" href="/painter/exhibitions" data-artist-link="exhibitions" data-astro-reload>Exhibitions</a>
+      <a class="artist-link" href="/painter/everything" data-artist-link="everything" data-astro-reload>Everything</a>
+    </nav>
   </section>
 </BaseLayout>
 
+<script>
+  (() => {
+    const stateKey = '__varelismArtistPage';
+    const state = (window[stateKey] ||= {
+      cleanup: null,
+      listenersAttached: false,
+    });
+
+    const forceArtistReplayKey = '__varelismForceArtistReplay';
+    const artistReturnReplayKey = 'varelism-artist-return-replay';
+    const artistReturnBlankClass = 'artist-return-blank-active';
+    const routeEnteringClass = 'varelism-route-entering';
+    const routeEnterEvent = 'varelism:route-enter';
+    const preloaderCompleteEvent = 'varelism:artist-preloader-complete';
+    const TEXT_TO_LINE_GAP = 10;
+    const DEFAULT_HORIZONTAL_LEAD_LENGTH = 64;
+    const MOBILE_ARTIST_VIEWPORT_QUERY = '(max-width: 1199px)';
+    const TOUCH_VIEWPORT_QUERY = '(any-pointer: coarse), (pointer: coarse)';
+    const VIEWPORT_RESIZE_EPSILON = 1;
+    const DEBUG_ARTIST_CONNECTOR = false;
+    const EXHIBITIONS_REVEAL_DELAY_MS = 0;
+    const EVERYTHING_REVEAL_DELAY_MS = EXHIBITIONS_REVEAL_DELAY_MS + 750;
+    const CONNECTOR_DRAW_DELAY_MS = EVERYTHING_REVEAL_DELAY_MS + 450;
+    const NON_PHONE_DRAW_DURATION_SCALE = 2 / 3;
+    const ARTIST_RETURN_BLANK_HOLD_MS = 360;
+    const PORTRAIT_PHONE_PRESETS = [
+      {
+        amplitudeFactor: 0.19,
+        bendSign: 1,
+        exhibitions: { x: 0.95, y: 0.9 },
+        everything: { x: 0.68, y: 0.1 },
+        everythingAccentWeight: 0.12,
+        phase: 0.02,
+        waveCycles: 1.94,
+        warp: -0.006,
+      },
+      {
+        amplitudeFactor: 0.18,
+        bendSign: -1,
+        exhibitions: { x: 0.86, y: 0.12 },
+        everything: { x: 0.7, y: 0.9 },
+        everythingAccentWeight: 0.12,
+        phase: -0.01,
+        waveCycles: 1.96,
+        warp: 0.004,
+      },
+      {
+        amplitudeFactor: 0.2,
+        bendSign: 1,
+        exhibitions: { x: 0.72, y: 0.9 },
+        everything: { x: 0.6, y: 0.1 },
+        everythingAccentWeight: 0.1,
+        phase: 0.035,
+        waveCycles: 1.92,
+        warp: 0.008,
+      },
+    ];
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const randomBetween = (min, max) => (max <= min ? min : min + Math.random() * (max - min));
+    const smootherstep = (value) => {
+      const t = clamp(value, 0, 1);
+
+      return t * t * t * (t * (t * 6 - 15) + 10);
+    };
+    const formatPathNumber = (value) => (Number.isFinite(value) ? String(value) : '0');
+    const isPortraitPhoneViewport = (stageWidth, stageHeight) =>
+      stageWidth <= 600 && stageHeight > stageWidth * 1.35;
+    const getRandomPortraitPhonePreset = () =>
+      PORTRAIT_PHONE_PRESETS[Math.floor(Math.random() * PORTRAIT_PHONE_PRESETS.length)];
+    const getArtistCurveScale = ({ stageHeight = window.innerHeight, stageWidth }) => {
+      const portraitPhoneViewport = isPortraitPhoneViewport(stageWidth, stageHeight);
+      const mobileViewport = stageWidth <= 560 || portraitPhoneViewport;
+      const compactViewport = stageWidth <= 900;
+
+      return {
+        amplitudeFactorMax: portraitPhoneViewport ? 0.24 : 0.2,
+        amplitudeFactorMin: portraitPhoneViewport ? 0.15 : 0.13,
+        amplitudeMaximum: portraitPhoneViewport
+          ? clamp(stageHeight * 0.2, 82, 168)
+          : clamp(stageHeight * 0.18, 72, 170),
+        amplitudeMinimum: portraitPhoneViewport ? 34 : 26,
+        bodySegmentCount: portraitPhoneViewport ? 16 : null,
+        fallbackExhibitionsY: portraitPhoneViewport
+          ? 0.72
+          : mobileViewport
+            ? 0.6
+            : compactViewport
+              ? 0.62
+              : 0.62,
+        fallbackEverythingY: portraitPhoneViewport
+          ? 0.28
+          : mobileViewport
+            ? 0.4
+            : compactViewport
+              ? 0.38
+              : 0.42,
+        horizontalSeparationFactor: mobileViewport ? 0.48 : compactViewport ? 0.42 : 0.36,
+        horizontalSeparationMax: mobileViewport ? 220 : compactViewport ? 380 : 360,
+        leadLength: mobileViewport
+          ? 8
+          : compactViewport
+            ? 18
+            : DEFAULT_HORIZONTAL_LEAD_LENGTH,
+        maximumVerticalDistance: mobileViewport
+          ? portraitPhoneViewport
+            ? clamp(stageHeight * 0.58, 340, 480)
+            : clamp(stageHeight * 0.36, 220, 320)
+          : compactViewport
+            ? clamp(stageHeight * 0.34, 260, 380)
+            : stageHeight,
+        minimumLeadLength: mobileViewport ? 6 : compactViewport ? 10 : 28,
+        minimumVerticalDistance: mobileViewport
+          ? portraitPhoneViewport
+            ? clamp(stageHeight * 0.34, 230, 340)
+            : clamp(stageHeight * 0.16, 96, 152)
+          : compactViewport
+            ? clamp(stageHeight * 0.18, 136, 240)
+            : 0,
+        normalXScale: portraitPhoneViewport ? 0.75 : 1,
+        normalYScale: 1,
+        terminalTangentFactorMax: portraitPhoneViewport ? 0.34 : 0.5,
+        terminalTangentFactorMin: portraitPhoneViewport ? 0.24 : 0.34,
+        terminalTangentMaximum: portraitPhoneViewport ? 118 : 220,
+        terminalTangentMinimum: portraitPhoneViewport ? 46 : 52,
+        textSeparationPadding: mobileViewport ? 88 : compactViewport ? 84 : 72,
+        tensionMax: 0.68,
+        tensionMin: portraitPhoneViewport ? 0.54 : 0.5,
+        wavelengthDriftFactor: portraitPhoneViewport ? 0.024 : 0.035,
+        waveEnvelopePower: portraitPhoneViewport ? 0.86 : 1.12,
+        waveMagnitudeMax: portraitPhoneViewport ? 1.12 : 1.18,
+        waveMagnitudeMin: portraitPhoneViewport ? 0.82 : 0.72,
+        waveTJitterFactor: portraitPhoneViewport ? 0.14 : 0.22,
+        waveTJitter: portraitPhoneViewport ? 0.028 : 0.055,
+        waveTMax: portraitPhoneViewport ? 0.9 : 0.78,
+        waveTMin: portraitPhoneViewport ? 0.1 : 0.22,
+      };
+    };
+
+    function getTextNode(link) {
+      return Array.from(link.childNodes).find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim()
+      );
+    }
+
+    function toStageRect(rect, stageRect) {
+      return {
+        left: rect.left - stageRect.left,
+        right: rect.right - stageRect.left,
+        top: rect.top - stageRect.top,
+        bottom: rect.bottom - stageRect.top,
+        width: rect.width,
+        height: rect.height,
+        centerX: rect.left - stageRect.left + rect.width / 2,
+        centerY: rect.top - stageRect.top + rect.height / 2,
+      };
+    }
+
+    // DOM Range keeps connector endpoints tied to the rendered glyph bounds.
+    function getCharacterRect(link, charIndex, stageRect) {
+      const textNode = getTextNode(link);
+
+      if (!textNode || !textNode.nodeValue) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      const raw = textNode.nodeValue;
+      const measuredText = raw.trim();
+
+      if (!measuredText.length) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      const textStart = raw.indexOf(measuredText);
+
+      const safeIndex = Math.min(
+        Math.max(charIndex, 0),
+        Math.max(measuredText.length - 1, 0)
+      );
+
+      const range = document.createRange();
+      range.setStart(textNode, textStart + safeIndex);
+      range.setEnd(textNode, textStart + safeIndex + 1);
+
+      const browserRect = range.getBoundingClientRect();
+      range.detach?.();
+
+      if (!browserRect.width || !browserRect.height) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      return toStageRect(browserRect, stageRect);
+    }
+
+    function computeConnectorEndpoints(exhibitionsLink, everythingLink, stageRect) {
+      const exhibitionsRect = toStageRect(exhibitionsLink.getBoundingClientRect(), stageRect);
+      const everythingRect = toStageRect(everythingLink.getBoundingClientRect(), stageRect);
+
+      const everythingIsRight = everythingRect.centerX >= exhibitionsRect.centerX;
+
+      const exhibitionsText = exhibitionsLink.textContent.trim();
+      const everythingText = everythingLink.textContent.trim();
+
+      const exhibitionsCharIndex = everythingIsRight ? exhibitionsText.length - 1 : 0;
+      const everythingCharIndex = everythingIsRight ? 0 : everythingText.length - 1;
+
+      const exhibitionsCharRect = getCharacterRect(exhibitionsLink, exhibitionsCharIndex, stageRect);
+      const everythingCharRect = getCharacterRect(everythingLink, everythingCharIndex, stageRect);
+
+      const horizontalDirection = everythingIsRight
+        ? { x: 1, y: 0 }
+        : { x: -1, y: 0 };
+
+      const startPoint = everythingIsRight
+        ? {
+            x: exhibitionsCharRect.right + TEXT_TO_LINE_GAP,
+            y: exhibitionsRect.centerY,
+          }
+        : {
+            x: exhibitionsCharRect.left - TEXT_TO_LINE_GAP,
+            y: exhibitionsRect.centerY,
+          };
+
+      const endPoint = everythingIsRight
+        ? {
+            x: everythingCharRect.left - TEXT_TO_LINE_GAP,
+            y: everythingRect.centerY,
+          }
+        : {
+            x: everythingCharRect.right + TEXT_TO_LINE_GAP,
+            y: everythingRect.centerY,
+          };
+
+      return {
+        startPoint,
+        endPoint,
+        horizontalDirection,
+        exhibitionsRect,
+        everythingRect,
+        exhibitionsCharRect,
+        everythingCharRect,
+        everythingIsRight,
+        stageHeight: stageRect.height,
+        stageWidth: stageRect.width,
+      };
+    }
+
+    const getLinkSize = (link) => {
+      const rect = link.getBoundingClientRect();
+
+      return {
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+
+    const getCenterRange = ({ maxX, maxY, minX, minY, size, stageHeight, stageWidth }) => {
+      const halfWidth = size.width / 2;
+      const halfHeight = size.height / 2;
+      const safeMinX = clamp(minX + halfWidth, 0, stageWidth);
+      const safeMaxX = clamp(maxX - halfWidth, safeMinX, stageWidth);
+      const safeMinY = clamp(minY + halfHeight, 0, stageHeight);
+      const safeMaxY = clamp(maxY - halfHeight, safeMinY, stageHeight);
+
+      return {
+        maxX: safeMaxX,
+        maxY: safeMaxY,
+        minX: safeMinX,
+        minY: safeMinY,
+      };
+    };
+
+    const getRandomPointInRange = (range) => ({
+      x: randomBetween(range.minX, range.maxX),
+      y: randomBetween(range.minY, range.maxY),
+    });
+
+    const getPresetPointInRange = (range, presetPoint) => ({
+      x: range.minX + (range.maxX - range.minX) * presetPoint.x,
+      y: range.minY + (range.maxY - range.minY) * presetPoint.y,
+    });
+
+    function getPortraitPhonePlacement({
+      exhibitionsRange,
+      everythingRange,
+      preset,
+      stageHeight,
+    }) {
+      if (preset) {
+        return {
+          exhibitions: getPresetPointInRange(exhibitionsRange, preset.exhibitions),
+          everything: getPresetPointInRange(everythingRange, preset.everything),
+        };
+      }
+
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight || stageHeight;
+      const requestedMinimumVerticalDistance = viewportHeight * 0.62;
+      const requestedMinimumPathDistance = viewportHeight * 0.66;
+      const getPointAtRandomX = (range, y) => ({
+        x: randomBetween(range.minX, range.maxX),
+        y,
+      });
+      const getCandidate = ({ lowerKey, lowerRange, upperKey, upperRange }) => {
+        const maxDistance = Math.max(0, lowerRange.maxY - upperRange.minY);
+        const minDistance = Math.max(
+          0,
+          requestedMinimumVerticalDistance,
+          lowerRange.minY - upperRange.maxY
+        );
+
+        if (maxDistance < minDistance) return null;
+
+        const distance = randomBetween(minDistance, maxDistance);
+        const upperMinY = Math.max(upperRange.minY, lowerRange.minY - distance);
+        const upperMaxY = Math.min(upperRange.maxY, lowerRange.maxY - distance);
+        const upperY = randomBetween(upperMinY, upperMaxY);
+        const lowerY = upperY + distance;
+        const upperPoint = getPointAtRandomX(upperRange, upperY);
+        const lowerPoint = getPointAtRandomX(lowerRange, lowerY);
+        const pathDistance = Math.hypot(lowerPoint.x - upperPoint.x, lowerPoint.y - upperPoint.y);
+
+        if (pathDistance < Math.min(requestedMinimumPathDistance, maxDistance)) return null;
+
+        return {
+          [upperKey]: upperPoint,
+          [lowerKey]: lowerPoint,
+        };
+      };
+
+      const candidates = [];
+
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const exhibitionsLowerCandidate = getCandidate({
+          lowerKey: 'exhibitions',
+          lowerRange: exhibitionsRange,
+          upperKey: 'everything',
+          upperRange: everythingRange,
+        });
+        const everythingLowerCandidate = getCandidate({
+          lowerKey: 'everything',
+          lowerRange: everythingRange,
+          upperKey: 'exhibitions',
+          upperRange: exhibitionsRange,
+        });
+
+        if (exhibitionsLowerCandidate) candidates.push(exhibitionsLowerCandidate);
+        if (everythingLowerCandidate) candidates.push(everythingLowerCandidate);
+        if (candidates.length >= 12) break;
+      }
+
+      if (candidates.length) {
+        const { exhibitions, everything } = candidates[Math.floor(Math.random() * candidates.length)];
+
+        return { exhibitions, everything };
+      }
+
+      const exhibitionsAreLower = Math.random() < 0.5;
+      const topRange = exhibitionsAreLower ? everythingRange : exhibitionsRange;
+      const bottomRange = exhibitionsAreLower ? exhibitionsRange : everythingRange;
+      const topY = topRange.minY;
+      const bottomY = bottomRange.maxY;
+
+      return {
+        exhibitions: getPointAtRandomX(exhibitionsRange, exhibitionsAreLower ? bottomY : topY),
+        everything: getPointAtRandomX(everythingRange, exhibitionsAreLower ? topY : bottomY),
+      };
+    }
+
+    function placeArtistLinks(stage, exhibitionsLink, everythingLink, portraitPhonePreset = null) {
+      const stageRect = stage.getBoundingClientRect();
+      const stageWidth = Math.max(stageRect.width, 1);
+      const stageHeight = Math.max(stageRect.height, 1);
+      const safeX = clamp(stageWidth * 0.08, 32, 96);
+      const safeY = clamp(stageHeight * 0.12, 48, 120);
+      const curveScale = getArtistCurveScale({ stageHeight, stageWidth });
+      const exhibitionsSize = getLinkSize(exhibitionsLink);
+      const everythingSize = getLinkSize(everythingLink);
+      const exhibitionsRange = getCenterRange({
+        maxX: stageWidth * 0.45,
+        maxY: stageHeight - safeY,
+        minX: safeX,
+        minY: safeY,
+        size: exhibitionsSize,
+        stageHeight,
+        stageWidth,
+      });
+      const everythingRange = getCenterRange({
+        maxX: stageWidth - safeX,
+        maxY: stageHeight - safeY,
+        minX: stageWidth * 0.55,
+        minY: safeY,
+        size: everythingSize,
+        stageHeight,
+        stageWidth,
+      });
+
+      if (isPortraitPhoneViewport(stageWidth, stageHeight)) {
+        return getPortraitPhonePlacement({
+          exhibitionsRange,
+          everythingRange,
+          preset: portraitPhonePreset,
+          stageHeight,
+        });
+      }
+
+      const desiredMinimumHorizontalDistance = Math.max(
+        128,
+        Math.min(stageWidth * curveScale.horizontalSeparationFactor, curveScale.horizontalSeparationMax),
+        (exhibitionsSize.width + everythingSize.width) / 2 + curveScale.textSeparationPadding
+      );
+      const maximumHorizontalDistance = Math.max(0, everythingRange.maxX - exhibitionsRange.minX);
+      const minimumHorizontalDistance = Math.min(
+        desiredMinimumHorizontalDistance,
+        Math.max(maximumHorizontalDistance - 8, 0)
+      );
+      const minimumVerticalDistance = curveScale.minimumVerticalDistance;
+      const maximumVerticalDistance = curveScale.maximumVerticalDistance;
+
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const exhibitionsPoint = getRandomPointInRange(exhibitionsRange);
+        const everythingPoint = getRandomPointInRange(everythingRange);
+        const horizontalDistance = Math.abs(everythingPoint.x - exhibitionsPoint.x);
+        const verticalDistance = Math.abs(everythingPoint.y - exhibitionsPoint.y);
+
+        if (
+          horizontalDistance >= minimumHorizontalDistance &&
+          verticalDistance >= minimumVerticalDistance &&
+          verticalDistance <= maximumVerticalDistance
+        ) {
+          return {
+            everything: everythingPoint,
+            exhibitions: exhibitionsPoint,
+          };
+        }
+      }
+
+      return {
+        everything: {
+          x: stageWidth * 0.65,
+          y: stageHeight * curveScale.fallbackEverythingY,
+        },
+        exhibitions: {
+          x: stageWidth * 0.35,
+          y: stageHeight * curveScale.fallbackExhibitionsY,
+        },
+      };
+    }
+
+    function verifyConnectorGeometry(endpointData, pathData) {
+      if (!DEBUG_ARTIST_CONNECTOR) return;
+
+      const {
+        everythingCharRect,
+        everythingIsRight,
+        everythingRect,
+        exhibitionsRect,
+        exhibitionsCharRect,
+        endPoint,
+        startPoint,
+      } = endpointData;
+      const startGap = everythingIsRight
+        ? startPoint.x - exhibitionsCharRect.right
+        : exhibitionsCharRect.left - startPoint.x;
+      const endGap = everythingIsRight
+        ? everythingCharRect.left - endPoint.x
+        : endPoint.x - everythingCharRect.right;
+      const startLeadLength = Math.hypot(
+        pathData.startLeadPoint.x - pathData.pathStartPoint.x,
+        pathData.startLeadPoint.y - pathData.pathStartPoint.y
+      );
+      const endLeadLength = Math.hypot(
+        endPoint.x - pathData.endLeadPoint.x,
+        endPoint.y - pathData.endLeadPoint.y
+      );
+      const tolerance = 0.01;
+      const hasGapError =
+        Math.abs(startGap - TEXT_TO_LINE_GAP) > tolerance ||
+        Math.abs(endGap - TEXT_TO_LINE_GAP) > tolerance;
+      const hasLeadError = Math.abs(startLeadLength - endLeadLength) > tolerance;
+      const hasAlignmentError =
+        Math.abs(pathData.pathStartPoint.y - exhibitionsRect.centerY) > tolerance ||
+        Math.abs(endPoint.y - everythingRect.centerY) > tolerance;
+
+      if (hasGapError || hasLeadError || hasAlignmentError) {
+        console.warn('[artist connector]', {
+          endGap,
+          endLeadLength,
+          endY: endPoint.y,
+          everythingCenterY: everythingRect.centerY,
+          startGap,
+          startLeadLength,
+          startY: pathData.pathStartPoint.y,
+          exhibitionsCenterY: exhibitionsRect.centerY,
+        });
+      }
+    }
+
+    function buildConnectorPath(endpointData, portraitPhonePreset = null) {
+      const {
+        endPoint,
+        horizontalDirection,
+        stageHeight = window.innerHeight,
+        stageWidth = window.innerWidth,
+        startPoint,
+      } = endpointData;
+      const portraitPhoneCurve = isPortraitPhoneViewport(stageWidth, stageHeight);
+      const curveScale = getArtistCurveScale({ stageHeight, stageWidth });
+      const pathStartPoint = {
+        x: startPoint.x,
+        y: startPoint.y,
+      };
+      const availableHorizontalDistance = Math.abs(endPoint.x - pathStartPoint.x);
+      const maxSafeLead = Math.max(0, (availableHorizontalDistance - 24) / 2);
+
+      const horizontalLeadLength = Math.min(
+        curveScale.leadLength,
+        maxSafeLead
+      );
+
+      const finalLeadLength = maxSafeLead >= curveScale.minimumLeadLength
+        ? Math.max(curveScale.minimumLeadLength, horizontalLeadLength)
+        : horizontalLeadLength;
+
+      const startLeadPoint = {
+        x: pathStartPoint.x + horizontalDirection.x * finalLeadLength,
+        y: pathStartPoint.y,
+      };
+
+      const endLeadPoint = {
+        x: endPoint.x - horizontalDirection.x * finalLeadLength,
+        y: endPoint.y,
+      };
+
+      const bodyStart = startLeadPoint;
+      const bodyEnd = endLeadPoint;
+      const dx = bodyEnd.x - bodyStart.x;
+      const dy = bodyEnd.y - bodyStart.y;
+      const distance = Math.hypot(dx, dy);
+      const bodyDirection = distance > 0.001
+        ? {
+            x: dx / distance,
+            y: dy / distance,
+          }
+        : horizontalDirection;
+      const normal = {
+        x: -bodyDirection.y,
+        y: bodyDirection.x,
+      };
+      const amplitudeFactor = portraitPhoneCurve && portraitPhonePreset
+        ? portraitPhonePreset.amplitudeFactor
+        : randomBetween(curveScale.amplitudeFactorMin, curveScale.amplitudeFactorMax);
+      const amplitude = clamp(
+        distance * amplitudeFactor,
+        curveScale.amplitudeMinimum,
+        curveScale.amplitudeMaximum
+      );
+      const bendSign = portraitPhoneCurve && portraitPhonePreset
+        ? portraitPhonePreset.bendSign
+        : Math.random() < 0.5 ? -1 : 1;
+      const bodySegmentCount =
+        curveScale.bodySegmentCount || (distance > 620 ? 4 : distance > 240 ? 3 : 2);
+      const bodyPoints = [{ ...bodyStart, curveT: 0 }];
+      const portraitPhoneCycles = portraitPhoneCurve
+        ? portraitPhonePreset?.waveCycles ?? randomBetween(1.88, 2.08)
+        : 0;
+      const portraitPhonePhase = portraitPhoneCurve
+        ? portraitPhonePreset?.phase ?? randomBetween(-0.1, 0.1)
+        : 0;
+      const portraitPhoneWarp = portraitPhoneCurve
+        ? portraitPhonePreset?.warp ?? randomBetween(-0.032, 0.032)
+        : 0;
+      const getPortraitPhoneSampleT = (index) => {
+        const internalCount = Math.max(1, bodySegmentCount - 1);
+
+        if (internalCount === 1) {
+          return 0.5;
+        }
+
+        return 0.12 + ((index - 1) / (internalCount - 1)) * 0.76;
+      };
+      const getPortraitPhoneWave = (t) => {
+        const endpointEase = smootherstep(t / 0.34) * smootherstep((1 - t) / 0.34);
+        const centerBreath = 0.86 + Math.sin(Math.PI * t) * 0.14;
+        const everythingAccentWeight = portraitPhonePreset?.everythingAccentWeight ?? 0.18;
+        const everythingHalfEnergy =
+          smootherstep((t - 0.48) / 0.22) * smootherstep((0.9 - t) / 0.24);
+        const warpedT = clamp(
+          t +
+            Math.sin(Math.PI * 2 * t) * portraitPhoneWarp +
+            Math.sin(Math.PI * 4 * t + portraitPhonePhase) * 0.003,
+          0,
+          1
+        );
+        const primaryWave = Math.sin(
+          Math.PI * 2 * portraitPhoneCycles * warpedT + portraitPhonePhase
+        );
+        const everythingAccent = Math.sin(
+          Math.PI * 2 * (portraitPhoneCycles + 0.58) * warpedT +
+            portraitPhonePhase +
+            Math.PI * 0.42
+        );
+
+        return (
+          (primaryWave * (centerBreath + everythingHalfEnergy * 0.18) +
+            everythingAccent * everythingHalfEnergy * everythingAccentWeight) *
+          endpointEase
+        );
+      };
+      const portraitPhoneAmplitudeLimit = portraitPhoneCurve
+        ? Array.from({ length: bodySegmentCount - 1 }, (_, index) => getPortraitPhoneSampleT(index + 1))
+            .reduce((limit, t) => {
+              const baselineX = bodyStart.x + dx * t;
+              const waveX = Math.abs(getPortraitPhoneWave(t) * normal.x * curveScale.normalXScale);
+
+              if (waveX < 0.001) {
+                return limit;
+              }
+
+              return Math.min(
+                limit,
+                Math.abs(baselineX - TEXT_TO_LINE_GAP) / waveX,
+                Math.abs(stageWidth - TEXT_TO_LINE_GAP - baselineX) / waveX
+              );
+            }, Number.POSITIVE_INFINITY)
+        : amplitude;
+      const portraitPhoneAmplitude = portraitPhoneCurve
+        ? Math.min(
+            amplitude,
+            Number.isFinite(portraitPhoneAmplitudeLimit) ? portraitPhoneAmplitudeLimit : amplitude
+          )
+        : amplitude;
+      const getPortraitPhonePoint = (t) => {
+        const portraitPhoneWave = getPortraitPhoneWave(t);
+        const waveOffset = portraitPhoneAmplitude * portraitPhoneWave * bendSign;
+        const verticalProgress = smootherstep(t);
+
+        return {
+          x:
+            bodyStart.x +
+            dx * t +
+            normal.x * curveScale.normalXScale * waveOffset,
+          y:
+            bodyStart.y +
+            dy * verticalProgress +
+            normal.y * curveScale.normalYScale * waveOffset,
+          curveT: t,
+        };
+      };
+      const terminalTangentLength = clamp(
+        distance *
+          randomBetween(curveScale.terminalTangentFactorMin, curveScale.terminalTangentFactorMax),
+        curveScale.terminalTangentMinimum,
+        curveScale.terminalTangentMaximum
+      );
+
+      for (let index = 1; index < bodySegmentCount; index += 1) {
+        const baseT = portraitPhoneCurve ? getPortraitPhoneSampleT(index) : index / bodySegmentCount;
+        const jitter = portraitPhoneCurve
+          ? 0
+          : Math.min(curveScale.waveTJitter, curveScale.waveTJitterFactor / bodySegmentCount);
+        const t = clamp(
+          baseT + randomBetween(-jitter, jitter),
+          portraitPhoneCurve ? 0 : curveScale.waveTMin,
+          portraitPhoneCurve ? 1 : curveScale.waveTMax
+        );
+        const rawEnvelope = Math.sin(Math.PI * t) ** curveScale.waveEnvelopePower;
+        const waveEnvelope = portraitPhoneCurve ? Math.max(0.72, rawEnvelope) : rawEnvelope;
+        const waveSign = bendSign * (index % 2 === 0 ? -1 : 1);
+        const waveAmplitude = portraitPhoneCurve
+          ? 0
+          : amplitude *
+            waveEnvelope *
+            randomBetween(curveScale.waveMagnitudeMin, curveScale.waveMagnitudeMax);
+        const wavelengthDrift = portraitPhoneCurve
+          ? 0
+          : distance *
+            randomBetween(-curveScale.wavelengthDriftFactor, curveScale.wavelengthDriftFactor) *
+            waveEnvelope;
+
+        if (portraitPhoneCurve) {
+          bodyPoints.push(getPortraitPhonePoint(t));
+        } else {
+          bodyPoints.push({
+            x:
+              bodyStart.x +
+              dx * t +
+              bodyDirection.x * wavelengthDrift +
+              normal.x * curveScale.normalXScale * waveAmplitude * waveSign,
+            y:
+              bodyStart.y +
+              dy * t +
+              bodyDirection.y * wavelengthDrift +
+              normal.y * curveScale.normalYScale * waveAmplitude * waveSign,
+            curveT: t,
+          });
+        }
+      }
+
+      bodyPoints.push({ ...bodyEnd, curveT: 1 });
+
+      const getTerminalTangentLength = (index) => {
+        const adjacentPoint = index === 0
+          ? bodyPoints[index + 1]
+          : bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const adjacentDistance = adjacentPoint
+          ? Math.hypot(adjacentPoint.x - point.x, adjacentPoint.y - point.y)
+          : terminalTangentLength;
+
+        return portraitPhoneCurve
+          ? Math.min(terminalTangentLength, adjacentDistance * 0.9)
+          : terminalTangentLength;
+      };
+      const getPortraitPhoneTerminalDerivative = (index) => {
+        const adjacentPoint = index === 0
+          ? bodyPoints[index + 1]
+          : bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const segmentT = adjacentPoint
+          ? Math.abs((adjacentPoint.curveT ?? 0) - (point.curveT ?? 0))
+          : 1;
+        const tangentLength = getTerminalTangentLength(index);
+
+        return {
+          x: horizontalDirection.x * tangentLength / Math.max(segmentT, 0.001),
+          y: 0,
+        };
+      };
+
+      const getPortraitPhoneWaveDerivative = (t) => {
+        const sampleSize = 0.004;
+        const previousT = Math.max(0, t - sampleSize);
+        const nextT = Math.min(1, t + sampleSize);
+        const previousPoint = getPortraitPhonePoint(previousT);
+        const nextPoint = getPortraitPhonePoint(nextT);
+        const sampleDistance = Math.max(nextT - previousT, 0.001);
+
+        return {
+          x: (nextPoint.x - previousPoint.x) / sampleDistance,
+          y: (nextPoint.y - previousPoint.y) / sampleDistance,
+        };
+      };
+
+      const getPortraitPhoneTangent = (index) => {
+        if (index === 0 || index === bodyPoints.length - 1) {
+          return getPortraitPhoneTerminalDerivative(index);
+        }
+
+        const point = bodyPoints[index];
+        const previousPoint = bodyPoints[index - 1];
+        const nextPoint = bodyPoints[index + 1];
+        const hPrevious = Math.max(point.curveT - previousPoint.curveT, 0.001);
+        const hNext = Math.max(nextPoint.curveT - point.curveT, 0.001);
+        const previousDistance = Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+        const nextDistance = Math.hypot(nextPoint.x - point.x, nextPoint.y - point.y);
+        const maxDerivativeLength =
+          Math.min(previousDistance / hPrevious, nextDistance / hNext) * 1.38;
+        const derivative = getPortraitPhoneWaveDerivative(point.curveT);
+        const derivativeLength = Math.hypot(derivative.x, derivative.y);
+
+        if (derivativeLength > maxDerivativeLength && derivativeLength > 0.001) {
+          const scale = maxDerivativeLength / derivativeLength;
+
+          return {
+            x: derivative.x * scale,
+            y: derivative.y * scale,
+          };
+        }
+
+        return derivative;
+      };
+
+      const getBodyTangent = (index) => {
+        if (index === 0 || index === bodyPoints.length - 1) {
+          return {
+            x: horizontalDirection.x * getTerminalTangentLength(index),
+            y: 0,
+          };
+        }
+
+        const previousPoint = bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const nextPoint = bodyPoints[index + 1];
+
+        if (portraitPhoneCurve) {
+          const tangentX = nextPoint.x - previousPoint.x;
+          const tangentY = nextPoint.y - previousPoint.y;
+          const tangentLength = Math.hypot(tangentX, tangentY);
+          const previousLength = Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+          const nextLength = Math.hypot(nextPoint.x - point.x, nextPoint.y - point.y);
+          const handleLength = Math.min(previousLength, nextLength) * 0.96;
+
+          if (tangentLength > 0.001) {
+            return {
+              x: (tangentX / tangentLength) * handleLength,
+              y: (tangentY / tangentLength) * handleLength,
+            };
+          }
+        }
+
+        const tension = randomBetween(curveScale.tensionMin, curveScale.tensionMax);
+
+        return {
+          x: (nextPoint.x - previousPoint.x) * tension,
+          y: (nextPoint.y - previousPoint.y) * tension,
+        };
+      };
+
+      const tangents = portraitPhoneCurve
+        ? bodyPoints.map((_, index) => getPortraitPhoneTangent(index))
+        : bodyPoints.map((_, index) => getBodyTangent(index));
+      const cubicCommands = bodyPoints.slice(0, -1).map((point, index) => {
+        const nextPoint = bodyPoints[index + 1];
+        const segmentT = Math.max((nextPoint.curveT ?? 1) - (point.curveT ?? 0), 0.001);
+        const controlOne = portraitPhoneCurve
+          ? {
+              x: point.x + (tangents[index].x * segmentT) / 3,
+              y: point.y + (tangents[index].y * segmentT) / 3,
+            }
+          : {
+              x: point.x + tangents[index].x / 3,
+              y: point.y + tangents[index].y / 3,
+            };
+        const controlTwo = portraitPhoneCurve
+          ? {
+              x: nextPoint.x - (tangents[index + 1].x * segmentT) / 3,
+              y: nextPoint.y - (tangents[index + 1].y * segmentT) / 3,
+            }
+          : {
+              x: nextPoint.x - tangents[index + 1].x / 3,
+              y: nextPoint.y - tangents[index + 1].y / 3,
+            };
+
+        return [
+          'C',
+          formatPathNumber(controlOne.x),
+          formatPathNumber(controlOne.y),
+          formatPathNumber(controlTwo.x),
+          formatPathNumber(controlTwo.y),
+          formatPathNumber(nextPoint.x),
+          formatPathNumber(nextPoint.y),
+        ].join(' ');
+      });
+      const d = [
+        'M',
+        formatPathNumber(pathStartPoint.x),
+        formatPathNumber(pathStartPoint.y),
+        'L',
+        formatPathNumber(startLeadPoint.x),
+        formatPathNumber(startLeadPoint.y),
+        ...cubicCommands,
+        'L',
+        formatPathNumber(endPoint.x),
+        formatPathNumber(endPoint.y),
+      ].join(' ');
+
+      return {
+        d,
+        endLeadPoint,
+        pathStartPoint,
+        startLeadPoint,
+      };
+    }
+
+    const resetPathStyles = (path) => {
+      path.removeAttribute('d');
+      path.style.opacity = '';
+      path.style.strokeDasharray = '';
+      path.style.strokeDashoffset = '';
+      path.style.transition = '';
+    };
+
+    const setPathHidden = (path, length) => {
+      path.style.opacity = '0';
+      path.style.strokeDasharray = `${length} ${length}`;
+      path.style.strokeDashoffset = `${length}`;
+      path.style.transition = 'none';
+    };
+
+    const isElementTag = (element, tagName) =>
+      Boolean(element && element.nodeType === 1 && element.tagName?.toLowerCase() === tagName);
+
+    const isSvgElementTag = (element, tagName) =>
+      isElementTag(element, tagName) && element.namespaceURI === 'http://www.w3.org/2000/svg';
+
+    const consumeArtistReturnReplay = () => {
+      try {
+        if (sessionStorage.getItem(artistReturnReplayKey) !== 'true') return false;
+        sessionStorage.removeItem(artistReturnReplayKey);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const initArtistPage = () => {
+      const stage = document.querySelector('[data-artist-stage]');
+
+      if (!(stage instanceof HTMLElement)) {
+        state.cleanup?.();
+        return;
+      }
+
+      const shouldForceReplayFromWindow = window[forceArtistReplayKey] === true;
+      const shouldForceReplayFromSession = consumeArtistReturnReplay();
+      const shouldForceReplay = shouldForceReplayFromWindow || shouldForceReplayFromSession;
+      if (shouldForceReplay) {
+        window[forceArtistReplayKey] = false;
+        document.documentElement.classList.add(artistReturnBlankClass);
+        document.querySelectorAll('[data-home-preloader-handoff]').forEach((overlay) => overlay.remove());
+        document.documentElement.classList.remove(
+          'home-preloader-active',
+          'home-preloader-booting',
+          'home-preloader-handoff-active',
+          'home-preloader-navigation-active'
+        );
+      }
+
+      if (stage.dataset.artistBooted === 'true') {
+        if (!shouldForceReplay && typeof state.cleanup === 'function') return;
+
+        delete stage.dataset.artistBooted;
+      }
+
+      state.cleanup?.();
+      stage.dataset.artistBooted = 'true';
+
+      const connector = stage.querySelector('[data-artist-connector]');
+      const path = stage.querySelector('[data-artist-connector-path]');
+      const exhibitionsLink = stage.querySelector('[data-artist-link="exhibitions"]');
+      const everythingLink = stage.querySelector('[data-artist-link="everything"]');
+      const shell = stage.closest('.site-shell');
+
+      if (
+        !isSvgElementTag(connector, 'svg') ||
+        !isSvgElementTag(path, 'path') ||
+        !isElementTag(exhibitionsLink, 'a') ||
+        !isElementTag(everythingLink, 'a') ||
+        !(shell instanceof HTMLElement)
+      ) {
+        return;
+      }
+
+      const timers = new Set();
+      const animationFrames = new Set();
+      let cleanupAnimation = () => {};
+      let disposed = false;
+      let hasStartedSequence = false;
+      let layoutToken = 0;
+      let pathLength = 0;
+      let returnBlankTimer = 0;
+      const hasActivePreloaderSurface = () =>
+        Boolean(document.querySelector('[data-home-preloader], [data-home-preloader-handoff]'));
+      const isRouteEntering = () => document.documentElement.classList.contains(routeEnteringClass);
+      let returnBlankComplete = !shouldForceReplay;
+      let preloaderComplete = returnBlankComplete && !isRouteEntering() && !hasActivePreloaderSurface();
+      const portraitPhonePreset = getRandomPortraitPhonePreset();
+      let sequenceComplete = false;
+      let ignoreTouchResizeUntil = 0;
+
+      const getViewportSnapshot = () => ({
+        height: window.innerHeight || document.documentElement.clientHeight || 0,
+        scale: window.visualViewport?.scale || 1,
+        width: window.innerWidth || document.documentElement.clientWidth || 0,
+      });
+
+      let viewportSnapshot = getViewportSnapshot();
+
+      const isTouchViewport = () =>
+        Boolean(
+          window.navigator?.maxTouchPoints > 0 ||
+          window.matchMedia?.(TOUCH_VIEWPORT_QUERY)?.matches
+        );
+
+      const isMobileArtistViewport = () =>
+        Boolean(window.matchMedia?.(MOBILE_ARTIST_VIEWPORT_QUERY)?.matches);
+
+      const getViewportDelta = (nextViewport) => ({
+        heightChanged: Math.abs(nextViewport.height - viewportSnapshot.height) > VIEWPORT_RESIZE_EPSILON,
+        scaleChanged: Math.abs(nextViewport.scale - viewportSnapshot.scale) > 0.001,
+        widthChanged: Math.abs(nextViewport.width - viewportSnapshot.width) > VIEWPORT_RESIZE_EPSILON,
+      });
+
+      const markTouchInteraction = () => {
+        ignoreTouchResizeUntil = Date.now() + 900;
+      };
+
+      const isIgnoredMobileHeightResize = (eventType, nextViewport) => {
+        if (eventType === 'orientationchange') return false;
+
+        const { heightChanged, scaleChanged, widthChanged } = getViewportDelta(nextViewport);
+        const mobileTouchViewport = isTouchViewport() || isMobileArtistViewport();
+
+        if (!mobileTouchViewport) return false;
+
+        if (
+          Date.now() < ignoreTouchResizeUntil ||
+          scaleChanged ||
+          Math.abs((window.visualViewport?.scale || 1) - 1) > 0.001
+        ) {
+          return true;
+        }
+
+        return heightChanged && !widthChanged;
+      };
+
+      const clearTimers = () => {
+        timers.forEach((timer) => window.clearTimeout(timer));
+        timers.clear();
+      };
+
+      const clearAnimationFrames = () => {
+        animationFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+        animationFrames.clear();
+      };
+
+      const clearPendingWork = () => {
+        clearTimers();
+        clearAnimationFrames();
+      };
+
+      const setTimer = (callback, delay) => {
+        const timer = window.setTimeout(() => {
+          timers.delete(timer);
+          if (!disposed) callback();
+        }, delay);
+
+        timers.add(timer);
+        return timer;
+      };
+
+      const clearStalePreloader = () => {
+        if (preloaderComplete) return;
+
+        const overlay = document.querySelector('[data-home-preloader]');
+
+        if (!(overlay instanceof HTMLElement)) {
+          waitForPreloaderSurfacesToClear();
+          return;
+        }
+
+        if (overlay.dataset.homePreloaderBooted !== 'true' && !overlay.classList.contains('is-visible')) {
+          overlay.remove();
+          document.documentElement.classList.remove('home-preloader-active');
+          waitForPreloaderSurfacesToClear();
+        }
+      };
+
+      const waitForAnimationFrame = () =>
+        new Promise((resolve) => {
+          const frame = window.requestAnimationFrame(() => {
+            animationFrames.delete(frame);
+            resolve();
+          });
+
+          animationFrames.add(frame);
+        });
+
+      const resetRevealClasses = () => {
+        stage.classList.remove(
+          'is-everything-visible',
+          'is-exhibitions-visible',
+          'is-line-drawing',
+          'is-positioned'
+        );
+      };
+
+      const showCompletedReveal = () => {
+        stage.classList.add(
+          'is-positioned',
+          'is-exhibitions-visible',
+          'is-line-drawing',
+          'is-everything-visible'
+        );
+        path.style.opacity = '1';
+        path.style.strokeDashoffset = '0';
+        path.style.transition = 'none';
+      };
+
+      const getRevealSnapshot = () => ({
+        everythingVisible: stage.classList.contains('is-everything-visible'),
+        exhibitionsVisible: stage.classList.contains('is-exhibitions-visible'),
+        complete: sequenceComplete,
+        lineDrawing: stage.classList.contains('is-line-drawing'),
+        started: hasStartedSequence,
+      });
+
+      const finishLineReveal = () => {
+        stage.classList.add('is-exhibitions-visible', 'is-everything-visible');
+        sequenceComplete = true;
+      };
+
+      const continueRevealAfterRebuild = (revealSnapshot) => {
+        if (!revealSnapshot) return false;
+
+        if (revealSnapshot.complete) {
+          hasStartedSequence = true;
+          sequenceComplete = true;
+          showCompletedReveal();
+          return true;
+        }
+
+        if (revealSnapshot.lineDrawing) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-positioned', 'is-exhibitions-visible', 'is-everything-visible', 'is-line-drawing');
+          path.style.opacity = '1';
+          path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+          path.style.strokeDashoffset = '0';
+          path.style.transition = 'none';
+          setTimer(finishLineReveal, 220);
+          return true;
+        }
+
+        if (revealSnapshot.everythingVisible) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-exhibitions-visible', 'is-everything-visible');
+          setTimer(() => {
+            stage.classList.add('is-line-drawing');
+            cleanupAnimation = animatePath(() => {
+              finishLineReveal();
+            });
+          }, 180);
+          return true;
+        }
+
+        if (revealSnapshot.exhibitionsVisible || revealSnapshot.started) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-exhibitions-visible');
+          setTimer(() => {
+            stage.classList.add('is-everything-visible');
+          }, EVERYTHING_REVEAL_DELAY_MS - EXHIBITIONS_REVEAL_DELAY_MS);
+          setTimer(() => {
+            stage.classList.add('is-line-drawing');
+            cleanupAnimation = animatePath(() => {
+              finishLineReveal();
+            });
+          }, CONNECTOR_DRAW_DELAY_MS - EXHIBITIONS_REVEAL_DELAY_MS);
+          return true;
+        }
+
+        return false;
+      };
+
+      const clearInlinePositions = () => {
+        shell.style.removeProperty('--artist-viewport-height');
+        stage.style.removeProperty('--artist-stage-height');
+        exhibitionsLink.style.removeProperty('--artist-link-x');
+        exhibitionsLink.style.removeProperty('--artist-link-y');
+        everythingLink.style.removeProperty('--artist-link-x');
+        everythingLink.style.removeProperty('--artist-link-y');
+      };
+
+      const resetStage = () => {
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+        resetRevealClasses();
+        clearInlinePositions();
+        connector.removeAttribute('height');
+        connector.removeAttribute('viewBox');
+        connector.removeAttribute('width');
+        resetPathStyles(path);
+      };
+
+      const animatePath = (onComplete) => {
+        const viewport = getViewportSnapshot();
+        const isPhoneViewport = viewport.width <= 600 || isPortraitPhoneViewport(viewport.width, viewport.height);
+        const baseDuration = clamp(pathLength * 5, 2400, 5600);
+        const duration = isPhoneViewport ? baseDuration : baseDuration * NON_PHONE_DRAW_DURATION_SCALE;
+        let hasFinished = false;
+        let fallbackTimer = 0;
+
+        const finish = () => {
+          if (hasFinished) return;
+
+          hasFinished = true;
+          path.removeEventListener('transitionend', onTransitionEnd);
+          path.style.transition = 'none';
+          path.style.strokeDashoffset = '0';
+          path.style.opacity = '1';
+
+          if (fallbackTimer) {
+            window.clearTimeout(fallbackTimer);
+            timers.delete(fallbackTimer);
+          }
+
+          onComplete();
+        };
+
+        const onTransitionEnd = (event) => {
+          if (event.target === path && event.propertyName === 'stroke-dashoffset') {
+            finish();
+          }
+        };
+
+        path.style.opacity = '1';
+        path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+        path.style.strokeDashoffset = `${pathLength}`;
+        path.style.transition = 'none';
+        path.getBoundingClientRect();
+        path.addEventListener('transitionend', onTransitionEnd);
+        path.style.transition = `stroke-dashoffset ${duration}ms linear`;
+        path.style.strokeDashoffset = '0';
+
+        fallbackTimer = setTimer(finish, duration + 120);
+
+        return () => {
+          path.removeEventListener('transitionend', onTransitionEnd);
+          path.style.transition = 'none';
+        };
+      };
+
+      const tryStartSequence = () => {
+        if (disposed || hasStartedSequence || !preloaderComplete || !pathLength) return;
+        if (hasActivePreloaderSurface()) {
+          preloaderComplete = false;
+          waitForPreloaderSurfacesToClear();
+          return;
+        }
+
+        hasStartedSequence = true;
+
+        setTimer(() => {
+          stage.classList.add('is-exhibitions-visible');
+        }, EXHIBITIONS_REVEAL_DELAY_MS);
+
+        setTimer(() => {
+          stage.classList.add('is-everything-visible');
+        }, EVERYTHING_REVEAL_DELAY_MS);
+
+        setTimer(() => {
+          stage.classList.add('is-line-drawing');
+          cleanupAnimation = animatePath(() => {
+            finishLineReveal();
+          });
+        }, CONNECTOR_DRAW_DELAY_MS);
+      };
+
+      const rebuildConnector = async ({ revealSnapshot = null } = {}) => {
+        const token = ++layoutToken;
+        const shouldContinueReveal = Boolean(
+          revealSnapshot?.everythingVisible ||
+          revealSnapshot?.exhibitionsVisible ||
+          revealSnapshot?.complete ||
+          revealSnapshot?.lineDrawing ||
+          revealSnapshot?.started
+        );
+
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+
+        if (!shouldContinueReveal) {
+          hasStartedSequence = false;
+          sequenceComplete = false;
+          resetRevealClasses();
+        } else {
+          stage.classList.remove('is-line-drawing');
+          if (!revealSnapshot?.everythingVisible && !revealSnapshot?.complete) {
+            stage.classList.remove('is-everything-visible');
+          }
+          if (
+            !revealSnapshot?.exhibitionsVisible &&
+            !revealSnapshot?.lineDrawing &&
+            !revealSnapshot?.everythingVisible &&
+            !revealSnapshot?.complete
+          ) {
+            stage.classList.remove('is-exhibitions-visible');
+          }
+        }
+
+        resetPathStyles(path);
+        stage.style.removeProperty('--artist-stage-height');
+        shell.style.setProperty('--artist-viewport-height', `${getViewportSnapshot().height}px`);
+
+        try {
+          if (document.fonts?.ready) {
+            await document.fonts.ready;
+          }
+        } catch {
+          // Continue with browser fallback fonts if the FontFaceSet promise rejects.
+        }
+
+        await waitForAnimationFrame();
+
+        if (disposed || token !== layoutToken) return;
+
+        const measuredStageRect = stage.getBoundingClientRect();
+        const measuredStageHeight = Math.max(measuredStageRect.height, 1);
+        stage.style.setProperty('--artist-stage-height', `${measuredStageHeight}px`);
+
+        const placements = placeArtistLinks(stage, exhibitionsLink, everythingLink, portraitPhonePreset);
+
+        exhibitionsLink.style.setProperty('--artist-link-x', `${placements.exhibitions.x}px`);
+        exhibitionsLink.style.setProperty('--artist-link-y', `${placements.exhibitions.y}px`);
+        everythingLink.style.setProperty('--artist-link-x', `${placements.everything.x}px`);
+        everythingLink.style.setProperty('--artist-link-y', `${placements.everything.y}px`);
+        stage.classList.add('is-positioned');
+
+        await waitForAnimationFrame();
+
+        if (disposed || token !== layoutToken) return;
+
+        const stageRect = stage.getBoundingClientRect();
+        const stageWidth = Math.max(stageRect.width, 1);
+        const stageHeight = Math.max(stageRect.height, 1);
+        const endpointData = computeConnectorEndpoints(exhibitionsLink, everythingLink, stageRect);
+        const pathData = buildConnectorPath(endpointData, portraitPhonePreset);
+
+        connector.setAttribute('height', `${stageHeight}`);
+        connector.setAttribute('viewBox', `0 0 ${stageWidth} ${stageHeight}`);
+        connector.setAttribute('width', `${stageWidth}`);
+        path.setAttribute('d', pathData.d);
+        pathLength = path.getTotalLength();
+        setPathHidden(path, pathLength);
+        verifyConnectorGeometry(endpointData, pathData);
+        viewportSnapshot = getViewportSnapshot();
+
+        if (continueRevealAfterRebuild(revealSnapshot)) return;
+
+        if (!preloaderComplete) {
+          waitForPreloaderSurfacesToClear();
+        }
+
+        tryStartSequence();
+      };
+
+      const onPreloaderComplete = () => {
+        waitForPreloaderSurfacesToClear();
+      };
+
+      const onRouteEnter = () => {
+        waitForPreloaderSurfacesToClear();
+      };
+
+      const waitForPreloaderSurfacesToClear = () => {
+        if (disposed) return;
+
+        if (!returnBlankComplete) {
+          setTimer(waitForPreloaderSurfacesToClear, 60);
+          return;
+        }
+
+        if (isRouteEntering()) {
+          setTimer(waitForPreloaderSurfacesToClear, 30);
+          return;
+        }
+
+        if (hasActivePreloaderSurface()) {
+          setTimer(waitForPreloaderSurfacesToClear, 60);
+          return;
+        }
+
+        preloaderComplete = true;
+        tryStartSequence();
+      };
+
+      const onResize = (event) => {
+        const nextViewport = getViewportSnapshot();
+        const eventType = event?.type || 'resize';
+        const { heightChanged, scaleChanged, widthChanged } = getViewportDelta(nextViewport);
+
+        if (eventType !== 'orientationchange' && !heightChanged && !scaleChanged && !widthChanged) {
+          return;
+        }
+
+        // Mobile browser chrome can change only viewport height while scrolling.
+        // Ignoring that keeps the random placement and connector frozen after spawn.
+        if (isIgnoredMobileHeightResize(eventType, nextViewport)) {
+          return;
+        }
+
+        viewportSnapshot = nextViewport;
+        const revealSnapshot = getRevealSnapshot();
+
+        ++layoutToken;
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+
+        const frame = window.requestAnimationFrame(() => {
+          animationFrames.delete(frame);
+          rebuildConnector({ revealSnapshot });
+        });
+
+        animationFrames.add(frame);
+      };
+
+      window.addEventListener(preloaderCompleteEvent, onPreloaderComplete);
+      window.addEventListener('varelism:handoff-complete', onPreloaderComplete);
+      window.addEventListener(routeEnterEvent, onRouteEnter);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      window.addEventListener('touchstart', markTouchInteraction, { passive: true });
+      window.addEventListener('touchmove', markTouchInteraction, { passive: true });
+      window.addEventListener('touchend', markTouchInteraction, { passive: true });
+      window.addEventListener('touchcancel', markTouchInteraction, { passive: true });
+      window.visualViewport?.addEventListener('resize', onResize);
+      if (shouldForceReplay) {
+        returnBlankTimer = window.setTimeout(() => {
+          returnBlankTimer = 0;
+          if (disposed) return;
+
+          returnBlankComplete = true;
+          document.documentElement.classList.remove(artistReturnBlankClass);
+          waitForPreloaderSurfacesToClear();
+        }, ARTIST_RETURN_BLANK_HOLD_MS);
+      }
+      setTimer(clearStalePreloader, 250);
+      rebuildConnector();
+
+      state.cleanup = () => {
+        disposed = true;
+        ++layoutToken;
+        window.removeEventListener(preloaderCompleteEvent, onPreloaderComplete);
+        window.removeEventListener('varelism:handoff-complete', onPreloaderComplete);
+        window.removeEventListener(routeEnterEvent, onRouteEnter);
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('orientationchange', onResize);
+        window.removeEventListener('touchstart', markTouchInteraction);
+        window.removeEventListener('touchmove', markTouchInteraction);
+        window.removeEventListener('touchend', markTouchInteraction);
+        window.removeEventListener('touchcancel', markTouchInteraction);
+        window.visualViewport?.removeEventListener('resize', onResize);
+        if (returnBlankTimer) {
+          window.clearTimeout(returnBlankTimer);
+          returnBlankTimer = 0;
+        }
+        document.documentElement.classList.remove(artistReturnBlankClass);
+        resetStage();
+        delete stage.dataset.artistBooted;
+        state.cleanup = null;
+      };
+    };
+
+    let pendingHistoryRestartFrame = 0;
+
+    const isArtistPath = () =>
+      window.location.pathname === '/painter' || window.location.pathname === '/painter/';
+
+    const isArtistStageComplete = () => {
+      const stage = document.querySelector('[data-artist-stage]');
+
+      return Boolean(
+        stage instanceof HTMLElement &&
+          stage.classList.contains('is-exhibitions-visible') &&
+          stage.classList.contains('is-everything-visible') &&
+          stage.classList.contains('is-line-drawing')
+      );
+    };
+
+    const restartArtistPage = () => {
+      if (!isArtistPath()) return;
+
+      if (pendingHistoryRestartFrame) {
+        window.cancelAnimationFrame(pendingHistoryRestartFrame);
+      }
+
+      pendingHistoryRestartFrame = window.requestAnimationFrame(() => {
+        pendingHistoryRestartFrame = 0;
+        state.cleanup?.();
+        initArtistPage();
+      });
+    };
+
+    const restartArtistPageFromHistory = (event) => {
+      if (!event?.persisted && !isArtistStageComplete()) return;
+
+      restartArtistPage();
+    };
+
+    const restartCompletedArtistPage = () => {
+      if (!isArtistStageComplete()) return;
+
+      restartArtistPage();
+    };
+
+    if (!state.listenersAttached) {
+      document.addEventListener('astro:before-swap', () => state.cleanup?.());
+      document.addEventListener('astro:page-load', initArtistPage);
+      state.listenersAttached = true;
+    }
+
+    if (state.historyRestartVersion !== 1) {
+      document.addEventListener('astro:page-load', restartCompletedArtistPage);
+      window.addEventListener('pageshow', restartArtistPageFromHistory);
+      window.addEventListener('popstate', restartArtistPage);
+      state.historyRestartVersion = 1;
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initArtistPage, { once: true });
+    } else {
+      initArtistPage();
+    }
+  })();
+</script>
+
 <style>
-  .painting-grid {
-    display: grid;
-    gap: 1.2rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  :global(.site-shell) {
+    --artist-footer-offset: 7.5rem;
+    --artist-viewport-height: 100svh;
+
+    background: #ffffff;
+    min-height: calc(var(--artist-viewport-height) + var(--artist-footer-offset));
   }
 
-  .work {
-    display: grid;
-    gap: 0.5rem;
+  :global(.site-shell > main) {
+    --artist-main-top: clamp(6rem, 12vh, 8rem);
+
+    max-width: none;
+    min-height: calc(var(--artist-viewport-height) + var(--artist-footer-offset));
+    padding: var(--artist-main-top) clamp(1rem, 4vw, 3rem) 0;
+    width: 100%;
   }
 
-  .work img {
-    aspect-ratio: 4 / 5;
+  :global(.site-shell > .site-footer) {
+    bottom: auto;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: var(--artist-viewport-height);
+    width: 100%;
+    z-index: 20;
   }
 
-  h2 {
-    font-size: 1.2rem;
-    font-weight: 400;
-    margin: 0;
+  .artist-stage {
+    background: #ffffff;
+    display: block;
+    height: var(--artist-stage-height, calc(var(--artist-viewport-height) - var(--artist-main-top)));
+    isolation: isolate;
+    min-height: 24rem;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
   }
 
-  .work-meta p {
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    margin: 0.2rem 0 0;
-    text-transform: uppercase;
+  .artist-connector {
+    display: block;
+    height: 100%;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
   }
 
-  @media (max-width: 980px) {
-    .painting-grid {
-      grid-template-columns: 1fr 1fr;
+  :global(.artist-connector path) {
+    fill: none;
+    opacity: 0;
+    stroke: #000000;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 0.28;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .artist-links {
+    height: 100%;
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+  }
+
+  :global(html.artist-return-blank-active) .artist-stage {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .artist-link {
+    color: #691b17;
+    cursor: pointer;
+    display: block;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(1.35rem, 2.1vw, 2.15rem);
+    font-weight: 300;
+    left: var(--artist-link-x);
+    letter-spacing: 0;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    text-decoration: none;
+    top: var(--artist-link-y);
+    transform: translate(-50%, -50%);
+    transition:
+      color 180ms ease,
+      opacity 450ms ease;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .artist-stage.is-positioned.is-exhibitions-visible [data-artist-link='exhibitions'],
+  .artist-stage.is-positioned.is-everything-visible [data-artist-link='everything'] {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      color 180ms ease,
+      opacity 450ms ease;
+    visibility: visible;
+  }
+
+  .artist-stage.is-line-drawing :global(.artist-connector path) {
+    opacity: 1;
+  }
+
+  .artist-link:focus-visible {
+    color: #000000;
+    outline: 1px solid #691b17;
+    outline-offset: 0.45rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .artist-link:hover {
+      color: #000000;
     }
   }
 
-  @media (max-width: 680px) {
-    .painting-grid {
-      grid-template-columns: 1fr;
+  @media (hover: none) and (pointer: coarse) {
+    .artist-link:active {
+      color: #000000;
+    }
+  }
+
+  @media (max-width: 560px) {
+    :global(.site-shell > main) {
+      --artist-main-top: 5rem;
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
+    }
+
+    .artist-stage {
+      min-height: 25rem;
+    }
+
+    .artist-link {
+      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
     }
   }
 </style>

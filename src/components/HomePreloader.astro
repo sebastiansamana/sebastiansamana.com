@@ -113,7 +113,7 @@ const {
 
     const getRouteCompleteEvents = (pathname) => {
       if (matchesAnyPath(pathname, ['/writer/', '/esp/escritor/'])) return ['varelism:author-preloader-complete'];
-      if (matchesAnyPath(pathname, ['/artist/', '/esp/artista/'])) return ['varelism:artist-preloader-complete'];
+      if (matchesAnyPath(pathname, ['/painter/', '/esp/pintor/'])) return ['varelism:artist-preloader-complete'];
       if (matchesAnyPath(pathname, ['/architect/', '/esp/arquitecto/'])) {
         return ['varelism:architect-preloader-complete'];
       }
@@ -505,7 +505,7 @@ const {
         (document.documentElement.classList.contains('author-return-blank-active') &&
           activePaths.some((path) => matchesAnyPath(path, ['/writer/', '/esp/escritor/']))) ||
           (document.documentElement.classList.contains('artist-return-blank-active') &&
-            activePaths.some((path) => matchesAnyPath(path, ['/artist/', '/esp/artista/']))) ||
+            activePaths.some((path) => matchesAnyPath(path, ['/painter/', '/esp/pintor/']))) ||
           (document.documentElement.classList.contains('architect-return-blank-active') &&
             activePaths.some((path) => matchesAnyPath(path, ['/architect/', '/esp/arquitecto/']))) ||
           (document.documentElement.classList.contains('home-return-active') &&

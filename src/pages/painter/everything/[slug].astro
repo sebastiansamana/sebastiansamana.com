@@ -1,8 +1,8 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
-import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import { getArtworkDetailMetadata, getPublicArtworks } from '../../../../lib/artworks';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getArtworkDetailMetadata, getPublicArtworks } from '../../../lib/artworks';
 
 export const getStaticPaths = (async () => {
   const artworks = getPublicArtworks(await getCollection('artworks'));
@@ -14,50 +14,28 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { artwork } = Astro.props;
-const metadataLabelTranslations: Record<string, string> = {
-  Date: 'Fecha',
-  Medium: 'Técnica',
-  Dimensions: 'Dimensiones',
-};
-const mediumTranslations: Record<string, string> = {
-  Charcoal: 'Carboncillo',
-  'HB Pencil': 'Lápiz HB',
-  Pastels: 'Pasteles',
-  Watercolor: 'Acuarela',
-};
-const translateMedium = (value: string) =>
-  value
-    .split(',')
-    .map((part) => {
-      const medium = part.trim();
-      return mediumTranslations[medium] ?? medium;
-    })
-    .join(', ');
-const metadata = getArtworkDetailMetadata(artwork, 'es').map((item) => ({
-  label: metadataLabelTranslations[item.label] ?? item.label,
-  value: item.label === 'Medium' ? translateMedium(item.value) : item.value,
-}));
+const metadata = getArtworkDetailMetadata(artwork);
 const enquiryEmail = 'bastivarela@icloud.com';
 const enquiryDetails = metadata.map((item) => item.value).join(' / ');
 const enquiryBody = [
-  'Hola Sebastian,',
+  'Hello Sebastian,',
   '',
-  'Me gustaría consultar más sobre esta obra:',
+  'I would like to enquire further about this artwork:',
   '',
   artwork.data.title,
   ...(enquiryDetails ? [enquiryDetails] : []),
   '',
-  'Mi consulta:',
+  'My query:',
 ].join('\n');
 const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
-  `Consulta sobre ${artwork.data.title}`
+  `Enquiry about ${artwork.data.title}`
 )}&body=${encodeURIComponent(enquiryBody)}`;
 const hasDescription = Boolean(artwork.data.description);
 ---
 
 <BaseLayout title={`${artwork.data.title} | Varelism`} description={artwork.data.description ?? artwork.data.title}>
   <article class="artwork-detail" data-varelism-route-reveal data-varelism-route-reveal-images="true">
-    <a class="artwork-back" href="/esp/artista/todo/">Volver</a>
+    <a class="artwork-back" href="/painter/everything/">Return</a>
 
     <figure class="artwork-figure">
       {
@@ -87,7 +65,7 @@ const hasDescription = Boolean(artwork.data.description);
             </dl>
           )
         }
-        <a class="artwork-enquiry" href={enquiryHref}>Consultar más</a>
+        <a class="artwork-enquiry" href={enquiryHref}>Enquire further</a>
       </figcaption>
     </figure>
 

@@ -22,14 +22,14 @@ const englishToSpanishRoutes = new Map<string, string>([
   ['/about', '/esp/sobre/'],
   ['/writer', '/esp/escritor/'],
   ['/architect', '/esp/arquitecto/'],
-  ['/artist', '/esp/artista/'],
+  ['/painter', '/esp/pintor/'],
   ['/buy', '/esp/comprar/'],
   ['/writer/books', '/esp/escritor/libros/'],
   ['/writer/everything', '/esp/escritor/todo/'],
   ['/architect/projects', '/esp/arquitecto/proyectos/'],
   ['/architect/portfolios', '/esp/arquitecto/portafolios/'],
-  ['/artist/exhibitions', '/esp/artista/exposiciones/'],
-  ['/artist/everything', '/esp/artista/todo/'],
+  ['/painter/exhibitions', '/esp/pintor/exposiciones/'],
+  ['/painter/everything', '/esp/pintor/todo/'],
 ]);
 const spanishToEnglishRoutes = new Map<string, string>(
   Array.from(englishToSpanishRoutes.entries()).map(([englishPath, spanishPath]) => [
@@ -70,14 +70,14 @@ const getLanguageSwitchHref = (pathname: string) => {
     return slug ? `/esp/escritor/todo/${slug}/` : '/esp/escritor/todo/';
   }
 
-  if (normalizedPath.startsWith('/esp/artista/todo/')) {
-    const slug = normalizedPath.slice('/esp/artista/todo/'.length);
-    return slug ? `/artist/everything/${slug}/` : '/artist/everything/';
+  if (normalizedPath.startsWith('/esp/pintor/todo/')) {
+    const slug = normalizedPath.slice('/esp/pintor/todo/'.length);
+    return slug ? `/painter/everything/${slug}/` : '/painter/everything/';
   }
 
-  if (normalizedPath.startsWith('/artist/everything/')) {
-    const slug = normalizedPath.slice('/artist/everything/'.length);
-    return slug ? `/esp/artista/todo/${slug}/` : '/esp/artista/todo/';
+  if (normalizedPath.startsWith('/painter/everything/')) {
+    const slug = normalizedPath.slice('/painter/everything/'.length);
+    return slug ? `/esp/pintor/todo/${slug}/` : '/esp/pintor/todo/';
   }
 
   if (normalizedPath === '/esp' || normalizedPath.startsWith('/esp/')) {
@@ -195,14 +195,14 @@ const globalPreloaderPaths = [
           '/esp/escritor/todo',
         ];
         const artistReplayReturnPaths = [
-          '/artist/exhibitions/',
-          '/artist/exhibitions',
-          '/artist/everything/',
-          '/artist/everything',
-          '/esp/artista/exposiciones/',
-          '/esp/artista/exposiciones',
-          '/esp/artista/todo/',
-          '/esp/artista/todo',
+          '/painter/exhibitions/',
+          '/painter/exhibitions',
+          '/painter/everything/',
+          '/painter/everything',
+          '/esp/pintor/exposiciones/',
+          '/esp/pintor/exposiciones',
+          '/esp/pintor/todo/',
+          '/esp/pintor/todo',
         ];
         const architectReplayReturnPaths = [
           '/architect/projects/',
@@ -318,7 +318,7 @@ const globalPreloaderPaths = [
         const isArchitectPath = (pathname) =>
           isSamePath(pathname, '/architect/') || isSamePath(pathname, '/esp/arquitecto/');
         const isArtistPath = (pathname) =>
-          isSamePath(pathname, '/artist/') || isSamePath(pathname, '/esp/artista/');
+          isSamePath(pathname, '/painter/') || isSamePath(pathname, '/esp/pintor/');
         const isPrimaryHomeReturn = (toPathname, fromPathname) =>
           isHomePath(toPathname) &&
           (isAuthorPath(fromPathname) || isArchitectPath(fromPathname) || isArtistPath(fromPathname));
@@ -755,14 +755,14 @@ const globalPreloaderPaths = [
           ['/about', '/esp/sobre/'],
           ['/writer', '/esp/escritor/'],
           ['/architect', '/esp/arquitecto/'],
-          ['/artist', '/esp/artista/'],
+          ['/painter', '/esp/pintor/'],
           ['/buy', '/esp/comprar/'],
           ['/writer/books', '/esp/escritor/libros/'],
           ['/writer/everything', '/esp/escritor/todo/'],
           ['/architect/projects', '/esp/arquitecto/proyectos/'],
           ['/architect/portfolios', '/esp/arquitecto/portafolios/'],
-          ['/artist/exhibitions', '/esp/artista/exposiciones/'],
-          ['/artist/everything', '/esp/artista/todo/'],
+          ['/painter/exhibitions', '/esp/pintor/exposiciones/'],
+          ['/painter/everything', '/esp/pintor/todo/'],
         ]);
         const spanishToEnglishRoutes = new Map(
           Array.from(englishToSpanishRoutes.entries()).map(([englishPath, spanishPath]) => [
@@ -804,14 +804,14 @@ const globalPreloaderPaths = [
             return slug ? `/esp/escritor/todo/${slug}/` : '/esp/escritor/todo/';
           }
 
-          if (normalizedPath.startsWith('/esp/artista/todo/')) {
-            const slug = normalizedPath.slice('/esp/artista/todo/'.length);
-            return slug ? `/artist/everything/${slug}/` : '/artist/everything/';
+          if (normalizedPath.startsWith('/esp/pintor/todo/')) {
+            const slug = normalizedPath.slice('/esp/pintor/todo/'.length);
+            return slug ? `/painter/everything/${slug}/` : '/painter/everything/';
           }
 
-          if (normalizedPath.startsWith('/artist/everything/')) {
-            const slug = normalizedPath.slice('/artist/everything/'.length);
-            return slug ? `/esp/artista/todo/${slug}/` : '/esp/artista/todo/';
+          if (normalizedPath.startsWith('/painter/everything/')) {
+            const slug = normalizedPath.slice('/painter/everything/'.length);
+            return slug ? `/esp/pintor/todo/${slug}/` : '/esp/pintor/todo/';
           }
 
           if (isSpanishPath(normalizedPath)) {

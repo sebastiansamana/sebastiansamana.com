@@ -11,7 +11,7 @@ const viewport = { width: 390, height: 844, deviceScaleFactor: 3 };
 const targets = [
   { index: 0, name: 'Writer', expectedPath: '/writer/' },
   { index: 1, name: 'Architect', expectedPath: '/architect/' },
-  { index: 2, name: 'Artist', expectedPath: '/artist/' },
+  { index: 2, name: 'Painter', expectedPath: '/painter/' },
 ];
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
