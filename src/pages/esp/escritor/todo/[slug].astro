@@ -1,9 +1,9 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
-import AuthorItemDetail from '../../../components/AuthorItemDetail.astro';
-import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { getAuthorItemTitle, getPublicAuthorItems } from '../../../lib/authorItems';
+import AuthorItemDetail from '../../../../components/AuthorItemDetail.astro';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { getAuthorItemTitle, getPublicAuthorItems } from '../../../../lib/authorItems';
 
 export const getStaticPaths = (async () => {
   const items = getPublicAuthorItems(await getCollection('authorItems'));
@@ -15,9 +15,9 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { item } = Astro.props;
-const title = getAuthorItemTitle(item);
+const title = getAuthorItemTitle(item, 'es');
 ---
 
 <BaseLayout title={`${title} | Varelism`} description={title}>
-  <AuthorItemDetail backHref="/author/everything/" backLabel="Return" item={item} />
+  <AuthorItemDetail backHref="/esp/escritor/todo/" backLabel="Volver" item={item} locale="es" />
 </BaseLayout>

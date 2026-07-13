@@ -20,12 +20,12 @@ const englishToSpanishRoutes = new Map<string, string>([
   ['/', '/esp'],
   ['/contact', '/esp/contacto/'],
   ['/about', '/esp/sobre/'],
-  ['/author', '/esp/autor/'],
+  ['/writer', '/esp/escritor/'],
   ['/architect', '/esp/arquitecto/'],
   ['/artist', '/esp/artista/'],
   ['/buy', '/esp/comprar/'],
-  ['/author/books', '/esp/autor/libros/'],
-  ['/author/everything', '/esp/autor/todo/'],
+  ['/writer/books', '/esp/escritor/libros/'],
+  ['/writer/everything', '/esp/escritor/todo/'],
   ['/architect/projects', '/esp/arquitecto/proyectos/'],
   ['/architect/portfolios', '/esp/arquitecto/portafolios/'],
   ['/artist/exhibitions', '/esp/artista/exposiciones/'],
@@ -60,14 +60,14 @@ const getLanguageSwitchHref = (pathname: string) => {
     return slug ? `/esp/arquitecto/portafolios/${slug}/` : '/esp/arquitecto/portafolios/';
   }
 
-  if (normalizedPath.startsWith('/esp/autor/todo/')) {
-    const slug = normalizedPath.slice('/esp/autor/todo/'.length);
-    return slug ? `/author/everything/${slug}/` : '/author/everything/';
+  if (normalizedPath.startsWith('/esp/escritor/todo/')) {
+    const slug = normalizedPath.slice('/esp/escritor/todo/'.length);
+    return slug ? `/writer/everything/${slug}/` : '/writer/everything/';
   }
 
-  if (normalizedPath.startsWith('/author/everything/')) {
-    const slug = normalizedPath.slice('/author/everything/'.length);
-    return slug ? `/esp/autor/todo/${slug}/` : '/esp/autor/todo/';
+  if (normalizedPath.startsWith('/writer/everything/')) {
+    const slug = normalizedPath.slice('/writer/everything/'.length);
+    return slug ? `/esp/escritor/todo/${slug}/` : '/esp/escritor/todo/';
   }
 
   if (normalizedPath.startsWith('/esp/artista/todo/')) {
@@ -185,14 +185,14 @@ const globalPreloaderPaths = [
         const homeReturnRevealMs = 320;
         const routeBlankHoldMs = 70;
         const authorReplayReturnPaths = [
-          '/author/books/',
-          '/author/books',
-          '/author/everything/',
-          '/author/everything',
-          '/esp/autor/libros/',
-          '/esp/autor/libros',
-          '/esp/autor/todo/',
-          '/esp/autor/todo',
+          '/writer/books/',
+          '/writer/books',
+          '/writer/everything/',
+          '/writer/everything',
+          '/esp/escritor/libros/',
+          '/esp/escritor/libros',
+          '/esp/escritor/todo/',
+          '/esp/escritor/todo',
         ];
         const artistReplayReturnPaths = [
           '/artist/exhibitions/',
@@ -314,7 +314,7 @@ const globalPreloaderPaths = [
           `${pathA.replace(/\/$/, '')}/` === `${pathB.replace(/\/$/, '')}/`;
 
         const isAuthorPath = (pathname) =>
-          isSamePath(pathname, '/author/') || isSamePath(pathname, '/esp/autor/');
+          isSamePath(pathname, '/writer/') || isSamePath(pathname, '/esp/escritor/');
         const isArchitectPath = (pathname) =>
           isSamePath(pathname, '/architect/') || isSamePath(pathname, '/esp/arquitecto/');
         const isArtistPath = (pathname) =>
@@ -753,12 +753,12 @@ const globalPreloaderPaths = [
           ['/', '/esp'],
           ['/contact', '/esp/contacto/'],
           ['/about', '/esp/sobre/'],
-          ['/author', '/esp/autor/'],
+          ['/writer', '/esp/escritor/'],
           ['/architect', '/esp/arquitecto/'],
           ['/artist', '/esp/artista/'],
           ['/buy', '/esp/comprar/'],
-          ['/author/books', '/esp/autor/libros/'],
-          ['/author/everything', '/esp/autor/todo/'],
+          ['/writer/books', '/esp/escritor/libros/'],
+          ['/writer/everything', '/esp/escritor/todo/'],
           ['/architect/projects', '/esp/arquitecto/proyectos/'],
           ['/architect/portfolios', '/esp/arquitecto/portafolios/'],
           ['/artist/exhibitions', '/esp/artista/exposiciones/'],
@@ -794,14 +794,14 @@ const globalPreloaderPaths = [
             return slug ? `/esp/arquitecto/portafolios/${slug}/` : '/esp/arquitecto/portafolios/';
           }
 
-          if (normalizedPath.startsWith('/esp/autor/todo/')) {
-            const slug = normalizedPath.slice('/esp/autor/todo/'.length);
-            return slug ? `/author/everything/${slug}/` : '/author/everything/';
+          if (normalizedPath.startsWith('/esp/escritor/todo/')) {
+            const slug = normalizedPath.slice('/esp/escritor/todo/'.length);
+            return slug ? `/writer/everything/${slug}/` : '/writer/everything/';
           }
 
-          if (normalizedPath.startsWith('/author/everything/')) {
-            const slug = normalizedPath.slice('/author/everything/'.length);
-            return slug ? `/esp/autor/todo/${slug}/` : '/esp/autor/todo/';
+          if (normalizedPath.startsWith('/writer/everything/')) {
+            const slug = normalizedPath.slice('/writer/everything/'.length);
+            return slug ? `/esp/escritor/todo/${slug}/` : '/esp/escritor/todo/';
           }
 
           if (normalizedPath.startsWith('/esp/artista/todo/')) {

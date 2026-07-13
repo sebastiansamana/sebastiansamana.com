@@ -112,7 +112,7 @@ const {
     const matchesAnyPath = (pathname, paths) => paths.some((path) => isSamePath(pathname, path));
 
     const getRouteCompleteEvents = (pathname) => {
-      if (matchesAnyPath(pathname, ['/author/', '/esp/autor/'])) return ['varelism:author-preloader-complete'];
+      if (matchesAnyPath(pathname, ['/writer/', '/esp/escritor/'])) return ['varelism:author-preloader-complete'];
       if (matchesAnyPath(pathname, ['/artist/', '/esp/artista/'])) return ['varelism:artist-preloader-complete'];
       if (matchesAnyPath(pathname, ['/architect/', '/esp/arquitecto/'])) {
         return ['varelism:architect-preloader-complete'];
@@ -503,7 +503,7 @@ const {
       const overlayFallbackSrc = overlay.dataset.fallbackSrc || '';
       const isSuppressedByReturnBlank = Boolean(
         (document.documentElement.classList.contains('author-return-blank-active') &&
-          activePaths.some((path) => matchesAnyPath(path, ['/author/', '/esp/autor/']))) ||
+          activePaths.some((path) => matchesAnyPath(path, ['/writer/', '/esp/escritor/']))) ||
           (document.documentElement.classList.contains('artist-return-blank-active') &&
             activePaths.some((path) => matchesAnyPath(path, ['/artist/', '/esp/artista/']))) ||
           (document.documentElement.classList.contains('architect-return-blank-active') &&

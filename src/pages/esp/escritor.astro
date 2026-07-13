@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Autor | Varelism" description="Autor.">
-  <section class="author-stage" data-author-stage aria-label="Autor">
+<BaseLayout title="Escritor | Varelism" description="Escritor.">
+  <section class="author-stage" data-author-stage aria-label="Escritor">
     <svg class="author-connector" data-author-connector aria-hidden="true" focusable="false">
       <path
         data-author-connector-path
@@ -16,9 +16,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       ></path>
     </svg>
 
-    <nav class="author-links" aria-label="Secciones de autor">
-      <a class="author-link" href="/esp/autor/libros" data-author-link="books" data-astro-reload>Libros</a>
-      <a class="author-link" href="/esp/autor/todo" data-author-link="everything" data-astro-reload>Todo</a>
+    <nav class="author-links" aria-label="Secciones de escritor">
+      <a class="author-link" href="/esp/escritor/libros" data-author-link="books" data-astro-reload>Libros</a>
+      <a class="author-link" href="/esp/escritor/todo" data-author-link="everything" data-astro-reload>Todo</a>
     </nav>
   </section>
 </BaseLayout>
@@ -1465,7 +1465,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     let pendingHistoryRestartFrame = 0;
 
     const isAuthorPath = () =>
-      window.location.pathname === '/esp/autor' || window.location.pathname === '/esp/autor/';
+      window.location.pathname === '/esp/escritor' || window.location.pathname === '/esp/escritor/';
 
     const isAuthorStageComplete = () => {
       const stage = document.querySelector('[data-author-stage]');

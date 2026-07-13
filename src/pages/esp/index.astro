@@ -3,13 +3,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import MathVisualisationBackground from '../../components/MathVisualisationBackground.astro';
 
 const sections = [
-  { title: 'Autor', href: '/esp/autor/' },
+  { title: 'Escritor', href: '/esp/escritor/' },
   { title: 'Arquitecto', href: '/esp/arquitecto/' },
   { title: 'Artista', href: '/esp/artista/' },
 ];
 ---
 
-<BaseLayout title="Varelism" description="Autor, arquitecto y artista.">
+<BaseLayout title="Varelism" description="Escritor, arquitecto y artista.">
   <MathVisualisationBackground />
   <section class="triptych" aria-label="Secciones de Varelism">
     {sections.map((section) => (

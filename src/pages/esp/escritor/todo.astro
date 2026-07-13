@@ -6,7 +6,7 @@ import { getAuthorItemMetadata, getAuthorItemTitle, getPublicAuthorItems } from 
 
 const items = getPublicAuthorItems(await getCollection('authorItems'));
 const rows = items.map((item) => ({
-  href: `/esp/autor/todo/${item.slug}/`,
+  href: `/esp/escritor/todo/${item.slug}/`,
   metadata: getAuthorItemMetadata(item, 'es'),
   title: getAuthorItemTitle(item, 'es'),
 }));

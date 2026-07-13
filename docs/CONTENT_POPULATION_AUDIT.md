@@ -2,7 +2,8 @@
 
 - Audited: 11 July 2026
 - Repository state audited: `fceb101` on `main`
-- Purpose: authoritative hand-off for future Author, Architect portfolio, and Artist population work.
+- Route naming updated: 13 July 2026 (`Writer` / `Escritor`; internal `authorItems` identifiers retained).
+- Purpose: authoritative hand-off for future Writer, Architect portfolio, and Artist population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
 
@@ -25,7 +26,7 @@ If the implementation later changes, update this document in the same change. Un
 
 | Population target | Files normally allowed to change | Files not to change during routine population |
 |---|---|---|
-| Author | One new or updated `src/content/authorItems/<slug>.md` record | Archive/detail routes, `AuthorIndexArchive.astro`, `AuthorItemDetail.astro`, schemas, layout, styles |
+| Writer | One new or updated `src/content/authorItems/<slug>.md` record | Archive/detail routes, `AuthorIndexArchive.astro`, `AuthorItemDetail.astro`, schemas, layout, styles |
 | Architect portfolio | `src/data/portfolios.ts` plus supplied files under `public/pdfs/` and `public/images/portfolios/` | Portfolio archive/detail/PDF components, routes, layout, PDF.js support files, styles |
 | Artist | One record in `src/data/artworks/<slug>.md` plus supplied files under `public/images/artworks/` | `ArtworkArchive.astro`, detail routes, language dictionaries, schemas, layout, styles |
 
@@ -38,7 +39,7 @@ An exception to this boundary is a separately authorized implementation change, 
 | English holder | Spanish counterpart | English file | Spanish file |
 |---|---|---|---|
 | `/buy/` | `/esp/comprar/` | `src/pages/buy.astro` | `src/pages/esp/comprar.astro` |
-| `/author/books/` | `/esp/autor/libros/` | `src/pages/author/books.astro` | `src/pages/esp/autor/libros.astro` |
+| `/writer/books/` | `/esp/escritor/libros/` | `src/pages/writer/books.astro` | `src/pages/esp/escritor/libros.astro` |
 | `/architect/projects/` | `/esp/arquitecto/proyectos/` | `src/pages/architect/projects/index.astro` | `src/pages/esp/arquitecto/proyectos/index.astro` |
 | `/artist/exhibitions/` | `/esp/artista/exposiciones/` | `src/pages/artist/exhibitions.astro` | `src/pages/esp/artista/exposiciones.astro` |
 
@@ -54,18 +55,18 @@ The project holder has three old example project detail routes in each language 
 | About | `/about/` | `/esp/sobre/` | corresponding page files plus `AboutComposition.astro` |
 | Custom 404 | `/404.html` | `/esp/404/` | corresponding page files plus `NotFoundPage.astro` |
 | Contact | `/contact/` | `/esp/contacto/` | corresponding page files plus `ContactPage.astro` |
-| Author landing | `/author/` | `/esp/autor/` | completed animated landing pages |
+| Writer landing | `/writer/` | `/esp/escritor/` | completed animated landing pages |
 | Architect landing | `/architect/` | `/esp/arquitecto/` | completed 3D landing pages |
 | Artist landing | `/artist/` | `/esp/artista/` | completed animated landing pages |
 | Header, footer, language switch, transitions | all pages using the shared shell | all Spanish routes | `src/layouts/BaseLayout.astro` and `src/styles/global.css` |
 
-Do not use the legacy root routes `/writer/`, `/painter/`, `/books/`, `/booklist/`, or `/memories/` as population sources. They are unrelated to the three active archives. The repository `README.md` also predates the active archive architecture; this runbook and the implementation are authoritative.
+Do not use the legacy root routes `/painter/`, `/books/`, `/booklist/`, or `/memories/` as population sources. They are unrelated to the three active archives. The repository `README.md` also predates the active archive architecture; this runbook and the implementation are authoritative.
 
 ### Active population routes
 
 | System | English archive | Spanish archive | Detail pair |
 |---|---|---|---|
-| Author | `/author/everything/` | `/esp/autor/todo/` | same filename-derived slug in both |
+| Writer | `/writer/everything/` | `/esp/escritor/todo/` | same filename-derived slug in both |
 | Architect | `/architect/portfolios/` | `/esp/arquitecto/portafolios/` | same explicit portfolio `id` in both |
 | Artist | `/artist/everything/` | `/esp/artista/todo/` | same filename-derived collection ID in both |
 
@@ -77,27 +78,27 @@ The site is Astro 5.18 static output (`astro.config.mjs:6-13`). A fresh `npm run
 
 | System | Source | Visibility step | Ordering step | Outputs |
 |---|---|---|---|---|
-| Author | one bilingual Markdown file | exact `status === 'public'` | shared date-priority sorter | EN archive/detail and ES archive/detail |
+| Writer | one bilingual Markdown file | exact `status === 'public'` | shared date-priority sorter | EN archive/detail and ES archive/detail |
 | Artist | one shared Markdown record plus images | exact `status === 'public'` | shared date-priority sorter | EN grid/index/detail and ES grid/index/detail |
 | Portfolio | one object in a TypeScript array plus PDF/images | none; every array item is public | literal array order | EN grid/index/detail/PDF and ES grid/index/detail/PDF |
 
-Author and Artist use Astro content collections defined in `src/content.config.ts`. Portfolio does not: it uses `src/data/portfolios.ts` directly.
+Writer and Artist use Astro content collections defined in `src/content.config.ts`. Portfolio does not: it uses `src/data/portfolios.ts` directly.
 
 ### Language pairing
 
-`BaseLayout.astro:19-87` maps the static English/Spanish routes. Detail switches at `:43-80` preserve the suffix slug for projects, portfolios, Author items, and Artist items. The mapping is duplicated at `:743-868` so the persistent header is corrected after Astro page transitions. Both copies are intentional; routine population must not edit either.
+`BaseLayout.astro:19-87` maps the static English/Spanish routes. Detail switches at `:43-80` preserve the suffix slug for projects, portfolios, Writer items, and Artist items. The mapping is duplicated at `:743-868` so the persistent header is corrected after Astro page transitions. Both copies are intentional; routine population must not edit either.
 
 There is no translation-pair identifier:
 
-- Author: one record contains the English and Spanish versions.
+- Writer: one record contains the English and Spanish versions.
 - Artist: one record is reused by both languages.
 - Portfolio: one object is reused by both languages.
 
-A public Author or Artist item therefore always generates both language routes together. A portfolio object also always generates both routes.
+A public Writer or Artist item therefore always generates both language routes together. A portfolio object also always generates both routes.
 
 ### Visibility and security boundary
 
-| State/request | Author | Artist | Portfolio |
+| State/request | Writer | Artist | Portfolio |
 |---|---|---|---|
 | `public` | Both language archives and details build | Both language archives and details build | Not a field; all registry items build |
 | `draft` | Both language archives/details excluded | Both language archives/details excluded | Not supported |
@@ -130,9 +131,9 @@ The audit found no canonical links, `hreflang`, Open Graph tags, Twitter tags, r
 
 There is one committed browser regression: `npm run test:home-mobile`. It rebuilds, starts a preview, uses Chrome/Edge at 390 x 844 with DPR 3, throttles CPU/network, and confirms cold taps on all three homepage columns navigate correctly. It is valuable as a global regression but does not validate the three archives.
 
-There is no Author-, Artist-, or portfolio-specific automated test, no standalone content validation script, and no configured `astro check` script. The manual matrices below are therefore mandatory.
+There is no Writer-, Artist-, or portfolio-specific automated test, no standalone content validation script, and no configured `astro check` script. The manual matrices below are therefore mandatory.
 
-## 4. Author population system
+## 4. Writer population system
 
 ### Files and lifecycle
 
@@ -142,10 +143,10 @@ There is no Author-, Artist-, or portfolio-specific automated test, no standalon
 - Date localization: `src/lib/dateLabels.ts`
 - Archive component: `src/components/AuthorIndexArchive.astro`
 - Detail component: `src/components/AuthorItemDetail.astro`
-- Archive routes: `src/pages/author/everything.astro` and `src/pages/esp/autor/todo.astro`
+- Archive routes: `src/pages/writer/everything.astro` and `src/pages/esp/escritor/todo.astro`
 - Detail routes: the corresponding `[slug].astro` files
 
-There is no author generator. Create one UTF-8 Markdown record manually using the existing schema.
+There is no writer generator. Create one UTF-8 Markdown record manually using the existing schema.
 
 ### Exact fields
 
@@ -231,7 +232,7 @@ Responsive behavior:
 
 The existing spelling `Gohsts` is authoritative content. Do not silently correct it.
 
-### First Author intake message
+### First Writer intake message
 
 > Please send the following in one package:
 >
@@ -245,7 +246,7 @@ The existing spelling `Gohsts` is authoritative content. Do not silently correct
 
 Do not ask for unsupported IDs, pair keys, original language, SEO fields, canonical, enquiry link, thumbnails, or images.
 
-### Safe Author procedure
+### Safe Writer procedure
 
 1. Collect the consolidated intake above; do not infer missing facts.
 2. Validate both final bodies as UTF-8; check supplied English Markdown links.
@@ -617,7 +618,7 @@ Build success does not prove string asset paths exist. Check every referenced fi
 
 ### Generated output
 
-For each new public Author/Artist slug:
+For each new public Writer/Artist slug:
 
 - both archive HTML files exist;
 - both detail HTML files exist;
@@ -668,7 +669,7 @@ Do not call population complete if:
 - required source text/assets are missing;
 - public approval is ambiguous;
 - a requested Spanish-specific artwork field is unsupported;
-- an Author Spanish body is missing for a public item;
+- a Writer Spanish body is missing for a public item;
 - a portfolio would expose an unacceptable English PDF on the Spanish route;
 - a PDF count/order/ratio is unverified;
 - an asset path is missing or case-mismatched;
@@ -681,7 +682,7 @@ Do not call population complete if:
 - `npm run test:home-mobile` passed all three cold mobile taps.
 - Both language archives and representative details returned HTTP 200.
 - Artist had four public and six draft records; all twelve draft detail-route checks (six slugs x two languages) were absent.
-- Artist grid rendered 4/3/2 columns at 1440/1024/390px; Author rows changed from two-column desktop to stacked phone; portfolio inline viewer loaded all 39 pages in both languages without console errors.
+- Artist grid rendered 4/3/2 columns at 1440/1024/390px; Writer rows changed from two-column desktop to stacked phone; portfolio inline viewer loaded all 39 pages in both languages without console errors.
 - The raw PDF returned `206 Partial Content` for a byte-range request and `Content-Type: application/pdf`.
 - `public/pdfs/studio-2-2.pdf` and its `dist` copy had the identical SHA-256 recorded above.
 - Only this runbook and the `AGENTS.md` pointer were changed; application code, existing content, assets, and order were untouched.
@@ -690,7 +691,7 @@ Do not call population complete if:
 
 When the user says “Let’s populate …”, ask the full consolidated questionnaire in the relevant section above. In short:
 
-- **Author:** shared publication state; exact EN/ES titles and bodies; exact known date/precision and same-day order; EN/ES type; word-count handling; slug.
+- **Writer:** shared publication state; exact EN/ES titles and bodies; exact known date/precision and same-day order; EN/ES type; word-count handling; slug.
 - **Architect:** final original English PDF; exact title; ID; array placement; public-in-both-languages consequence; optional subtitle/covers/preview; do not request the unfinished Spanish PDF.
 - **Artist:** original image and optional supplied red hover; exact shared title; known date; medium; physical dimensions; draft/public; optional known location/description; only conditional tie order/slug/alt.
 

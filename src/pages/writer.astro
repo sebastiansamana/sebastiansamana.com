@@ -1,74 +1,1676 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-const texts = [
-  {
-    title: 'Drawing as Slow Thinking',
-    type: 'Essay',
-    date: 'March 2026',
-    excerpt: 'A text on slowness, notation, and architectural attention.',
-  },
-  {
-    title: 'Margins of the Construction Site',
-    type: 'Notebook',
-    date: 'December 2025',
-    excerpt: 'Fragments from active sites and temporary spatial conditions.',
-  },
-  {
-    title: 'Notes on Material Memory',
-    type: 'Lecture Draft',
-    date: 'September 2025',
-    excerpt: 'How surfaces absorb time through wear, repair, and repetition.',
-  },
-];
 ---
 
-<BaseLayout title="Writer | Sebastian Samana" description="Writing practice and research notes.">
-  <section class="section fade-up">
-    <p class="eyebrow">Writer</p>
-    <h1 class="page-title">Texts, notebooks, and research fragments.</h1>
-    <p class="page-intro">Writing is where projects begin and where completed work is tested again through language.</p>
-  </section>
+<BaseLayout title="Writer | Varelism" description="Writer.">
+  <section class="author-stage" data-author-stage aria-label="Writer">
+    <svg class="author-connector" data-author-connector aria-hidden="true" focusable="false">
+      <path
+        data-author-connector-path
+        fill="none"
+        stroke="#000000"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="0.28"
+        vector-effect="non-scaling-stroke"
+      ></path>
+    </svg>
 
-  <section class="section writing-list">
-    {texts.map((text, index) => (
-      <article class="entry fade-up stagger" style={`--delay:${index * 0.07}s`}>
-        <p class="meta">{text.type} · {text.date}</p>
-        <h2>{text.title}</h2>
-        <p>{text.excerpt}</p>
-      </article>
-    ))}
+    <nav class="author-links" aria-label="Writer sections">
+      <a class="author-link" href="/writer/books" data-author-link="books" data-astro-reload>Books</a>
+      <a class="author-link" href="/writer/everything" data-author-link="everything" data-astro-reload>Everything</a>
+    </nav>
   </section>
 </BaseLayout>
 
+<script>
+  (() => {
+    const stateKey = '__varelismAuthorPage';
+    const state = (window[stateKey] ||= {
+      cleanup: null,
+      listenersAttached: false,
+    });
+
+    const forceAuthorReplayKey = '__varelismForceAuthorReplay';
+    const authorReturnReplayKey = 'varelism-author-return-replay';
+    const authorReturnBlankClass = 'author-return-blank-active';
+    const routeEnteringClass = 'varelism-route-entering';
+    const routeEnterEvent = 'varelism:route-enter';
+    const preloaderCompleteEvent = 'varelism:author-preloader-complete';
+    const TEXT_TO_LINE_GAP = 10;
+    const DEFAULT_HORIZONTAL_LEAD_LENGTH = 64;
+    const MOBILE_AUTHOR_VIEWPORT_QUERY = '(max-width: 1199px)';
+    const TOUCH_VIEWPORT_QUERY = '(any-pointer: coarse), (pointer: coarse)';
+    const VIEWPORT_RESIZE_EPSILON = 1;
+    const DEBUG_AUTHOR_CONNECTOR = false;
+    const BOOKS_REVEAL_DELAY_MS = 0;
+    const EVERYTHING_REVEAL_DELAY_MS = BOOKS_REVEAL_DELAY_MS + 750;
+    const CONNECTOR_DRAW_DELAY_MS = EVERYTHING_REVEAL_DELAY_MS + 450;
+    const NON_PHONE_DRAW_DURATION_SCALE = 2 / 3;
+    const AUTHOR_RETURN_BLANK_HOLD_MS = 360;
+    const PORTRAIT_PHONE_PRESETS = [
+      {
+        amplitudeFactor: 0.19,
+        bendSign: 1,
+        books: { x: 0.95, y: 0.9 },
+        everything: { x: 0.68, y: 0.1 },
+        everythingAccentWeight: 0.12,
+        phase: 0.02,
+        waveCycles: 1.94,
+        warp: -0.006,
+      },
+      {
+        amplitudeFactor: 0.18,
+        bendSign: -1,
+        books: { x: 0.86, y: 0.12 },
+        everything: { x: 0.7, y: 0.9 },
+        everythingAccentWeight: 0.12,
+        phase: -0.01,
+        waveCycles: 1.96,
+        warp: 0.004,
+      },
+      {
+        amplitudeFactor: 0.2,
+        bendSign: 1,
+        books: { x: 0.72, y: 0.9 },
+        everything: { x: 0.6, y: 0.1 },
+        everythingAccentWeight: 0.1,
+        phase: 0.035,
+        waveCycles: 1.92,
+        warp: 0.008,
+      },
+    ];
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const randomBetween = (min, max) => (max <= min ? min : min + Math.random() * (max - min));
+    const smootherstep = (value) => {
+      const t = clamp(value, 0, 1);
+
+      return t * t * t * (t * (t * 6 - 15) + 10);
+    };
+    const formatPathNumber = (value) => (Number.isFinite(value) ? String(value) : '0');
+    const isPortraitPhoneViewport = (stageWidth, stageHeight) =>
+      stageWidth <= 600 && stageHeight > stageWidth * 1.35;
+    const getRandomPortraitPhonePreset = () =>
+      PORTRAIT_PHONE_PRESETS[Math.floor(Math.random() * PORTRAIT_PHONE_PRESETS.length)];
+    const getAuthorCurveScale = ({ stageHeight = window.innerHeight, stageWidth }) => {
+      const portraitPhoneViewport = isPortraitPhoneViewport(stageWidth, stageHeight);
+      const mobileViewport = stageWidth <= 560 || portraitPhoneViewport;
+      const compactViewport = stageWidth <= 900;
+
+      return {
+        amplitudeFactorMax: portraitPhoneViewport ? 0.24 : 0.2,
+        amplitudeFactorMin: portraitPhoneViewport ? 0.15 : 0.13,
+        amplitudeMaximum: portraitPhoneViewport
+          ? clamp(stageHeight * 0.2, 82, 168)
+          : clamp(stageHeight * 0.18, 72, 170),
+        amplitudeMinimum: portraitPhoneViewport ? 34 : 26,
+        bodySegmentCount: portraitPhoneViewport ? 16 : null,
+        fallbackBooksY: portraitPhoneViewport
+          ? 0.72
+          : mobileViewport
+            ? 0.6
+            : compactViewport
+              ? 0.62
+              : 0.62,
+        fallbackEverythingY: portraitPhoneViewport
+          ? 0.28
+          : mobileViewport
+            ? 0.4
+            : compactViewport
+              ? 0.38
+              : 0.42,
+        horizontalSeparationFactor: mobileViewport ? 0.48 : compactViewport ? 0.42 : 0.36,
+        horizontalSeparationMax: mobileViewport ? 220 : compactViewport ? 380 : 360,
+        leadLength: mobileViewport
+          ? 8
+          : compactViewport
+            ? 18
+            : DEFAULT_HORIZONTAL_LEAD_LENGTH,
+        maximumVerticalDistance: mobileViewport
+          ? portraitPhoneViewport
+            ? clamp(stageHeight * 0.58, 340, 480)
+            : clamp(stageHeight * 0.36, 220, 320)
+          : compactViewport
+            ? clamp(stageHeight * 0.34, 260, 380)
+            : stageHeight,
+        minimumLeadLength: mobileViewport ? 6 : compactViewport ? 10 : 28,
+        minimumVerticalDistance: mobileViewport
+          ? portraitPhoneViewport
+            ? clamp(stageHeight * 0.34, 230, 340)
+            : clamp(stageHeight * 0.16, 96, 152)
+          : compactViewport
+            ? clamp(stageHeight * 0.18, 136, 240)
+            : 0,
+        normalXScale: portraitPhoneViewport ? 0.75 : 1,
+        normalYScale: 1,
+        terminalTangentFactorMax: portraitPhoneViewport ? 0.34 : 0.5,
+        terminalTangentFactorMin: portraitPhoneViewport ? 0.24 : 0.34,
+        terminalTangentMaximum: portraitPhoneViewport ? 118 : 220,
+        terminalTangentMinimum: portraitPhoneViewport ? 46 : 52,
+        textSeparationPadding: mobileViewport ? 88 : compactViewport ? 84 : 72,
+        tensionMax: 0.68,
+        tensionMin: portraitPhoneViewport ? 0.54 : 0.5,
+        wavelengthDriftFactor: portraitPhoneViewport ? 0.024 : 0.035,
+        waveEnvelopePower: portraitPhoneViewport ? 0.86 : 1.12,
+        waveMagnitudeMax: portraitPhoneViewport ? 1.12 : 1.18,
+        waveMagnitudeMin: portraitPhoneViewport ? 0.82 : 0.72,
+        waveTJitterFactor: portraitPhoneViewport ? 0.14 : 0.22,
+        waveTJitter: portraitPhoneViewport ? 0.028 : 0.055,
+        waveTMax: portraitPhoneViewport ? 0.9 : 0.78,
+        waveTMin: portraitPhoneViewport ? 0.1 : 0.22,
+      };
+    };
+
+    function getTextNode(link) {
+      return Array.from(link.childNodes).find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim()
+      );
+    }
+
+    function toStageRect(rect, stageRect) {
+      return {
+        left: rect.left - stageRect.left,
+        right: rect.right - stageRect.left,
+        top: rect.top - stageRect.top,
+        bottom: rect.bottom - stageRect.top,
+        width: rect.width,
+        height: rect.height,
+        centerX: rect.left - stageRect.left + rect.width / 2,
+        centerY: rect.top - stageRect.top + rect.height / 2,
+      };
+    }
+
+    // DOM Range keeps connector endpoints tied to the rendered glyph bounds.
+    function getCharacterRect(link, charIndex, stageRect) {
+      const textNode = getTextNode(link);
+
+      if (!textNode || !textNode.nodeValue) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      const raw = textNode.nodeValue;
+      const measuredText = raw.trim();
+
+      if (!measuredText.length) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      const textStart = raw.indexOf(measuredText);
+
+      const safeIndex = Math.min(
+        Math.max(charIndex, 0),
+        Math.max(measuredText.length - 1, 0)
+      );
+
+      const range = document.createRange();
+      range.setStart(textNode, textStart + safeIndex);
+      range.setEnd(textNode, textStart + safeIndex + 1);
+
+      const browserRect = range.getBoundingClientRect();
+      range.detach?.();
+
+      if (!browserRect.width || !browserRect.height) {
+        return toStageRect(link.getBoundingClientRect(), stageRect);
+      }
+
+      return toStageRect(browserRect, stageRect);
+    }
+
+    function computeConnectorEndpoints(booklistLink, everythingLink, stageRect) {
+      const booklistRect = toStageRect(booklistLink.getBoundingClientRect(), stageRect);
+      const everythingRect = toStageRect(everythingLink.getBoundingClientRect(), stageRect);
+
+      const everythingIsRight = everythingRect.centerX >= booklistRect.centerX;
+
+      const booklistText = booklistLink.textContent.trim();
+      const everythingText = everythingLink.textContent.trim();
+
+      const booklistCharIndex = everythingIsRight ? booklistText.length - 1 : 0;
+      const everythingCharIndex = everythingIsRight ? 0 : everythingText.length - 1;
+
+      const booklistCharRect = getCharacterRect(booklistLink, booklistCharIndex, stageRect);
+      const everythingCharRect = getCharacterRect(everythingLink, everythingCharIndex, stageRect);
+
+      const horizontalDirection = everythingIsRight
+        ? { x: 1, y: 0 }
+        : { x: -1, y: 0 };
+
+      const startPoint = everythingIsRight
+        ? {
+            x: booklistCharRect.right + TEXT_TO_LINE_GAP,
+            y: booklistRect.centerY,
+          }
+        : {
+            x: booklistCharRect.left - TEXT_TO_LINE_GAP,
+            y: booklistRect.centerY,
+          };
+
+      const endPoint = everythingIsRight
+        ? {
+            x: everythingCharRect.left - TEXT_TO_LINE_GAP,
+            y: everythingRect.centerY,
+          }
+        : {
+            x: everythingCharRect.right + TEXT_TO_LINE_GAP,
+            y: everythingRect.centerY,
+          };
+
+      return {
+        startPoint,
+        endPoint,
+        horizontalDirection,
+        booklistRect,
+        everythingRect,
+        booklistCharRect,
+        everythingCharRect,
+        everythingIsRight,
+        stageHeight: stageRect.height,
+        stageWidth: stageRect.width,
+      };
+    }
+
+    const getLinkSize = (link) => {
+      const rect = link.getBoundingClientRect();
+
+      return {
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+
+    const getCenterRange = ({ maxX, maxY, minX, minY, size, stageHeight, stageWidth }) => {
+      const halfWidth = size.width / 2;
+      const halfHeight = size.height / 2;
+      const safeMinX = clamp(minX + halfWidth, 0, stageWidth);
+      const safeMaxX = clamp(maxX - halfWidth, safeMinX, stageWidth);
+      const safeMinY = clamp(minY + halfHeight, 0, stageHeight);
+      const safeMaxY = clamp(maxY - halfHeight, safeMinY, stageHeight);
+
+      return {
+        maxX: safeMaxX,
+        maxY: safeMaxY,
+        minX: safeMinX,
+        minY: safeMinY,
+      };
+    };
+
+    const getRandomPointInRange = (range) => ({
+      x: randomBetween(range.minX, range.maxX),
+      y: randomBetween(range.minY, range.maxY),
+    });
+
+    const getPresetPointInRange = (range, presetPoint) => ({
+      x: range.minX + (range.maxX - range.minX) * presetPoint.x,
+      y: range.minY + (range.maxY - range.minY) * presetPoint.y,
+    });
+
+    function getPortraitPhonePlacement({
+      booklistRange,
+      everythingRange,
+      preset,
+      stageHeight,
+    }) {
+      if (preset) {
+        return {
+          books: getPresetPointInRange(booklistRange, preset.books),
+          everything: getPresetPointInRange(everythingRange, preset.everything),
+        };
+      }
+
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight || stageHeight;
+      const requestedMinimumVerticalDistance = viewportHeight * 0.62;
+      const requestedMinimumPathDistance = viewportHeight * 0.66;
+      const getPointAtRandomX = (range, y) => ({
+        x: randomBetween(range.minX, range.maxX),
+        y,
+      });
+      const getCandidate = ({ lowerKey, lowerRange, upperKey, upperRange }) => {
+        const maxDistance = Math.max(0, lowerRange.maxY - upperRange.minY);
+        const minDistance = Math.max(
+          0,
+          requestedMinimumVerticalDistance,
+          lowerRange.minY - upperRange.maxY
+        );
+
+        if (maxDistance < minDistance) return null;
+
+        const distance = randomBetween(minDistance, maxDistance);
+        const upperMinY = Math.max(upperRange.minY, lowerRange.minY - distance);
+        const upperMaxY = Math.min(upperRange.maxY, lowerRange.maxY - distance);
+        const upperY = randomBetween(upperMinY, upperMaxY);
+        const lowerY = upperY + distance;
+        const upperPoint = getPointAtRandomX(upperRange, upperY);
+        const lowerPoint = getPointAtRandomX(lowerRange, lowerY);
+        const pathDistance = Math.hypot(lowerPoint.x - upperPoint.x, lowerPoint.y - upperPoint.y);
+
+        if (pathDistance < Math.min(requestedMinimumPathDistance, maxDistance)) return null;
+
+        return {
+          [upperKey]: upperPoint,
+          [lowerKey]: lowerPoint,
+        };
+      };
+
+      const candidates = [];
+
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const booksLowerCandidate = getCandidate({
+          lowerKey: 'books',
+          lowerRange: booklistRange,
+          upperKey: 'everything',
+          upperRange: everythingRange,
+        });
+        const everythingLowerCandidate = getCandidate({
+          lowerKey: 'everything',
+          lowerRange: everythingRange,
+          upperKey: 'books',
+          upperRange: booklistRange,
+        });
+
+        if (booksLowerCandidate) candidates.push(booksLowerCandidate);
+        if (everythingLowerCandidate) candidates.push(everythingLowerCandidate);
+        if (candidates.length >= 12) break;
+      }
+
+      if (candidates.length) {
+        const { books, everything } = candidates[Math.floor(Math.random() * candidates.length)];
+
+        return { books, everything };
+      }
+
+      const booksAreLower = Math.random() < 0.5;
+      const topRange = booksAreLower ? everythingRange : booklistRange;
+      const bottomRange = booksAreLower ? booklistRange : everythingRange;
+      const topY = topRange.minY;
+      const bottomY = bottomRange.maxY;
+
+      return {
+        books: getPointAtRandomX(booklistRange, booksAreLower ? bottomY : topY),
+        everything: getPointAtRandomX(everythingRange, booksAreLower ? topY : bottomY),
+      };
+    }
+
+    function placeAuthorLinks(stage, booklistLink, everythingLink, portraitPhonePreset = null) {
+      const stageRect = stage.getBoundingClientRect();
+      const stageWidth = Math.max(stageRect.width, 1);
+      const stageHeight = Math.max(stageRect.height, 1);
+      const safeX = clamp(stageWidth * 0.08, 32, 96);
+      const safeY = clamp(stageHeight * 0.12, 48, 120);
+      const curveScale = getAuthorCurveScale({ stageHeight, stageWidth });
+      const booklistSize = getLinkSize(booklistLink);
+      const everythingSize = getLinkSize(everythingLink);
+      const booklistRange = getCenterRange({
+        maxX: stageWidth * 0.45,
+        maxY: stageHeight - safeY,
+        minX: safeX,
+        minY: safeY,
+        size: booklistSize,
+        stageHeight,
+        stageWidth,
+      });
+      const everythingRange = getCenterRange({
+        maxX: stageWidth - safeX,
+        maxY: stageHeight - safeY,
+        minX: stageWidth * 0.55,
+        minY: safeY,
+        size: everythingSize,
+        stageHeight,
+        stageWidth,
+      });
+
+      if (isPortraitPhoneViewport(stageWidth, stageHeight)) {
+        return getPortraitPhonePlacement({
+          booklistRange,
+          everythingRange,
+          preset: portraitPhonePreset,
+          stageHeight,
+        });
+      }
+
+      const desiredMinimumHorizontalDistance = Math.max(
+        128,
+        Math.min(stageWidth * curveScale.horizontalSeparationFactor, curveScale.horizontalSeparationMax),
+        (booklistSize.width + everythingSize.width) / 2 + curveScale.textSeparationPadding
+      );
+      const maximumHorizontalDistance = Math.max(0, everythingRange.maxX - booklistRange.minX);
+      const minimumHorizontalDistance = Math.min(
+        desiredMinimumHorizontalDistance,
+        Math.max(maximumHorizontalDistance - 8, 0)
+      );
+      const minimumVerticalDistance = curveScale.minimumVerticalDistance;
+      const maximumVerticalDistance = curveScale.maximumVerticalDistance;
+
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const booklistPoint = getRandomPointInRange(booklistRange);
+        const everythingPoint = getRandomPointInRange(everythingRange);
+        const horizontalDistance = Math.abs(everythingPoint.x - booklistPoint.x);
+        const verticalDistance = Math.abs(everythingPoint.y - booklistPoint.y);
+
+        if (
+          horizontalDistance >= minimumHorizontalDistance &&
+          verticalDistance >= minimumVerticalDistance &&
+          verticalDistance <= maximumVerticalDistance
+        ) {
+          return {
+            everything: everythingPoint,
+            books: booklistPoint,
+          };
+        }
+      }
+
+      return {
+        everything: {
+          x: stageWidth * 0.65,
+          y: stageHeight * curveScale.fallbackEverythingY,
+        },
+        books: {
+          x: stageWidth * 0.35,
+          y: stageHeight * curveScale.fallbackBooksY,
+        },
+      };
+    }
+
+    function verifyConnectorGeometry(endpointData, pathData) {
+      if (!DEBUG_AUTHOR_CONNECTOR) return;
+
+      const {
+        everythingCharRect,
+        everythingIsRight,
+        everythingRect,
+        booklistRect,
+        booklistCharRect,
+        endPoint,
+        startPoint,
+      } = endpointData;
+      const startGap = everythingIsRight
+        ? startPoint.x - booklistCharRect.right
+        : booklistCharRect.left - startPoint.x;
+      const endGap = everythingIsRight
+        ? everythingCharRect.left - endPoint.x
+        : endPoint.x - everythingCharRect.right;
+      const startLeadLength = Math.hypot(
+        pathData.startLeadPoint.x - pathData.pathStartPoint.x,
+        pathData.startLeadPoint.y - pathData.pathStartPoint.y
+      );
+      const endLeadLength = Math.hypot(
+        endPoint.x - pathData.endLeadPoint.x,
+        endPoint.y - pathData.endLeadPoint.y
+      );
+      const tolerance = 0.01;
+      const hasGapError =
+        Math.abs(startGap - TEXT_TO_LINE_GAP) > tolerance ||
+        Math.abs(endGap - TEXT_TO_LINE_GAP) > tolerance;
+      const hasLeadError = Math.abs(startLeadLength - endLeadLength) > tolerance;
+      const hasAlignmentError =
+        Math.abs(pathData.pathStartPoint.y - booklistRect.centerY) > tolerance ||
+        Math.abs(endPoint.y - everythingRect.centerY) > tolerance;
+
+      if (hasGapError || hasLeadError || hasAlignmentError) {
+        console.warn('[author connector]', {
+          endGap,
+          endLeadLength,
+          endY: endPoint.y,
+          everythingCenterY: everythingRect.centerY,
+          startGap,
+          startLeadLength,
+          startY: pathData.pathStartPoint.y,
+          booklistCenterY: booklistRect.centerY,
+        });
+      }
+    }
+
+    function buildConnectorPath(endpointData, portraitPhonePreset = null) {
+      const {
+        endPoint,
+        horizontalDirection,
+        stageHeight = window.innerHeight,
+        stageWidth = window.innerWidth,
+        startPoint,
+      } = endpointData;
+      const portraitPhoneCurve = isPortraitPhoneViewport(stageWidth, stageHeight);
+      const curveScale = getAuthorCurveScale({ stageHeight, stageWidth });
+      const pathStartPoint = {
+        x: startPoint.x,
+        y: startPoint.y,
+      };
+      const availableHorizontalDistance = Math.abs(endPoint.x - pathStartPoint.x);
+      const maxSafeLead = Math.max(0, (availableHorizontalDistance - 24) / 2);
+
+      const horizontalLeadLength = Math.min(
+        curveScale.leadLength,
+        maxSafeLead
+      );
+
+      const finalLeadLength = maxSafeLead >= curveScale.minimumLeadLength
+        ? Math.max(curveScale.minimumLeadLength, horizontalLeadLength)
+        : horizontalLeadLength;
+
+      const startLeadPoint = {
+        x: pathStartPoint.x + horizontalDirection.x * finalLeadLength,
+        y: pathStartPoint.y,
+      };
+
+      const endLeadPoint = {
+        x: endPoint.x - horizontalDirection.x * finalLeadLength,
+        y: endPoint.y,
+      };
+
+      const bodyStart = startLeadPoint;
+      const bodyEnd = endLeadPoint;
+      const dx = bodyEnd.x - bodyStart.x;
+      const dy = bodyEnd.y - bodyStart.y;
+      const distance = Math.hypot(dx, dy);
+      const bodyDirection = distance > 0.001
+        ? {
+            x: dx / distance,
+            y: dy / distance,
+          }
+        : horizontalDirection;
+      const normal = {
+        x: -bodyDirection.y,
+        y: bodyDirection.x,
+      };
+      const amplitudeFactor = portraitPhoneCurve && portraitPhonePreset
+        ? portraitPhonePreset.amplitudeFactor
+        : randomBetween(curveScale.amplitudeFactorMin, curveScale.amplitudeFactorMax);
+      const amplitude = clamp(
+        distance * amplitudeFactor,
+        curveScale.amplitudeMinimum,
+        curveScale.amplitudeMaximum
+      );
+      const bendSign = portraitPhoneCurve && portraitPhonePreset
+        ? portraitPhonePreset.bendSign
+        : Math.random() < 0.5 ? -1 : 1;
+      const bodySegmentCount =
+        curveScale.bodySegmentCount || (distance > 620 ? 4 : distance > 240 ? 3 : 2);
+      const bodyPoints = [{ ...bodyStart, curveT: 0 }];
+      const portraitPhoneCycles = portraitPhoneCurve
+        ? portraitPhonePreset?.waveCycles ?? randomBetween(1.88, 2.08)
+        : 0;
+      const portraitPhonePhase = portraitPhoneCurve
+        ? portraitPhonePreset?.phase ?? randomBetween(-0.1, 0.1)
+        : 0;
+      const portraitPhoneWarp = portraitPhoneCurve
+        ? portraitPhonePreset?.warp ?? randomBetween(-0.032, 0.032)
+        : 0;
+      const getPortraitPhoneSampleT = (index) => {
+        const internalCount = Math.max(1, bodySegmentCount - 1);
+
+        if (internalCount === 1) {
+          return 0.5;
+        }
+
+        return 0.12 + ((index - 1) / (internalCount - 1)) * 0.76;
+      };
+      const getPortraitPhoneWave = (t) => {
+        const endpointEase = smootherstep(t / 0.34) * smootherstep((1 - t) / 0.34);
+        const centerBreath = 0.86 + Math.sin(Math.PI * t) * 0.14;
+        const everythingAccentWeight = portraitPhonePreset?.everythingAccentWeight ?? 0.18;
+        const everythingHalfEnergy =
+          smootherstep((t - 0.48) / 0.22) * smootherstep((0.9 - t) / 0.24);
+        const warpedT = clamp(
+          t +
+            Math.sin(Math.PI * 2 * t) * portraitPhoneWarp +
+            Math.sin(Math.PI * 4 * t + portraitPhonePhase) * 0.003,
+          0,
+          1
+        );
+        const primaryWave = Math.sin(
+          Math.PI * 2 * portraitPhoneCycles * warpedT + portraitPhonePhase
+        );
+        const everythingAccent = Math.sin(
+          Math.PI * 2 * (portraitPhoneCycles + 0.58) * warpedT +
+            portraitPhonePhase +
+            Math.PI * 0.42
+        );
+
+        return (
+          (primaryWave * (centerBreath + everythingHalfEnergy * 0.18) +
+            everythingAccent * everythingHalfEnergy * everythingAccentWeight) *
+          endpointEase
+        );
+      };
+      const portraitPhoneAmplitudeLimit = portraitPhoneCurve
+        ? Array.from({ length: bodySegmentCount - 1 }, (_, index) => getPortraitPhoneSampleT(index + 1))
+            .reduce((limit, t) => {
+              const baselineX = bodyStart.x + dx * t;
+              const waveX = Math.abs(getPortraitPhoneWave(t) * normal.x * curveScale.normalXScale);
+
+              if (waveX < 0.001) {
+                return limit;
+              }
+
+              return Math.min(
+                limit,
+                Math.abs(baselineX - TEXT_TO_LINE_GAP) / waveX,
+                Math.abs(stageWidth - TEXT_TO_LINE_GAP - baselineX) / waveX
+              );
+            }, Number.POSITIVE_INFINITY)
+        : amplitude;
+      const portraitPhoneAmplitude = portraitPhoneCurve
+        ? Math.min(
+            amplitude,
+            Number.isFinite(portraitPhoneAmplitudeLimit) ? portraitPhoneAmplitudeLimit : amplitude
+          )
+        : amplitude;
+      const getPortraitPhonePoint = (t) => {
+        const portraitPhoneWave = getPortraitPhoneWave(t);
+        const waveOffset = portraitPhoneAmplitude * portraitPhoneWave * bendSign;
+        const verticalProgress = smootherstep(t);
+
+        return {
+          x:
+            bodyStart.x +
+            dx * t +
+            normal.x * curveScale.normalXScale * waveOffset,
+          y:
+            bodyStart.y +
+            dy * verticalProgress +
+            normal.y * curveScale.normalYScale * waveOffset,
+          curveT: t,
+        };
+      };
+      const terminalTangentLength = clamp(
+        distance *
+          randomBetween(curveScale.terminalTangentFactorMin, curveScale.terminalTangentFactorMax),
+        curveScale.terminalTangentMinimum,
+        curveScale.terminalTangentMaximum
+      );
+
+      for (let index = 1; index < bodySegmentCount; index += 1) {
+        const baseT = portraitPhoneCurve ? getPortraitPhoneSampleT(index) : index / bodySegmentCount;
+        const jitter = portraitPhoneCurve
+          ? 0
+          : Math.min(curveScale.waveTJitter, curveScale.waveTJitterFactor / bodySegmentCount);
+        const t = clamp(
+          baseT + randomBetween(-jitter, jitter),
+          portraitPhoneCurve ? 0 : curveScale.waveTMin,
+          portraitPhoneCurve ? 1 : curveScale.waveTMax
+        );
+        const rawEnvelope = Math.sin(Math.PI * t) ** curveScale.waveEnvelopePower;
+        const waveEnvelope = portraitPhoneCurve ? Math.max(0.72, rawEnvelope) : rawEnvelope;
+        const waveSign = bendSign * (index % 2 === 0 ? -1 : 1);
+        const waveAmplitude = portraitPhoneCurve
+          ? 0
+          : amplitude *
+            waveEnvelope *
+            randomBetween(curveScale.waveMagnitudeMin, curveScale.waveMagnitudeMax);
+        const wavelengthDrift = portraitPhoneCurve
+          ? 0
+          : distance *
+            randomBetween(-curveScale.wavelengthDriftFactor, curveScale.wavelengthDriftFactor) *
+            waveEnvelope;
+
+        if (portraitPhoneCurve) {
+          bodyPoints.push(getPortraitPhonePoint(t));
+        } else {
+          bodyPoints.push({
+            x:
+              bodyStart.x +
+              dx * t +
+              bodyDirection.x * wavelengthDrift +
+              normal.x * curveScale.normalXScale * waveAmplitude * waveSign,
+            y:
+              bodyStart.y +
+              dy * t +
+              bodyDirection.y * wavelengthDrift +
+              normal.y * curveScale.normalYScale * waveAmplitude * waveSign,
+            curveT: t,
+          });
+        }
+      }
+
+      bodyPoints.push({ ...bodyEnd, curveT: 1 });
+
+      const getTerminalTangentLength = (index) => {
+        const adjacentPoint = index === 0
+          ? bodyPoints[index + 1]
+          : bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const adjacentDistance = adjacentPoint
+          ? Math.hypot(adjacentPoint.x - point.x, adjacentPoint.y - point.y)
+          : terminalTangentLength;
+
+        return portraitPhoneCurve
+          ? Math.min(terminalTangentLength, adjacentDistance * 0.9)
+          : terminalTangentLength;
+      };
+      const getPortraitPhoneTerminalDerivative = (index) => {
+        const adjacentPoint = index === 0
+          ? bodyPoints[index + 1]
+          : bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const segmentT = adjacentPoint
+          ? Math.abs((adjacentPoint.curveT ?? 0) - (point.curveT ?? 0))
+          : 1;
+        const tangentLength = getTerminalTangentLength(index);
+
+        return {
+          x: horizontalDirection.x * tangentLength / Math.max(segmentT, 0.001),
+          y: 0,
+        };
+      };
+
+      const getPortraitPhoneWaveDerivative = (t) => {
+        const sampleSize = 0.004;
+        const previousT = Math.max(0, t - sampleSize);
+        const nextT = Math.min(1, t + sampleSize);
+        const previousPoint = getPortraitPhonePoint(previousT);
+        const nextPoint = getPortraitPhonePoint(nextT);
+        const sampleDistance = Math.max(nextT - previousT, 0.001);
+
+        return {
+          x: (nextPoint.x - previousPoint.x) / sampleDistance,
+          y: (nextPoint.y - previousPoint.y) / sampleDistance,
+        };
+      };
+
+      const getPortraitPhoneTangent = (index) => {
+        if (index === 0 || index === bodyPoints.length - 1) {
+          return getPortraitPhoneTerminalDerivative(index);
+        }
+
+        const point = bodyPoints[index];
+        const previousPoint = bodyPoints[index - 1];
+        const nextPoint = bodyPoints[index + 1];
+        const hPrevious = Math.max(point.curveT - previousPoint.curveT, 0.001);
+        const hNext = Math.max(nextPoint.curveT - point.curveT, 0.001);
+        const previousDistance = Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+        const nextDistance = Math.hypot(nextPoint.x - point.x, nextPoint.y - point.y);
+        const maxDerivativeLength =
+          Math.min(previousDistance / hPrevious, nextDistance / hNext) * 1.38;
+        const derivative = getPortraitPhoneWaveDerivative(point.curveT);
+        const derivativeLength = Math.hypot(derivative.x, derivative.y);
+
+        if (derivativeLength > maxDerivativeLength && derivativeLength > 0.001) {
+          const scale = maxDerivativeLength / derivativeLength;
+
+          return {
+            x: derivative.x * scale,
+            y: derivative.y * scale,
+          };
+        }
+
+        return derivative;
+      };
+
+      const getBodyTangent = (index) => {
+        if (index === 0 || index === bodyPoints.length - 1) {
+          return {
+            x: horizontalDirection.x * getTerminalTangentLength(index),
+            y: 0,
+          };
+        }
+
+        const previousPoint = bodyPoints[index - 1];
+        const point = bodyPoints[index];
+        const nextPoint = bodyPoints[index + 1];
+
+        if (portraitPhoneCurve) {
+          const tangentX = nextPoint.x - previousPoint.x;
+          const tangentY = nextPoint.y - previousPoint.y;
+          const tangentLength = Math.hypot(tangentX, tangentY);
+          const previousLength = Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+          const nextLength = Math.hypot(nextPoint.x - point.x, nextPoint.y - point.y);
+          const handleLength = Math.min(previousLength, nextLength) * 0.96;
+
+          if (tangentLength > 0.001) {
+            return {
+              x: (tangentX / tangentLength) * handleLength,
+              y: (tangentY / tangentLength) * handleLength,
+            };
+          }
+        }
+
+        const tension = randomBetween(curveScale.tensionMin, curveScale.tensionMax);
+
+        return {
+          x: (nextPoint.x - previousPoint.x) * tension,
+          y: (nextPoint.y - previousPoint.y) * tension,
+        };
+      };
+
+      const tangents = portraitPhoneCurve
+        ? bodyPoints.map((_, index) => getPortraitPhoneTangent(index))
+        : bodyPoints.map((_, index) => getBodyTangent(index));
+      const cubicCommands = bodyPoints.slice(0, -1).map((point, index) => {
+        const nextPoint = bodyPoints[index + 1];
+        const segmentT = Math.max((nextPoint.curveT ?? 1) - (point.curveT ?? 0), 0.001);
+        const controlOne = portraitPhoneCurve
+          ? {
+              x: point.x + (tangents[index].x * segmentT) / 3,
+              y: point.y + (tangents[index].y * segmentT) / 3,
+            }
+          : {
+              x: point.x + tangents[index].x / 3,
+              y: point.y + tangents[index].y / 3,
+            };
+        const controlTwo = portraitPhoneCurve
+          ? {
+              x: nextPoint.x - (tangents[index + 1].x * segmentT) / 3,
+              y: nextPoint.y - (tangents[index + 1].y * segmentT) / 3,
+            }
+          : {
+              x: nextPoint.x - tangents[index + 1].x / 3,
+              y: nextPoint.y - tangents[index + 1].y / 3,
+            };
+
+        return [
+          'C',
+          formatPathNumber(controlOne.x),
+          formatPathNumber(controlOne.y),
+          formatPathNumber(controlTwo.x),
+          formatPathNumber(controlTwo.y),
+          formatPathNumber(nextPoint.x),
+          formatPathNumber(nextPoint.y),
+        ].join(' ');
+      });
+      const d = [
+        'M',
+        formatPathNumber(pathStartPoint.x),
+        formatPathNumber(pathStartPoint.y),
+        'L',
+        formatPathNumber(startLeadPoint.x),
+        formatPathNumber(startLeadPoint.y),
+        ...cubicCommands,
+        'L',
+        formatPathNumber(endPoint.x),
+        formatPathNumber(endPoint.y),
+      ].join(' ');
+
+      return {
+        d,
+        endLeadPoint,
+        pathStartPoint,
+        startLeadPoint,
+      };
+    }
+
+    const resetPathStyles = (path) => {
+      path.removeAttribute('d');
+      path.style.opacity = '';
+      path.style.strokeDasharray = '';
+      path.style.strokeDashoffset = '';
+      path.style.transition = '';
+    };
+
+    const setPathHidden = (path, length) => {
+      path.style.opacity = '0';
+      path.style.strokeDasharray = `${length} ${length}`;
+      path.style.strokeDashoffset = `${length}`;
+      path.style.transition = 'none';
+    };
+
+    const isElementTag = (element, tagName) =>
+      Boolean(element && element.nodeType === 1 && element.tagName?.toLowerCase() === tagName);
+
+    const isSvgElementTag = (element, tagName) =>
+      isElementTag(element, tagName) && element.namespaceURI === 'http://www.w3.org/2000/svg';
+
+    const consumeAuthorReturnReplay = () => {
+      try {
+        if (sessionStorage.getItem(authorReturnReplayKey) !== 'true') return false;
+        sessionStorage.removeItem(authorReturnReplayKey);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const initAuthorPage = () => {
+      const stage = document.querySelector('[data-author-stage]');
+
+      if (!(stage instanceof HTMLElement)) {
+        state.cleanup?.();
+        return;
+      }
+
+      const shouldForceReplayFromWindow = window[forceAuthorReplayKey] === true;
+      const shouldForceReplayFromSession = consumeAuthorReturnReplay();
+      const shouldForceReplay = shouldForceReplayFromWindow || shouldForceReplayFromSession;
+      if (shouldForceReplay) {
+        window[forceAuthorReplayKey] = false;
+        document.documentElement.classList.add(authorReturnBlankClass);
+        document.querySelectorAll('[data-home-preloader-handoff]').forEach((overlay) => overlay.remove());
+        document.documentElement.classList.remove(
+          'home-preloader-active',
+          'home-preloader-booting',
+          'home-preloader-handoff-active',
+          'home-preloader-navigation-active'
+        );
+      }
+
+      if (stage.dataset.authorBooted === 'true') {
+        if (!shouldForceReplay && typeof state.cleanup === 'function') return;
+
+        delete stage.dataset.authorBooted;
+      }
+
+      state.cleanup?.();
+      stage.dataset.authorBooted = 'true';
+
+      const connector = stage.querySelector('[data-author-connector]');
+      const path = stage.querySelector('[data-author-connector-path]');
+      const booklistLink = stage.querySelector('[data-author-link="books"]');
+      const everythingLink = stage.querySelector('[data-author-link="everything"]');
+      const shell = stage.closest('.site-shell');
+
+      if (
+        !isSvgElementTag(connector, 'svg') ||
+        !isSvgElementTag(path, 'path') ||
+        !isElementTag(booklistLink, 'a') ||
+        !isElementTag(everythingLink, 'a') ||
+        !(shell instanceof HTMLElement)
+      ) {
+        return;
+      }
+
+      const timers = new Set();
+      const animationFrames = new Set();
+      let cleanupAnimation = () => {};
+      let disposed = false;
+      let hasStartedSequence = false;
+      let layoutToken = 0;
+      let pathLength = 0;
+      let returnBlankTimer = 0;
+      const hasActivePreloaderSurface = () =>
+        Boolean(document.querySelector('[data-home-preloader], [data-home-preloader-handoff]'));
+      const isRouteEntering = () => document.documentElement.classList.contains(routeEnteringClass);
+      let returnBlankComplete = !shouldForceReplay;
+      let preloaderComplete = returnBlankComplete && !isRouteEntering() && !hasActivePreloaderSurface();
+      const portraitPhonePreset = getRandomPortraitPhonePreset();
+      let sequenceComplete = false;
+      let ignoreTouchResizeUntil = 0;
+
+      const getViewportSnapshot = () => ({
+        height: window.innerHeight || document.documentElement.clientHeight || 0,
+        scale: window.visualViewport?.scale || 1,
+        width: window.innerWidth || document.documentElement.clientWidth || 0,
+      });
+
+      let viewportSnapshot = getViewportSnapshot();
+
+      const isTouchViewport = () =>
+        Boolean(
+          window.navigator?.maxTouchPoints > 0 ||
+          window.matchMedia?.(TOUCH_VIEWPORT_QUERY)?.matches
+        );
+
+      const isMobileAuthorViewport = () =>
+        Boolean(window.matchMedia?.(MOBILE_AUTHOR_VIEWPORT_QUERY)?.matches);
+
+      const getViewportDelta = (nextViewport) => ({
+        heightChanged: Math.abs(nextViewport.height - viewportSnapshot.height) > VIEWPORT_RESIZE_EPSILON,
+        scaleChanged: Math.abs(nextViewport.scale - viewportSnapshot.scale) > 0.001,
+        widthChanged: Math.abs(nextViewport.width - viewportSnapshot.width) > VIEWPORT_RESIZE_EPSILON,
+      });
+
+      const markTouchInteraction = () => {
+        ignoreTouchResizeUntil = Date.now() + 900;
+      };
+
+      const isIgnoredMobileHeightResize = (eventType, nextViewport) => {
+        if (eventType === 'orientationchange') return false;
+
+        const { heightChanged, scaleChanged, widthChanged } = getViewportDelta(nextViewport);
+        const mobileTouchViewport = isTouchViewport() || isMobileAuthorViewport();
+
+        if (!mobileTouchViewport) return false;
+
+        if (
+          Date.now() < ignoreTouchResizeUntil ||
+          scaleChanged ||
+          Math.abs((window.visualViewport?.scale || 1) - 1) > 0.001
+        ) {
+          return true;
+        }
+
+        return heightChanged && !widthChanged;
+      };
+
+      const clearTimers = () => {
+        timers.forEach((timer) => window.clearTimeout(timer));
+        timers.clear();
+      };
+
+      const clearAnimationFrames = () => {
+        animationFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+        animationFrames.clear();
+      };
+
+      const clearPendingWork = () => {
+        clearTimers();
+        clearAnimationFrames();
+      };
+
+      const setTimer = (callback, delay) => {
+        const timer = window.setTimeout(() => {
+          timers.delete(timer);
+          if (!disposed) callback();
+        }, delay);
+
+        timers.add(timer);
+        return timer;
+      };
+
+      const clearStalePreloader = () => {
+        if (preloaderComplete) return;
+
+        const overlay = document.querySelector('[data-home-preloader]');
+
+        if (!(overlay instanceof HTMLElement)) {
+          waitForPreloaderSurfacesToClear();
+          return;
+        }
+
+        if (overlay.dataset.homePreloaderBooted !== 'true' && !overlay.classList.contains('is-visible')) {
+          overlay.remove();
+          document.documentElement.classList.remove('home-preloader-active');
+          waitForPreloaderSurfacesToClear();
+        }
+      };
+
+      const waitForAnimationFrame = () =>
+        new Promise((resolve) => {
+          const frame = window.requestAnimationFrame(() => {
+            animationFrames.delete(frame);
+            resolve();
+          });
+
+          animationFrames.add(frame);
+        });
+
+      const resetRevealClasses = () => {
+        stage.classList.remove(
+          'is-everything-visible',
+          'is-books-visible',
+          'is-line-drawing',
+          'is-positioned'
+        );
+      };
+
+      const showCompletedReveal = () => {
+        stage.classList.add(
+          'is-positioned',
+          'is-books-visible',
+          'is-line-drawing',
+          'is-everything-visible'
+        );
+        path.style.opacity = '1';
+        path.style.strokeDashoffset = '0';
+        path.style.transition = 'none';
+      };
+
+      const getRevealSnapshot = () => ({
+        everythingVisible: stage.classList.contains('is-everything-visible'),
+        booksVisible: stage.classList.contains('is-books-visible'),
+        complete: sequenceComplete,
+        lineDrawing: stage.classList.contains('is-line-drawing'),
+        started: hasStartedSequence,
+      });
+
+      const finishLineReveal = () => {
+        stage.classList.add('is-books-visible', 'is-everything-visible');
+        sequenceComplete = true;
+      };
+
+      const continueRevealAfterRebuild = (revealSnapshot) => {
+        if (!revealSnapshot) return false;
+
+        if (revealSnapshot.complete) {
+          hasStartedSequence = true;
+          sequenceComplete = true;
+          showCompletedReveal();
+          return true;
+        }
+
+        if (revealSnapshot.lineDrawing) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-positioned', 'is-books-visible', 'is-everything-visible', 'is-line-drawing');
+          path.style.opacity = '1';
+          path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+          path.style.strokeDashoffset = '0';
+          path.style.transition = 'none';
+          setTimer(finishLineReveal, 220);
+          return true;
+        }
+
+        if (revealSnapshot.everythingVisible) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-books-visible', 'is-everything-visible');
+          setTimer(() => {
+            stage.classList.add('is-line-drawing');
+            cleanupAnimation = animatePath(() => {
+              finishLineReveal();
+            });
+          }, 180);
+          return true;
+        }
+
+        if (revealSnapshot.booksVisible || revealSnapshot.started) {
+          hasStartedSequence = true;
+          sequenceComplete = false;
+          stage.classList.add('is-books-visible');
+          setTimer(() => {
+            stage.classList.add('is-everything-visible');
+          }, EVERYTHING_REVEAL_DELAY_MS - BOOKS_REVEAL_DELAY_MS);
+          setTimer(() => {
+            stage.classList.add('is-line-drawing');
+            cleanupAnimation = animatePath(() => {
+              finishLineReveal();
+            });
+          }, CONNECTOR_DRAW_DELAY_MS - BOOKS_REVEAL_DELAY_MS);
+          return true;
+        }
+
+        return false;
+      };
+
+      const clearInlinePositions = () => {
+        shell.style.removeProperty('--author-viewport-height');
+        stage.style.removeProperty('--author-stage-height');
+        booklistLink.style.removeProperty('--author-link-x');
+        booklistLink.style.removeProperty('--author-link-y');
+        everythingLink.style.removeProperty('--author-link-x');
+        everythingLink.style.removeProperty('--author-link-y');
+      };
+
+      const resetStage = () => {
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+        resetRevealClasses();
+        clearInlinePositions();
+        connector.removeAttribute('height');
+        connector.removeAttribute('viewBox');
+        connector.removeAttribute('width');
+        resetPathStyles(path);
+      };
+
+      const animatePath = (onComplete) => {
+        const viewport = getViewportSnapshot();
+        const isPhoneViewport = viewport.width <= 600 || isPortraitPhoneViewport(viewport.width, viewport.height);
+        const baseDuration = clamp(pathLength * 5, 2400, 5600);
+        const duration = isPhoneViewport ? baseDuration : baseDuration * NON_PHONE_DRAW_DURATION_SCALE;
+        let hasFinished = false;
+        let fallbackTimer = 0;
+
+        const finish = () => {
+          if (hasFinished) return;
+
+          hasFinished = true;
+          path.removeEventListener('transitionend', onTransitionEnd);
+          path.style.transition = 'none';
+          path.style.strokeDashoffset = '0';
+          path.style.opacity = '1';
+
+          if (fallbackTimer) {
+            window.clearTimeout(fallbackTimer);
+            timers.delete(fallbackTimer);
+          }
+
+          onComplete();
+        };
+
+        const onTransitionEnd = (event) => {
+          if (event.target === path && event.propertyName === 'stroke-dashoffset') {
+            finish();
+          }
+        };
+
+        path.style.opacity = '1';
+        path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+        path.style.strokeDashoffset = `${pathLength}`;
+        path.style.transition = 'none';
+        path.getBoundingClientRect();
+        path.addEventListener('transitionend', onTransitionEnd);
+        path.style.transition = `stroke-dashoffset ${duration}ms linear`;
+        path.style.strokeDashoffset = '0';
+
+        fallbackTimer = setTimer(finish, duration + 120);
+
+        return () => {
+          path.removeEventListener('transitionend', onTransitionEnd);
+          path.style.transition = 'none';
+        };
+      };
+
+      const tryStartSequence = () => {
+        if (disposed || hasStartedSequence || !preloaderComplete || !pathLength) return;
+        if (hasActivePreloaderSurface()) {
+          preloaderComplete = false;
+          waitForPreloaderSurfacesToClear();
+          return;
+        }
+
+        hasStartedSequence = true;
+
+        setTimer(() => {
+          stage.classList.add('is-books-visible');
+        }, BOOKS_REVEAL_DELAY_MS);
+
+        setTimer(() => {
+          stage.classList.add('is-everything-visible');
+        }, EVERYTHING_REVEAL_DELAY_MS);
+
+        setTimer(() => {
+          stage.classList.add('is-line-drawing');
+          cleanupAnimation = animatePath(() => {
+            finishLineReveal();
+          });
+        }, CONNECTOR_DRAW_DELAY_MS);
+      };
+
+      const rebuildConnector = async ({ revealSnapshot = null } = {}) => {
+        const token = ++layoutToken;
+        const shouldContinueReveal = Boolean(
+          revealSnapshot?.everythingVisible ||
+          revealSnapshot?.booksVisible ||
+          revealSnapshot?.complete ||
+          revealSnapshot?.lineDrawing ||
+          revealSnapshot?.started
+        );
+
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+
+        if (!shouldContinueReveal) {
+          hasStartedSequence = false;
+          sequenceComplete = false;
+          resetRevealClasses();
+        } else {
+          stage.classList.remove('is-line-drawing');
+          if (!revealSnapshot?.everythingVisible && !revealSnapshot?.complete) {
+            stage.classList.remove('is-everything-visible');
+          }
+          if (
+            !revealSnapshot?.booksVisible &&
+            !revealSnapshot?.lineDrawing &&
+            !revealSnapshot?.everythingVisible &&
+            !revealSnapshot?.complete
+          ) {
+            stage.classList.remove('is-books-visible');
+          }
+        }
+
+        resetPathStyles(path);
+        stage.style.removeProperty('--author-stage-height');
+        shell.style.setProperty('--author-viewport-height', `${getViewportSnapshot().height}px`);
+
+        try {
+          if (document.fonts?.ready) {
+            await document.fonts.ready;
+          }
+        } catch {
+          // Continue with browser fallback fonts if the FontFaceSet promise rejects.
+        }
+
+        await waitForAnimationFrame();
+
+        if (disposed || token !== layoutToken) return;
+
+        const measuredStageRect = stage.getBoundingClientRect();
+        const measuredStageHeight = Math.max(measuredStageRect.height, 1);
+        stage.style.setProperty('--author-stage-height', `${measuredStageHeight}px`);
+
+        const placements = placeAuthorLinks(stage, booklistLink, everythingLink, portraitPhonePreset);
+
+        booklistLink.style.setProperty('--author-link-x', `${placements.books.x}px`);
+        booklistLink.style.setProperty('--author-link-y', `${placements.books.y}px`);
+        everythingLink.style.setProperty('--author-link-x', `${placements.everything.x}px`);
+        everythingLink.style.setProperty('--author-link-y', `${placements.everything.y}px`);
+        stage.classList.add('is-positioned');
+
+        await waitForAnimationFrame();
+
+        if (disposed || token !== layoutToken) return;
+
+        const stageRect = stage.getBoundingClientRect();
+        const stageWidth = Math.max(stageRect.width, 1);
+        const stageHeight = Math.max(stageRect.height, 1);
+        const endpointData = computeConnectorEndpoints(booklistLink, everythingLink, stageRect);
+        const pathData = buildConnectorPath(endpointData, portraitPhonePreset);
+
+        connector.setAttribute('height', `${stageHeight}`);
+        connector.setAttribute('viewBox', `0 0 ${stageWidth} ${stageHeight}`);
+        connector.setAttribute('width', `${stageWidth}`);
+        path.setAttribute('d', pathData.d);
+        pathLength = path.getTotalLength();
+        setPathHidden(path, pathLength);
+        verifyConnectorGeometry(endpointData, pathData);
+        viewportSnapshot = getViewportSnapshot();
+
+        if (continueRevealAfterRebuild(revealSnapshot)) return;
+
+        if (!preloaderComplete) {
+          waitForPreloaderSurfacesToClear();
+        }
+
+        tryStartSequence();
+      };
+
+      const onPreloaderComplete = () => {
+        waitForPreloaderSurfacesToClear();
+      };
+
+      const onRouteEnter = () => {
+        waitForPreloaderSurfacesToClear();
+      };
+
+      const waitForPreloaderSurfacesToClear = () => {
+        if (disposed) return;
+
+        if (!returnBlankComplete) {
+          setTimer(waitForPreloaderSurfacesToClear, 60);
+          return;
+        }
+
+        if (isRouteEntering()) {
+          setTimer(waitForPreloaderSurfacesToClear, 30);
+          return;
+        }
+
+        if (hasActivePreloaderSurface()) {
+          setTimer(waitForPreloaderSurfacesToClear, 60);
+          return;
+        }
+
+        preloaderComplete = true;
+        tryStartSequence();
+      };
+
+      const onResize = (event) => {
+        const nextViewport = getViewportSnapshot();
+        const eventType = event?.type || 'resize';
+        const { heightChanged, scaleChanged, widthChanged } = getViewportDelta(nextViewport);
+
+        if (eventType !== 'orientationchange' && !heightChanged && !scaleChanged && !widthChanged) {
+          return;
+        }
+
+        // Mobile browser chrome can change only viewport height while scrolling.
+        // Ignoring that keeps the random placement and connector frozen after spawn.
+        if (isIgnoredMobileHeightResize(eventType, nextViewport)) {
+          return;
+        }
+
+        viewportSnapshot = nextViewport;
+        const revealSnapshot = getRevealSnapshot();
+
+        ++layoutToken;
+        cleanupAnimation();
+        cleanupAnimation = () => {};
+        clearPendingWork();
+
+        const frame = window.requestAnimationFrame(() => {
+          animationFrames.delete(frame);
+          rebuildConnector({ revealSnapshot });
+        });
+
+        animationFrames.add(frame);
+      };
+
+      window.addEventListener(preloaderCompleteEvent, onPreloaderComplete);
+      window.addEventListener('varelism:handoff-complete', onPreloaderComplete);
+      window.addEventListener(routeEnterEvent, onRouteEnter);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      window.addEventListener('touchstart', markTouchInteraction, { passive: true });
+      window.addEventListener('touchmove', markTouchInteraction, { passive: true });
+      window.addEventListener('touchend', markTouchInteraction, { passive: true });
+      window.addEventListener('touchcancel', markTouchInteraction, { passive: true });
+      window.visualViewport?.addEventListener('resize', onResize);
+      if (shouldForceReplay) {
+        returnBlankTimer = window.setTimeout(() => {
+          returnBlankTimer = 0;
+          if (disposed) return;
+
+          returnBlankComplete = true;
+          document.documentElement.classList.remove(authorReturnBlankClass);
+          waitForPreloaderSurfacesToClear();
+        }, AUTHOR_RETURN_BLANK_HOLD_MS);
+      }
+      setTimer(clearStalePreloader, 250);
+      rebuildConnector();
+
+      state.cleanup = () => {
+        disposed = true;
+        ++layoutToken;
+        window.removeEventListener(preloaderCompleteEvent, onPreloaderComplete);
+        window.removeEventListener('varelism:handoff-complete', onPreloaderComplete);
+        window.removeEventListener(routeEnterEvent, onRouteEnter);
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('orientationchange', onResize);
+        window.removeEventListener('touchstart', markTouchInteraction);
+        window.removeEventListener('touchmove', markTouchInteraction);
+        window.removeEventListener('touchend', markTouchInteraction);
+        window.removeEventListener('touchcancel', markTouchInteraction);
+        window.visualViewport?.removeEventListener('resize', onResize);
+        if (returnBlankTimer) {
+          window.clearTimeout(returnBlankTimer);
+          returnBlankTimer = 0;
+        }
+        document.documentElement.classList.remove(authorReturnBlankClass);
+        resetStage();
+        delete stage.dataset.authorBooted;
+        state.cleanup = null;
+      };
+    };
+
+    let pendingHistoryRestartFrame = 0;
+
+    const isAuthorPath = () =>
+      window.location.pathname === '/writer' || window.location.pathname === '/writer/';
+
+    const isAuthorStageComplete = () => {
+      const stage = document.querySelector('[data-author-stage]');
+
+      return Boolean(
+        stage instanceof HTMLElement &&
+          stage.classList.contains('is-books-visible') &&
+          stage.classList.contains('is-everything-visible') &&
+          stage.classList.contains('is-line-drawing')
+      );
+    };
+
+    const restartAuthorPage = () => {
+      if (!isAuthorPath()) return;
+
+      if (pendingHistoryRestartFrame) {
+        window.cancelAnimationFrame(pendingHistoryRestartFrame);
+      }
+
+      pendingHistoryRestartFrame = window.requestAnimationFrame(() => {
+        pendingHistoryRestartFrame = 0;
+        state.cleanup?.();
+        initAuthorPage();
+      });
+    };
+
+    const restartAuthorPageFromHistory = (event) => {
+      if (!event?.persisted && !isAuthorStageComplete()) return;
+
+      restartAuthorPage();
+    };
+
+    const restartCompletedAuthorPage = () => {
+      if (!isAuthorStageComplete()) return;
+
+      restartAuthorPage();
+    };
+
+    if (!state.listenersAttached) {
+      document.addEventListener('astro:before-swap', () => state.cleanup?.());
+      document.addEventListener('astro:page-load', initAuthorPage);
+      state.listenersAttached = true;
+    }
+
+    if (state.historyRestartVersion !== 1) {
+      document.addEventListener('astro:page-load', restartCompletedAuthorPage);
+      window.addEventListener('pageshow', restartAuthorPageFromHistory);
+      window.addEventListener('popstate', restartAuthorPage);
+      state.historyRestartVersion = 1;
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAuthorPage, { once: true });
+    } else {
+      initAuthorPage();
+    }
+  })();
+</script>
+
 <style>
-  .writing-list {
-    border-top: 1px solid var(--line);
+  :global(.site-shell) {
+    --author-footer-offset: 7.5rem;
+    --author-viewport-height: 100svh;
+
+    background: #ffffff;
+    min-height: calc(var(--author-viewport-height) + var(--author-footer-offset));
   }
 
-  .entry {
-    border-bottom: 1px solid var(--line);
-    padding: 1.4rem 0 1.5rem;
+  :global(.site-shell > main) {
+    --author-main-top: clamp(6rem, 12vh, 8rem);
+
+    max-width: none;
+    min-height: calc(var(--author-viewport-height) + var(--author-footer-offset));
+    padding: var(--author-main-top) clamp(1rem, 4vw, 3rem) 0;
+    width: 100%;
   }
 
-  .meta {
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.73rem;
-    letter-spacing: 0.04em;
-    margin: 0 0 0.35rem;
-    text-transform: uppercase;
+  :global(.site-shell > .site-footer) {
+    bottom: auto;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: var(--author-viewport-height);
+    width: 100%;
+    z-index: 20;
   }
 
-  h2 {
-    font-size: clamp(1.3rem, 2vw, 1.7rem);
-    font-weight: 400;
-    margin: 0;
+  .author-stage {
+    background: #ffffff;
+    display: block;
+    height: var(--author-stage-height, calc(var(--author-viewport-height) - var(--author-main-top)));
+    isolation: isolate;
+    min-height: 24rem;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
   }
 
-  .entry p:last-child {
-    color: var(--muted);
-    margin: 0.35rem 0 0;
-    max-width: 70ch;
+  .author-connector {
+    display: block;
+    height: 100%;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
+  }
+
+  :global(.author-connector path) {
+    fill: none;
+    opacity: 0;
+    stroke: #000000;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 0.28;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .author-links {
+    height: 100%;
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+  }
+
+  :global(html.author-return-blank-active) .author-stage {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .author-link {
+    color: #691b17;
+    cursor: pointer;
+    display: block;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(1.35rem, 2.1vw, 2.15rem);
+    font-weight: 300;
+    left: var(--author-link-x);
+    letter-spacing: 0;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    text-decoration: none;
+    top: var(--author-link-y);
+    transform: translate(-50%, -50%);
+    transition:
+      color 180ms ease,
+      opacity 450ms ease;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .author-stage.is-positioned.is-books-visible [data-author-link='books'],
+  .author-stage.is-positioned.is-everything-visible [data-author-link='everything'] {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      color 180ms ease,
+      opacity 450ms ease;
+    visibility: visible;
+  }
+
+  .author-stage.is-line-drawing :global(.author-connector path) {
+    opacity: 1;
+  }
+
+  .author-link:focus-visible {
+    color: #000000;
+    outline: 1px solid #691b17;
+    outline-offset: 0.45rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .author-link:hover {
+      color: #000000;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .author-link:active {
+      color: #000000;
+    }
+  }
+
+  @media (max-width: 560px) {
+    :global(.site-shell > main) {
+      --author-main-top: 5rem;
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
+    }
+
+    .author-stage {
+      min-height: 25rem;
+    }
+
+    .author-link {
+      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+    }
   }
 </style>

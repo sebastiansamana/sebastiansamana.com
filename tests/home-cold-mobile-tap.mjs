@@ -9,7 +9,7 @@ const debugPort = Number(process.env.HOME_MOBILE_TEST_DEBUG_PORT || 9357);
 const origin = `http://127.0.0.1:${previewPort}`;
 const viewport = { width: 390, height: 844, deviceScaleFactor: 3 };
 const targets = [
-  { index: 0, name: 'Author', expectedPath: '/author/' },
+  { index: 0, name: 'Writer', expectedPath: '/writer/' },
   { index: 1, name: 'Architect', expectedPath: '/architect/' },
   { index: 2, name: 'Artist', expectedPath: '/artist/' },
 ];
