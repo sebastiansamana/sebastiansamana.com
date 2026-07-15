@@ -106,8 +106,61 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
 <script>
   (() => {
+    const coarsePointerQuery = '(hover: none), (pointer: coarse)';
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
+    const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
+
+    const bindPortfolioTouchStates = (archive) => {
+      archive.querySelectorAll('.portfolio-card a').forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement) || link.dataset.portfolioTouchStateReady === 'true') {
+          return;
+        }
+
+        link.dataset.portfolioTouchStateReady = 'true';
+
+        let activePointerId = null;
+
+        const setActive = () => {
+          link.classList.add('is-touch-active');
+        };
+
+        const clearActive = () => {
+          activePointerId = null;
+          link.classList.remove('is-touch-active');
+        };
+
+        link.addEventListener('pointerdown', (event) => {
+          if (!isCoarsePointer()) return;
+
+          activePointerId = event.pointerId;
+          setActive();
+        });
+
+        link.addEventListener('pointerup', (event) => {
+          if (!isCoarsePointer() || (activePointerId !== null && event.pointerId !== activePointerId)) {
+            return;
+          }
+
+          clearActive();
+        });
+
+        link.addEventListener('pointercancel', clearActive);
+        link.addEventListener('pointerleave', clearActive);
+        link.addEventListener('blur', clearActive);
+        link.addEventListener(
+          'touchstart',
+          () => {
+            if (!isCoarsePointer()) return;
+
+            setActive();
+          },
+          { passive: true }
+        );
+        link.addEventListener('touchend', clearActive, { passive: true });
+        link.addEventListener('touchcancel', clearActive, { passive: true });
+      });
+    };
 
     const revealArchive = (archive) => {
       if (!(archive instanceof HTMLElement) || archive.dataset.portfolioArchiveReady === 'true') return;
@@ -138,6 +191,9 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
         archive.setAttribute('aria-busy', 'true');
 
         const viewButtons = Array.from(archive.querySelectorAll('[data-archive-view-button]'));
+
+        bindPortfolioTouchStates(archive);
+
         const setView = (view) => {
           archive.dataset.archiveView = view;
           viewButtons.forEach((button) => {
@@ -293,19 +349,23 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     margin-top: 0.25rem;
   }
 
-  .portfolio-card a:focus-visible .portfolio-card__title {
+  .portfolio-card a:focus-visible .portfolio-card__title,
+  .portfolio-card a.is-touch-active .portfolio-card__title {
     color: #691b17;
   }
 
-  .portfolio-card a:focus-visible .portfolio-card__image--base {
+  .portfolio-card a:focus-visible .portfolio-card__image--base,
+  .portfolio-card a.is-touch-active .portfolio-card__image--base {
     opacity: 0;
   }
 
-  .portfolio-card a:focus-visible .portfolio-card__image--hover {
+  .portfolio-card a:focus-visible .portfolio-card__image--hover,
+  .portfolio-card a.is-touch-active .portfolio-card__image--hover {
     opacity: 1;
   }
 
-  .portfolio-card a:focus-visible .portfolio-card__meta {
+  .portfolio-card a:focus-visible .portfolio-card__meta,
+  .portfolio-card a.is-touch-active .portfolio-card__meta {
     color: var(--portfolio-meta-hover-color);
   }
 
