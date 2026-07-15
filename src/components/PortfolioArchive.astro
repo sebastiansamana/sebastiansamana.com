@@ -109,7 +109,6 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     const coarsePointerQuery = '(hover: none), (pointer: coarse)';
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
-    const touchReleaseHoldMs = 500;
     const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
 
     const bindPortfolioTouchStates = (archive) => {
@@ -121,38 +120,19 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
         link.dataset.portfolioTouchStateReady = 'true';
 
         let activePointerId = null;
-        let isAwaitingNavigation = false;
-        let releaseTimer = null;
 
         const setActive = () => {
           link.classList.add('is-touch-active');
         };
 
         const clearActive = () => {
-          if (releaseTimer !== null) {
-            window.clearTimeout(releaseTimer);
-            releaseTimer = null;
-          }
-
           activePointerId = null;
-          isAwaitingNavigation = false;
           link.classList.remove('is-touch-active');
-        };
-
-        const holdActiveThroughNavigation = () => {
-          if (releaseTimer !== null) {
-            window.clearTimeout(releaseTimer);
-          }
-
-          activePointerId = null;
-          isAwaitingNavigation = true;
-          releaseTimer = window.setTimeout(clearActive, touchReleaseHoldMs);
         };
 
         link.addEventListener('pointerdown', (event) => {
           if (!isCoarsePointer()) return;
 
-          clearActive();
           activePointerId = event.pointerId;
           setActive();
         });
@@ -162,44 +142,22 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
             return;
           }
 
-          holdActiveThroughNavigation();
+          clearActive();
         });
 
         link.addEventListener('pointercancel', clearActive);
-        link.addEventListener('pointerleave', () => {
-          if (isAwaitingNavigation) return;
-
-          clearActive();
-        });
-        link.addEventListener('blur', () => {
-          if (isAwaitingNavigation) return;
-
-          clearActive();
-        });
+        link.addEventListener('pointerleave', clearActive);
+        link.addEventListener('blur', clearActive);
         link.addEventListener(
           'touchstart',
           () => {
             if (!isCoarsePointer()) return;
 
-            if (releaseTimer !== null) {
-              window.clearTimeout(releaseTimer);
-              releaseTimer = null;
-            }
-
-            isAwaitingNavigation = false;
             setActive();
           },
           { passive: true }
         );
-        link.addEventListener(
-          'touchend',
-          () => {
-            if (!isCoarsePointer()) return;
-
-            holdActiveThroughNavigation();
-          },
-          { passive: true }
-        );
+        link.addEventListener('touchend', clearActive, { passive: true });
         link.addEventListener('touchcancel', clearActive, { passive: true });
       });
     };
