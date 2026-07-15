@@ -68,7 +68,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                               alt=""
                               width={portfolio.coverImageWidth}
                               height={portfolio.coverImageHeight}
-                              loading="lazy"
+                              loading="eager"
                               decoding="async"
                               aria-hidden="true"
                             />
@@ -106,11 +106,9 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
 <script>
   (() => {
-    const coarsePointerQuery = '(hover: none), (pointer: coarse)';
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
-    const touchReleaseGraceMs = 500;
-    const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
+    const touchReleaseGraceMs = 260;
 
     const bindPortfolioTouchStates = (archive) => {
       archive.querySelectorAll('.portfolio-card a').forEach((link) => {
@@ -121,78 +119,64 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
         link.dataset.portfolioTouchStateReady = 'true';
 
         let activePointerId = null;
-        let isTouchReleased = false;
         let releaseTimer = null;
 
-        const setActive = () => {
-          if (releaseTimer !== null) {
-            window.clearTimeout(releaseTimer);
-            releaseTimer = null;
-          }
+        const clearReleaseTimer = () => {
+          if (releaseTimer === null) return;
 
-          isTouchReleased = false;
+          window.clearTimeout(releaseTimer);
+          releaseTimer = null;
+        };
+
+        const setActive = () => {
+          clearReleaseTimer();
           link.classList.add('is-touch-active', 'is-touch-origin');
         };
 
         const clearActive = () => {
-          if (releaseTimer !== null) {
-            window.clearTimeout(releaseTimer);
-            releaseTimer = null;
-          }
-
+          clearReleaseTimer();
           activePointerId = null;
-          isTouchReleased = false;
-          link.classList.remove('is-touch-active');
-          link.classList.remove('is-touch-origin');
+          link.classList.remove('is-touch-active', 'is-touch-origin');
         };
 
-        const completeTouch = () => {
-          if (releaseTimer !== null) {
-            window.clearTimeout(releaseTimer);
-          }
-
+        const holdActiveAfterRelease = () => {
+          clearReleaseTimer();
           activePointerId = null;
-          isTouchReleased = true;
+          link.classList.add('is-touch-active', 'is-touch-origin');
           releaseTimer = window.setTimeout(clearActive, touchReleaseGraceMs);
         };
 
-        link.addEventListener('pointerdown', (event) => {
-          if (!isCoarsePointer()) return;
+        if ('PointerEvent' in window) {
+          link.addEventListener('pointerdown', (event) => {
+            if (event.pointerType !== 'touch') return;
 
-          activePointerId = event.pointerId;
-          setActive();
-        });
-
-        link.addEventListener('pointerup', (event) => {
-          if (!isCoarsePointer() || (activePointerId !== null && event.pointerId !== activePointerId)) {
-            return;
-          }
-
-          completeTouch();
-        });
-
-        link.addEventListener('pointercancel', clearActive);
-        link.addEventListener('pointerleave', () => {
-          if (isTouchReleased) return;
-
-          clearActive();
-        });
-        link.addEventListener('blur', () => {
-          if (isTouchReleased) return;
-
-          clearActive();
-        });
-        link.addEventListener(
-          'touchstart',
-          () => {
-            if (!isCoarsePointer()) return;
-
+            activePointerId = event.pointerId;
             setActive();
-          },
-          { passive: true }
-        );
-        link.addEventListener('touchend', completeTouch, { passive: true });
-        link.addEventListener('touchcancel', clearActive, { passive: true });
+            try {
+              link.setPointerCapture(event.pointerId);
+            } catch {}
+          });
+
+          link.addEventListener('pointerup', (event) => {
+            if (event.pointerType !== 'touch' || (activePointerId !== null && event.pointerId !== activePointerId)) {
+              return;
+            }
+
+            holdActiveAfterRelease();
+          });
+
+          link.addEventListener('pointercancel', clearActive);
+        } else {
+          link.addEventListener(
+            'touchstart',
+            () => {
+              setActive();
+            },
+            { passive: true }
+          );
+          link.addEventListener('touchend', holdActiveAfterRelease, { passive: true });
+          link.addEventListener('touchcancel', clearActive, { passive: true });
+        }
       });
     };
 
@@ -246,12 +230,20 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
       });
     };
 
+    const clearPortfolioTouchStates = () => {
+      document.querySelectorAll('.portfolio-card a.is-touch-active, .portfolio-card a.is-touch-origin').forEach((link) => {
+        link.classList.remove('is-touch-active', 'is-touch-origin');
+      });
+    };
+
     setupArchive();
 
     if (window.__varelismPortfolioArchiveReady) return;
 
     window.__varelismPortfolioArchiveReady = true;
     document.addEventListener('astro:page-load', setupArchive);
+    document.addEventListener('astro:before-swap', clearPortfolioTouchStates);
+    window.addEventListener('pageshow', clearPortfolioTouchStates);
   })();
 </script>
 
@@ -338,6 +330,9 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
   .portfolio-card a {
     display: block;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
   }
 
   .portfolio-card__image-stack {
@@ -396,6 +391,10 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   .portfolio-card a:focus-visible:not(.is-touch-origin) .portfolio-card__image--hover,
   .portfolio-card a.is-touch-active .portfolio-card__image--hover {
     opacity: 1;
+  }
+
+  .portfolio-card a.is-touch-active .portfolio-card__image {
+    transition-duration: 0ms;
   }
 
   .portfolio-card a:focus-visible:not(.is-touch-origin) .portfolio-card__meta,

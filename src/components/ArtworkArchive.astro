@@ -69,7 +69,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
                               alt=""
                               width={artwork.data.imageWidth}
                               height={artwork.data.imageHeight}
-                              loading="lazy"
+                              loading="eager"
                               decoding="async"
                               aria-hidden="true"
                             />
@@ -120,10 +120,9 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   import Masonry from 'masonry-layout';
 
   (() => {
-    const coarsePointerQuery = '(hover: none), (pointer: coarse)';
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
-    const isCoarsePointer = () => Boolean(window.matchMedia?.(coarsePointerQuery)?.matches);
+    const touchReleaseGraceMs = 260;
 
     const waitForAnimationFrame = () =>
       new Promise((resolve) => {
@@ -184,45 +183,64 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
         link.dataset.artworkTouchStateReady = 'true';
 
         let activePointerId = null;
+        let releaseTimer = null;
+
+        const clearReleaseTimer = () => {
+          if (releaseTimer === null) return;
+
+          window.clearTimeout(releaseTimer);
+          releaseTimer = null;
+        };
 
         const setActive = () => {
-          link.classList.add('is-touch-active');
+          clearReleaseTimer();
+          link.classList.add('is-touch-active', 'is-touch-origin');
         };
 
         const clearActive = () => {
+          clearReleaseTimer();
           activePointerId = null;
-          link.classList.remove('is-touch-active');
+          link.classList.remove('is-touch-active', 'is-touch-origin');
         };
 
-        link.addEventListener('pointerdown', (event) => {
-          if (!isCoarsePointer()) return;
+        const holdActiveAfterRelease = () => {
+          clearReleaseTimer();
+          activePointerId = null;
+          link.classList.add('is-touch-active', 'is-touch-origin');
+          releaseTimer = window.setTimeout(clearActive, touchReleaseGraceMs);
+        };
 
-          activePointerId = event.pointerId;
-          setActive();
-        });
+        if ('PointerEvent' in window) {
+          link.addEventListener('pointerdown', (event) => {
+            if (event.pointerType !== 'touch') return;
 
-        link.addEventListener('pointerup', (event) => {
-          if (!isCoarsePointer() || (activePointerId !== null && event.pointerId !== activePointerId)) {
-            return;
-          }
-
-          clearActive();
-        });
-
-        link.addEventListener('pointercancel', clearActive);
-        link.addEventListener('pointerleave', clearActive);
-        link.addEventListener('blur', clearActive);
-        link.addEventListener(
-          'touchstart',
-          () => {
-            if (!isCoarsePointer()) return;
-
+            activePointerId = event.pointerId;
             setActive();
-          },
-          { passive: true }
-        );
-        link.addEventListener('touchend', clearActive, { passive: true });
-        link.addEventListener('touchcancel', clearActive, { passive: true });
+            try {
+              link.setPointerCapture(event.pointerId);
+            } catch {}
+          });
+
+          link.addEventListener('pointerup', (event) => {
+            if (event.pointerType !== 'touch' || (activePointerId !== null && event.pointerId !== activePointerId)) {
+              return;
+            }
+
+            holdActiveAfterRelease();
+          });
+
+          link.addEventListener('pointercancel', clearActive);
+        } else {
+          link.addEventListener(
+            'touchstart',
+            () => {
+              setActive();
+            },
+            { passive: true }
+          );
+          link.addEventListener('touchend', holdActiveAfterRelease, { passive: true });
+          link.addEventListener('touchcancel', clearActive, { passive: true });
+        }
       });
     };
 
@@ -312,12 +330,20 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
       });
     };
 
+    const clearArtworkTouchStates = () => {
+      document.querySelectorAll('.artwork-card a.is-touch-active, .artwork-card a.is-touch-origin').forEach((link) => {
+        link.classList.remove('is-touch-active', 'is-touch-origin');
+      });
+    };
+
     setupArchive();
 
     if (window.__varelismArtworkArchiveReady) return;
 
     window.__varelismArtworkArchiveReady = true;
     document.addEventListener('astro:page-load', setupArchive);
+    document.addEventListener('astro:before-swap', clearArtworkTouchStates);
+    window.addEventListener('pageshow', clearArtworkTouchStates);
   })();
 </script>
 
@@ -413,6 +439,9 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
 
   .artwork-card a {
     display: block;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
   }
 
   .artwork-card__image-stack {
@@ -455,22 +484,26 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     margin-top: 0.25rem;
   }
 
-  .artwork-card a:focus-visible .artwork-card__image--hover,
+  .artwork-card a:focus-visible:not(.is-touch-origin) .artwork-card__image--hover,
   .artwork-card a.is-touch-active .artwork-card__image--hover {
     opacity: 1;
   }
 
-  .artwork-card a:focus-visible .artwork-card__title,
+  .artwork-card a.is-touch-active .artwork-card__image--hover {
+    transition-duration: 0ms;
+  }
+
+  .artwork-card a:focus-visible:not(.is-touch-origin) .artwork-card__title,
   .artwork-card a.is-touch-active .artwork-card__title {
     color: #691b17;
   }
 
-  .artwork-card a:focus-visible .artwork-card__meta,
+  .artwork-card a:focus-visible:not(.is-touch-origin) .artwork-card__meta,
   .artwork-card a.is-touch-active .artwork-card__meta {
     color: var(--artwork-meta-hover-color);
   }
 
-  .artwork-card a:focus-visible {
+  .artwork-card a:focus-visible:not(.is-touch-origin) {
     outline: 1px solid #691b17;
     outline-offset: 0.35rem;
   }
