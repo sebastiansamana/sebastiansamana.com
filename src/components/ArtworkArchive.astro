@@ -51,7 +51,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
                 <a href={getArtworkHref(artwork)}>
                   {
                     artwork.data.image && artwork.data.imageWidth && artwork.data.imageHeight && (
-                      <span class="artwork-card__image-stack">
+                      <span class="artwork-card__image-stack" data-card-hover-hit>
                         <img
                           class="artwork-card__image artwork-card__image--base"
                           src={artwork.data.image}
@@ -78,10 +78,10 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
                       </span>
                     )
                   }
-                  <span class="artwork-card__title">{artwork.data.title}</span>
+                  <span class="artwork-card__title" data-card-hover-hit>{artwork.data.title}</span>
                   {
                     getArtworkDateLabel(artwork) && (
-                      <span class="artwork-card__meta">{getArtworkDateLabel(artwork)}</span>
+                      <span class="artwork-card__meta" data-card-hover-hit>{getArtworkDateLabel(artwork)}</span>
                     )
                   }
                 </a>
@@ -123,6 +123,17 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
     const touchReleaseGraceMs = 260;
+    const cardHoverHitSelector = '[data-card-hover-hit]';
+
+    const isCardHoverHitForLink = (link, target) => {
+      if (!(target instanceof Element)) return false;
+
+      const hit = target.closest(cardHoverHitSelector);
+      return Boolean(hit && link.contains(hit));
+    };
+
+    const isCardHoverHitPoint = (link, clientX, clientY) =>
+      isCardHoverHitForLink(link, document.elementFromPoint(clientX, clientY));
 
     const waitForAnimationFrame = () =>
       new Promise((resolve) => {
@@ -183,6 +194,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
         link.dataset.artworkTouchStateReady = 'true';
 
         let activePointerId = null;
+        let legacyTouchActive = false;
         let releaseTimer = null;
 
         const clearReleaseTimer = () => {
@@ -192,20 +204,26 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
           releaseTimer = null;
         };
 
+        const clearVisualState = () => {
+          clearReleaseTimer();
+          link.classList.remove('is-touch-active', 'is-touch-origin');
+        };
+
         const setActive = () => {
           clearReleaseTimer();
           link.classList.add('is-touch-active', 'is-touch-origin');
         };
 
         const clearActive = () => {
-          clearReleaseTimer();
           activePointerId = null;
-          link.classList.remove('is-touch-active', 'is-touch-origin');
+          legacyTouchActive = false;
+          clearVisualState();
         };
 
         const holdActiveAfterRelease = () => {
           clearReleaseTimer();
           activePointerId = null;
+          legacyTouchActive = false;
           link.classList.add('is-touch-active', 'is-touch-origin');
           releaseTimer = window.setTimeout(clearActive, touchReleaseGraceMs);
         };
@@ -215,30 +233,82 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
             if (event.pointerType !== 'touch') return;
 
             activePointerId = event.pointerId;
-            setActive();
+            if (isCardHoverHitForLink(link, event.target)) {
+              setActive();
+            } else {
+              clearVisualState();
+            }
             try {
               link.setPointerCapture(event.pointerId);
             } catch {}
           });
 
+          link.addEventListener(
+            'pointermove',
+            (event) => {
+              if (event.pointerType !== 'touch' || event.pointerId !== activePointerId) return;
+
+              if (isCardHoverHitPoint(link, event.clientX, event.clientY)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
+            },
+            { passive: true }
+          );
+
           link.addEventListener('pointerup', (event) => {
-            if (event.pointerType !== 'touch' || (activePointerId !== null && event.pointerId !== activePointerId)) {
+            if (event.pointerType !== 'touch' || event.pointerId !== activePointerId) {
               return;
             }
 
-            holdActiveAfterRelease();
+            if (isCardHoverHitPoint(link, event.clientX, event.clientY)) {
+              holdActiveAfterRelease();
+            } else {
+              clearActive();
+            }
           });
 
           link.addEventListener('pointercancel', clearActive);
         } else {
           link.addEventListener(
             'touchstart',
-            () => {
-              setActive();
+            (event) => {
+              legacyTouchActive = true;
+              if (isCardHoverHitForLink(link, event.target)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
             },
             { passive: true }
           );
-          link.addEventListener('touchend', holdActiveAfterRelease, { passive: true });
+          link.addEventListener(
+            'touchmove',
+            (event) => {
+              if (!legacyTouchActive) return;
+
+              const touch = event.touches[0];
+              if (touch && isCardHoverHitPoint(link, touch.clientX, touch.clientY)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
+            },
+            { passive: true }
+          );
+          link.addEventListener(
+            'touchend',
+            (event) => {
+              const touch = event.changedTouches[0];
+              if (legacyTouchActive && touch && isCardHoverHitPoint(link, touch.clientX, touch.clientY)) {
+                holdActiveAfterRelease();
+              } else {
+                clearActive();
+              }
+            },
+            { passive: true }
+          );
           link.addEventListener('touchcancel', clearActive, { passive: true });
         }
       });
@@ -468,7 +538,9 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
       'Helvetica Neue', Arial, sans-serif;
     letter-spacing: 0;
     line-height: 1.2;
+    max-width: 100%;
     transition: color 180ms ease;
+    width: fit-content;
   }
 
   .artwork-card__title {
@@ -509,15 +581,15 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .artwork-card a:hover .artwork-card__image--hover {
+    .artwork-card a:has(> [data-card-hover-hit]:hover) .artwork-card__image--hover {
       opacity: 1;
     }
 
-    .artwork-card a:hover .artwork-card__title {
+    .artwork-card a:has(> [data-card-hover-hit]:hover) .artwork-card__title {
       color: #691b17;
     }
 
-    .artwork-card a:hover .artwork-card__meta {
+    .artwork-card a:has(> [data-card-hover-hit]:hover) .artwork-card__meta {
       color: var(--artwork-meta-hover-color);
     }
   }

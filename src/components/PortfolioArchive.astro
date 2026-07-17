@@ -50,7 +50,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                 <a href={getPortfolioHref(portfolio)}>
                   {
                     portfolio.coverImage && portfolio.coverImageWidth && portfolio.coverImageHeight && (
-                      <span class="portfolio-card__image-stack">
+                      <span class="portfolio-card__image-stack" data-card-hover-hit>
                         <img
                           class="portfolio-card__image portfolio-card__image--base"
                           src={portfolio.coverImage}
@@ -77,8 +77,8 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                       </span>
                     )
                   }
-                  <span class="portfolio-card__title">{portfolio.title}</span>
-                  {getPortfolioMeta(portfolio) && <span class="portfolio-card__meta">{getPortfolioMeta(portfolio)}</span>}
+                  <span class="portfolio-card__title" data-card-hover-hit>{portfolio.title}</span>
+                  {getPortfolioMeta(portfolio) && <span class="portfolio-card__meta" data-card-hover-hit>{getPortfolioMeta(portfolio)}</span>}
                 </a>
               </article>
             ))
@@ -109,6 +109,17 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     const routeEnterEvent = 'varelism:route-enter';
     const routeEnteringClass = 'varelism-route-entering';
     const touchReleaseGraceMs = 260;
+    const cardHoverHitSelector = '[data-card-hover-hit]';
+
+    const isCardHoverHitForLink = (link, target) => {
+      if (!(target instanceof Element)) return false;
+
+      const hit = target.closest(cardHoverHitSelector);
+      return Boolean(hit && link.contains(hit));
+    };
+
+    const isCardHoverHitPoint = (link, clientX, clientY) =>
+      isCardHoverHitForLink(link, document.elementFromPoint(clientX, clientY));
 
     const bindPortfolioTouchStates = (archive) => {
       archive.querySelectorAll('.portfolio-card a').forEach((link) => {
@@ -119,6 +130,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
         link.dataset.portfolioTouchStateReady = 'true';
 
         let activePointerId = null;
+        let legacyTouchActive = false;
         let releaseTimer = null;
 
         const clearReleaseTimer = () => {
@@ -128,20 +140,26 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
           releaseTimer = null;
         };
 
+        const clearVisualState = () => {
+          clearReleaseTimer();
+          link.classList.remove('is-touch-active', 'is-touch-origin');
+        };
+
         const setActive = () => {
           clearReleaseTimer();
           link.classList.add('is-touch-active', 'is-touch-origin');
         };
 
         const clearActive = () => {
-          clearReleaseTimer();
           activePointerId = null;
-          link.classList.remove('is-touch-active', 'is-touch-origin');
+          legacyTouchActive = false;
+          clearVisualState();
         };
 
         const holdActiveAfterRelease = () => {
           clearReleaseTimer();
           activePointerId = null;
+          legacyTouchActive = false;
           link.classList.add('is-touch-active', 'is-touch-origin');
           releaseTimer = window.setTimeout(clearActive, touchReleaseGraceMs);
         };
@@ -151,30 +169,82 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
             if (event.pointerType !== 'touch') return;
 
             activePointerId = event.pointerId;
-            setActive();
+            if (isCardHoverHitForLink(link, event.target)) {
+              setActive();
+            } else {
+              clearVisualState();
+            }
             try {
               link.setPointerCapture(event.pointerId);
             } catch {}
           });
 
+          link.addEventListener(
+            'pointermove',
+            (event) => {
+              if (event.pointerType !== 'touch' || event.pointerId !== activePointerId) return;
+
+              if (isCardHoverHitPoint(link, event.clientX, event.clientY)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
+            },
+            { passive: true }
+          );
+
           link.addEventListener('pointerup', (event) => {
-            if (event.pointerType !== 'touch' || (activePointerId !== null && event.pointerId !== activePointerId)) {
+            if (event.pointerType !== 'touch' || event.pointerId !== activePointerId) {
               return;
             }
 
-            holdActiveAfterRelease();
+            if (isCardHoverHitPoint(link, event.clientX, event.clientY)) {
+              holdActiveAfterRelease();
+            } else {
+              clearActive();
+            }
           });
 
           link.addEventListener('pointercancel', clearActive);
         } else {
           link.addEventListener(
             'touchstart',
-            () => {
-              setActive();
+            (event) => {
+              legacyTouchActive = true;
+              if (isCardHoverHitForLink(link, event.target)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
             },
             { passive: true }
           );
-          link.addEventListener('touchend', holdActiveAfterRelease, { passive: true });
+          link.addEventListener(
+            'touchmove',
+            (event) => {
+              if (!legacyTouchActive) return;
+
+              const touch = event.touches[0];
+              if (touch && isCardHoverHitPoint(link, touch.clientX, touch.clientY)) {
+                setActive();
+              } else {
+                clearVisualState();
+              }
+            },
+            { passive: true }
+          );
+          link.addEventListener(
+            'touchend',
+            (event) => {
+              const touch = event.changedTouches[0];
+              if (legacyTouchActive && touch && isCardHoverHitPoint(link, touch.clientX, touch.clientY)) {
+                holdActiveAfterRelease();
+              } else {
+                clearActive();
+              }
+            },
+            { passive: true }
+          );
           link.addEventListener('touchcancel', clearActive, { passive: true });
         }
       });
@@ -362,7 +432,9 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
       'Helvetica Neue', Arial, sans-serif;
     letter-spacing: 0;
     line-height: 1.2;
+    max-width: 100%;
     transition: color 180ms ease;
+    width: fit-content;
   }
 
   .portfolio-card__title {
@@ -408,19 +480,19 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .portfolio-card a:hover .portfolio-card__title {
+    .portfolio-card a:has(> [data-card-hover-hit]:hover) .portfolio-card__title {
       color: #691b17;
     }
 
-    .portfolio-card a:hover .portfolio-card__meta {
+    .portfolio-card a:has(> [data-card-hover-hit]:hover) .portfolio-card__meta {
       color: var(--portfolio-meta-hover-color);
     }
 
-    .portfolio-card a:hover .portfolio-card__image--base {
+    .portfolio-card a:has(> [data-card-hover-hit]:hover) .portfolio-card__image--base {
       opacity: 0;
     }
 
-    .portfolio-card a:hover .portfolio-card__image--hover {
+    .portfolio-card a:has(> [data-card-hover-hit]:hover) .portfolio-card__image--hover {
       opacity: 1;
     }
   }
