@@ -1,7 +1,7 @@
 ---
 title: "Uiko"
 status: public
-date: ""
+date: "2026"
 sortYear: 2026
 sortMonth: 7
 sortDay: 25
