@@ -141,12 +141,19 @@ There are two committed browser regressions:
 
 - `npm run test:home-mobile` rebuilds, starts a preview, uses Chrome/Edge at 390 x
   844 with DPR 3, throttles CPU/network, and confirms cold taps on all three
-  homepage columns navigate correctly.
+  homepage columns navigate correctly. It also verifies that the homepage
+  preloader is the sole allowed shell-hiding state and that the header/footer
+  are fully visible before and after interaction, with a matching cold preloader
+  check on `/esp/`.
 - `npm run test:holder-reveal` rebuilds, serves the generated output locally, and checks all
   eight holder routes plus both Contact routes (ten total) at desktop and phone sizes. It
   verifies a hidden first main frame over white, the universal 450ms ease opacity
   reveal activity, the visible interactive final state, and the absence of a
-  duplicate Contact opacity reveal.
+  duplicate Contact opacity reveal. It additionally discovers every generated
+  non-home page with the shared shell and checks all sampled cold-load frames for
+  effective header/footer visibility, checks both visualisation routes, and
+  verifies client-side language/category navigation keeps the persistent shell
+  painted above the white route overlay.
 
 The homepage test is valuable as a global regression but does not validate the three archives.
 
@@ -686,7 +693,9 @@ Run `npm run test:home-mobile` for every completed population batch. It requires
 Run `npm run test:holder-reveal` after any separately authorized change to the holder pages,
 the Contact routes or `ContactPage.astro`, `BaseLayout.astro`'s main reveal opt-in, or the
 universal route-reveal timing. It checks all eight holder routes plus both Contact routes
-(ten total) at desktop and phone sizes.
+(ten total) for the exact reveal timing at desktop and phone sizes, then audits every
+generated non-home shared-shell route and the covered client-navigation paths for
+continuous header/footer visibility.
 
 ### Stop conditions
 

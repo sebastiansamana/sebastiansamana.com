@@ -18,7 +18,7 @@
   font-style: normal;
   font-weight: 200;
   src: url('/fonts/SF-Pro-Display-Thin.woff2') format('woff2');
-  font-display: block;
+  font-display: swap;
 }
 
 @font-face {
@@ -26,7 +26,7 @@
   font-style: normal;
   font-weight: 200;
   src: url('/fonts/SF-Pro-Display-Thin.ttf') format('truetype');
-  font-display: block;
+  font-display: swap;
 }
 
 @font-face {
@@ -34,7 +34,7 @@
   font-style: normal;
   font-weight: 300;
   src: url('/fonts/SF-Pro-Display-Ultralight.woff2') format('woff2');
-  font-display: block;
+  font-display: swap;
 }
 
 @font-face {
@@ -42,7 +42,7 @@
   font-style: normal;
   font-weight: 400;
   src: url('/fonts/SF-Pro-Display-Light.woff2') format('woff2');
-  font-display: block;
+  font-display: swap;
 }
 
 * {
@@ -91,21 +91,40 @@ html.home-preloader-navigation-active .home-preloader {
   pointer-events: none;
 }
 
-html.home-preloader-initial-home-active .site-header,
-html.home-preloader-initial-home-active main > :not(.home-preloader),
-html.home-preloader-initial-home-active .site-footer,
-html.home-preloader-initial-home-revealing .site-header,
-html.home-preloader-initial-home-revealing main > :not(.home-preloader),
-html.home-preloader-initial-home-revealing .site-footer {
+html[data-varelism-home-route].home-preloader-initial-home-active .site-header,
+html[data-varelism-home-route].home-preloader-initial-home-active main > :not(.home-preloader),
+html[data-varelism-home-route].home-preloader-initial-home-active .site-footer,
+html[data-varelism-home-route].home-preloader-initial-home-revealing .site-header,
+html[data-varelism-home-route].home-preloader-initial-home-revealing main > :not(.home-preloader),
+html[data-varelism-home-route].home-preloader-initial-home-revealing .site-footer {
   transition: opacity var(--varelism-route-fade-ms) var(--varelism-route-fade-ease);
   will-change: opacity;
 }
 
-html.home-preloader-initial-home-active .site-header,
-html.home-preloader-initial-home-active main > :not(.home-preloader),
-html.home-preloader-initial-home-active .site-footer {
+html[data-varelism-home-route].home-preloader-initial-home-active .site-header,
+html[data-varelism-home-route].home-preloader-initial-home-active main > :not(.home-preloader),
+html[data-varelism-home-route].home-preloader-initial-home-active .site-footer {
   opacity: 0;
   pointer-events: none;
+}
+
+html:not(
+    [data-varelism-home-route].home-preloader-initial-home-active
+  ):not(
+    [data-varelism-home-route].home-preloader-initial-home-revealing
+  )
+  .site-header,
+html:not(
+    [data-varelism-home-route].home-preloader-initial-home-active
+  ):not(
+    [data-varelism-home-route].home-preloader-initial-home-revealing
+  )
+  .site-footer {
+  display: flex !important;
+  opacity: 1 !important;
+  transition: none !important;
+  visibility: visible !important;
+  z-index: 20 !important;
 }
 
 .home-preloader__media::-webkit-media-controls,
@@ -113,11 +132,6 @@ html.home-preloader-initial-home-active .site-footer {
 .home-preloader__media::-webkit-media-controls-start-playback-button {
   -webkit-appearance: none;
   display: none !important;
-}
-
-html.home-return-active .site-footer {
-  position: relative;
-  z-index: 20;
 }
 
 html.varelism-route-entering main > :not(.home-preloader) {
@@ -340,7 +354,9 @@ main {
   gap: 0.35rem;
   line-height: 1;
   padding: 3rem 1rem 2.2rem;
+  position: relative;
   text-align: center;
+  z-index: 20;
 }
 
 .site-footer p {

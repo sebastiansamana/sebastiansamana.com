@@ -122,7 +122,10 @@ const globalPreloaderPaths = [
 ---
 
 <!doctype html>
-<html lang={isSpanishRoute ? 'es' : 'en'}>
+<html
+  lang={isSpanishRoute ? 'es' : 'en'}
+  data-varelism-home-route={isHomeRoute ? '' : undefined}
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -548,7 +551,8 @@ const globalPreloaderPaths = [
             visibility: 'visible',
             zIndex: '10',
           });
-          document.body?.append(overlay);
+          const overlayHost = document.querySelector('.site-shell');
+          (overlayHost instanceof HTMLElement ? overlayHost : document.body)?.append(overlay);
 
           return overlay;
         };
@@ -1058,7 +1062,11 @@ const globalPreloaderPaths = [
         }
         <slot />
       </main>
-      <footer class="site-footer">
+      <footer
+        class="site-footer"
+        data-varelism-site-footer
+        data-astro-transition-persist="varelism-site-footer"
+      >
         <p>&copy; 2026 Sebastian Samana</p>
       </footer>
     </div>
