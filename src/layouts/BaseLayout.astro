@@ -7,9 +7,15 @@ interface Props {
   title: string;
   description?: string;
   indexable?: boolean;
+  revealMainFromWhite?: boolean;
 }
 
-const { title, description = 'Website under construction.', indexable = true } = Astro.props;
+const {
+  title,
+  description = 'Website under construction.',
+  indexable = true,
+  revealMainFromWhite = false,
+} = Astro.props;
 const normalizeRoutePath = (pathname: string) => {
   const withoutIndex = pathname.replace(/\/index\.html$/, '') || '/';
 
@@ -1037,7 +1043,10 @@ const globalPreloaderPaths = [
           </a>
         </nav>
       </header>
-      <main>
+      <main
+        data-varelism-route-reveal={revealMainFromWhite ? '' : undefined}
+        data-varelism-route-reveal-from-white={revealMainFromWhite ? '' : undefined}
+      >
         {
           isHomeRoute && (
             <HomePreloader

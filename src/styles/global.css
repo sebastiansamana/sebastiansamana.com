@@ -138,6 +138,25 @@ html.varelism-route-entering main > :not(.home-preloader) {
   pointer-events: auto;
 }
 
+[data-varelism-route-reveal-from-white] {
+  transition: none;
+}
+
+[data-varelism-route-reveal-from-white].is-route-reveal-ready {
+  animation: varelism-route-reveal var(--varelism-route-fade-ms)
+    var(--varelism-route-fade-ease) both;
+}
+
+@keyframes varelism-route-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 ::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {

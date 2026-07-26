@@ -43,7 +43,10 @@ An exception to this boundary is a separately authorized implementation change, 
 | `/architect/projects/` | `/esp/arquitecto/proyectos/` | `src/pages/architect/projects/index.astro` | `src/pages/esp/arquitecto/proyectos/index.astro` |
 | `/painter/exhibitions/` | `/esp/pintor/exposiciones/` | `src/pages/painter/exhibitions.astro` | `src/pages/esp/pintor/exposiciones.astro` |
 
-All four pairs render `WorkInProgressPage.astro`. Do not populate or restyle them.
+All four pairs render `WorkInProgressPage.astro`. The Writer, Architect, and Painter holder
+pairs opt into `BaseLayout.astro`'s server-rendered main reveal so their complete canvas and
+content start hidden over white before using the universal page fade. The Buy pair retains
+the layout's automatic reveal fallback. Do not populate or restyle them.
 
 The project holder has three old example project detail routes in each language because `src/content/projects/` is still built by dynamic routes. They are not the active portfolio system, are not linked from the holder index, and must not be edited as part of `/architect/portfolios/` population.
 
@@ -131,9 +134,21 @@ Canonical and Open Graph URLs are derived globally from `Astro.site`; there are 
 
 ### Existing automated coverage
 
-There is one committed browser regression: `npm run test:home-mobile`. It rebuilds, starts a preview, uses Chrome/Edge at 390 x 844 with DPR 3, throttles CPU/network, and confirms cold taps on all three homepage columns navigate correctly. It is valuable as a global regression but does not validate the three archives.
+There are two committed browser regressions:
 
-There is no Writer-, Painter-, or portfolio-specific automated test, no standalone content validation script, and no configured `astro check` script. The manual matrices below are therefore mandatory.
+- `npm run test:home-mobile` rebuilds, starts a preview, uses Chrome/Edge at 390 x
+  844 with DPR 3, throttles CPU/network, and confirms cold taps on all three
+  homepage columns navigate correctly.
+- `npm run test:holder-reveal` rebuilds, serves the generated output locally, and checks the six
+  Writer, Architect, and Painter holder routes at desktop and phone sizes. It
+  verifies a hidden first main frame over white, the universal 450ms ease opacity
+  reveal activity, and the visible interactive final state.
+
+The homepage test is valuable as a global regression but does not validate the three archives.
+
+There is no Writer archive-, Painter archive-, or portfolio-specific automated content test,
+no standalone content validation script, and no configured `astro check` script. The manual
+matrices below are therefore mandatory.
 
 ## 4. Writer population system
 
@@ -663,6 +678,10 @@ Across applicable routes verify:
 ### Existing regression
 
 Run `npm run test:home-mobile` for every completed population batch. It requires Chrome or Edge (or `CHROME_PATH`); if that browser prerequisite is unavailable, report the test as not run and do not describe the batch as fully verified. It cannot replace the archive-specific manual checks.
+
+Run `npm run test:holder-reveal` after any separately authorized change to the holder pages,
+`BaseLayout.astro`'s main reveal opt-in, or the universal route-reveal timing. It checks all
+six Writer, Architect, and Painter holders at desktop and phone sizes.
 
 ### Stop conditions
 
