@@ -7,12 +7,58 @@ import path from 'node:path';
 
 const root = process.cwd();
 const targets = [
-  { path: '/architect/projects/', heading: 'Work in progress...' },
-  { path: '/esp/arquitecto/proyectos/', heading: 'Trabajo en curso...' },
-  { path: '/writer/books/', heading: 'Work in progress...' },
-  { path: '/esp/escritor/libros/', heading: 'Trabajo en curso...' },
-  { path: '/painter/exhibitions/', heading: 'Work in progress...' },
-  { path: '/esp/pintor/exposiciones/', heading: 'Trabajo en curso...' },
+  {
+    path: '/architect/projects/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Work in progress...',
+  },
+  {
+    path: '/esp/arquitecto/proyectos/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Trabajo en curso...',
+  },
+  {
+    path: '/writer/books/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Work in progress...',
+  },
+  {
+    path: '/esp/escritor/libros/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Trabajo en curso...',
+  },
+  {
+    path: '/painter/exhibitions/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Work in progress...',
+  },
+  {
+    path: '/esp/pintor/exposiciones/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Trabajo en curso...',
+  },
+  {
+    path: '/buy/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Nothing to buy...',
+  },
+  {
+    path: '/esp/comprar/',
+    contentSelector: '.work-in-progress-page__heading',
+    content: 'Nada que comprar...',
+  },
+  {
+    path: '/contact/',
+    contentSelector: '.contact-email',
+    content: 'sebastian.samana@icloud.com',
+    contactLabel: 'Contact',
+  },
+  {
+    path: '/esp/contacto/',
+    contentSelector: '.contact-email',
+    content: 'sebastian.samana@icloud.com',
+    contactLabel: 'Contacto',
+  },
 ];
 const viewports = [
   { name: 'desktop', width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false },
@@ -314,8 +360,39 @@ const installRevealProbe = (client) =>
       };
       window.__holderRevealProbe = probe;
 
+      ['transitionrun', 'transitionstart', 'transitionend', 'transitioncancel'].forEach((type) => {
+        document.addEventListener(type, (event) => {
+          if (
+            !(event.target instanceof HTMLElement) ||
+            !event.target.matches('[data-contact-page]') ||
+            event.propertyName !== 'opacity'
+          ) {
+            return;
+          }
+          probe.events.push({
+            elapsedTime: event.elapsedTime,
+            propertyName: event.propertyName,
+            time: performance.now(),
+            type,
+          });
+        }, true);
+      });
+
       ['animationstart', 'animationend', 'animationcancel'].forEach((type) => {
         document.addEventListener(type, (event) => {
+          if (
+            event.target instanceof HTMLElement &&
+            event.target.matches('[data-contact-page]')
+          ) {
+            probe.events.push({
+              animationName: event.animationName,
+              contactAnimation: true,
+              elapsedTime: event.elapsedTime,
+              time: performance.now(),
+              type,
+            });
+            return;
+          }
           if (
             event.target !== document.querySelector('main') ||
             event.animationName !== 'varelism-route-reveal'
@@ -336,8 +413,16 @@ const installRevealProbe = (client) =>
         if (main instanceof HTMLElement) {
           const mainStyle = getComputedStyle(main);
           const bodyStyle = document.body ? getComputedStyle(document.body) : null;
+          const contactPage = main.querySelector('[data-contact-page]');
+          const contactStyle =
+            contactPage instanceof HTMLElement ? getComputedStyle(contactPage) : null;
           probe.samples.push({
             bodyBackground: bodyStyle?.backgroundColor || '',
+            contactAnimationDuration: contactStyle?.animationDuration || '',
+            contactAnimationName: contactStyle?.animationName || '',
+            contactOpacity: contactStyle ? Number(contactStyle.opacity) : null,
+            contactTransitionDuration: contactStyle?.transitionDuration || '',
+            contactTransitionProperty: contactStyle?.transitionProperty || '',
             hasMarker: main.hasAttribute('data-varelism-route-reveal'),
             hasReadyClass: main.classList.contains('is-route-reveal-ready'),
             opacity: Number(mainStyle.opacity),
@@ -367,20 +452,30 @@ const configureViewport = async (client, viewport) => {
   });
 };
 
-const collectResult = (client) =>
+const collectResult = (client, target) =>
   runtimeValue(
     client,
     `(() => {
       const main = document.querySelector('main');
-      const heading = document.querySelector('.work-in-progress-page__heading');
+      const content = document.querySelector(${JSON.stringify(target.contentSelector)});
+      const contactPage = document.querySelector('[data-contact-page]');
       const mainStyle = main ? getComputedStyle(main) : null;
+      const contactStyle = contactPage ? getComputedStyle(contactPage) : null;
       return {
-        heading: heading?.textContent?.trim() || '',
+        contactAnimationDuration: contactStyle?.animationDuration || '',
+        contactAnimationName: contactStyle?.animationName || '',
+        contactLabel: contactPage?.getAttribute('aria-label') || '',
+        contactOpacity: contactStyle ? Number(contactStyle.opacity) : null,
+        contactTransitionDuration: contactStyle?.transitionDuration || '',
+        contactTransitionProperty: contactStyle?.transitionProperty || '',
+        contactVisibleClass: contactPage?.classList.contains('is-visible') || false,
+        content: content?.textContent?.trim() || '',
         mainMarkerCount: document.querySelectorAll('main[data-varelism-route-reveal]').length,
         mainReady: main?.classList.contains('is-route-reveal-ready') || false,
         opacity: mainStyle ? Number(mainStyle.opacity) : null,
         pointerEvents: mainStyle?.pointerEvents || '',
         probe: window.__holderRevealProbe,
+        animationDelay: mainStyle?.animationDelay || '',
         animationDuration: mainStyle?.animationDuration || '',
         animationName: mainStyle?.animationName || '',
         animationTimingFunction: mainStyle?.animationTimingFunction || '',
@@ -390,7 +485,7 @@ const collectResult = (client) =>
 
 const verifyResult = (result, target, viewport) => {
   const label = `${viewport.name} ${target.path}`;
-  assert.equal(result.heading, target.heading, `${label}: localized heading changed`);
+  assert.equal(result.content, target.content, `${label}: localized content changed`);
   assert.equal(result.mainMarkerCount, 1, `${label}: reveal marker must be present in initial main`);
   assert.ok(result.probe?.samples?.length > 2, `${label}: reveal probe did not collect samples`);
 
@@ -404,8 +499,19 @@ const verifyResult = (result, target, viewport) => {
     'rgb(255, 255, 255)',
     `${label}: first rendered frame was not over white`,
   );
+  if (target.contactLabel) {
+    assert.equal(first.contactOpacity, 1, `${label}: Contact still has a nested opacity reveal`);
+    assert.equal(
+      first.contactTransitionDuration,
+      '0s',
+      `${label}: Contact still has a nested transition`,
+    );
+    assert.equal(first.contactAnimationName, 'none', `${label}: Contact has a nested animation`);
+    assert.equal(first.contactAnimationDuration, '0s', `${label}: Contact has animation timing`);
+  }
 
   assert.equal(result.animationName, 'varelism-route-reveal', `${label}: reveal animation changed`);
+  assert.equal(result.animationDelay, '0s', `${label}: reveal animation delay changed`);
   assert.equal(result.animationDuration, '0.45s', `${label}: animation duration changed`);
   assert.equal(result.animationTimingFunction, 'ease', `${label}: animation easing changed`);
 
@@ -435,6 +541,49 @@ const verifyResult = (result, target, viewport) => {
   assert.equal(result.mainReady, true, `${label}: reveal class was not applied`);
   assert.equal(result.opacity, 1, `${label}: final content opacity was ${result.opacity}`);
   assert.equal(result.pointerEvents, 'auto', `${label}: final content was not interactive`);
+  if (target.contactLabel) {
+    const contactSamples = result.probe.samples.filter(
+      (sample) => sample.contactOpacity !== null,
+    );
+    assert.ok(contactSamples.length > 2, `${label}: Contact reveal probe did not collect samples`);
+    assert.equal(
+      contactSamples.every(
+        (sample) =>
+          sample.contactOpacity === 1 &&
+          sample.contactTransitionDuration === '0s' &&
+          sample.contactAnimationName === 'none' &&
+          sample.contactAnimationDuration === '0s',
+      ),
+      true,
+      `${label}: Contact changed opacity independently of the main reveal`,
+    );
+    assert.equal(result.contactLabel, target.contactLabel, `${label}: localized Contact label changed`);
+    assert.equal(result.contactOpacity, 1, `${label}: Contact content was not visible`);
+    assert.ok(
+      !result.contactTransitionProperty.split(',').map((value) => value.trim()).includes('opacity'),
+      `${label}: Contact retained an opacity transition`,
+    );
+    assert.equal(
+      result.contactTransitionDuration,
+      '0s',
+      `${label}: Contact retained a nested transition`,
+    );
+    assert.equal(result.contactAnimationName, 'none', `${label}: Contact retained an animation`);
+    assert.equal(result.contactAnimationDuration, '0s', `${label}: Contact retained animation timing`);
+    assert.equal(result.contactVisibleClass, false, `${label}: legacy Contact reveal class remains`);
+    assert.equal(
+      result.probe.events.some(
+        (event) => event.propertyName === 'opacity' && event.type.startsWith('transition'),
+      ),
+      false,
+      `${label}: Contact emitted a nested opacity transition`,
+    );
+    assert.equal(
+      result.probe.events.some((event) => event.contactAnimation),
+      false,
+      `${label}: Contact emitted a nested animation`,
+    );
+  }
 
   return {
     path: target.path,
@@ -565,12 +714,12 @@ try {
             !probe?.events?.some((event) => event.type === 'animationcancel');
         })()`,
       );
-      const result = await collectResult(client);
+      const result = await collectResult(client, target);
       results.push(verifyResult(result, target, viewport));
     }
   }
 
-  console.log('Holder route reveal regression passed.');
+  console.log('Selected route reveal regression passed.');
   for (const result of results) {
     console.log(`${result.viewport} ${result.path}: hidden first main frame over white; 450ms ease fade`);
   }

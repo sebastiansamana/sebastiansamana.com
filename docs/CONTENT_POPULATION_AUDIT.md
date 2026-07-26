@@ -43,10 +43,9 @@ An exception to this boundary is a separately authorized implementation change, 
 | `/architect/projects/` | `/esp/arquitecto/proyectos/` | `src/pages/architect/projects/index.astro` | `src/pages/esp/arquitecto/proyectos/index.astro` |
 | `/painter/exhibitions/` | `/esp/pintor/exposiciones/` | `src/pages/painter/exhibitions.astro` | `src/pages/esp/pintor/exposiciones.astro` |
 
-All four pairs render `WorkInProgressPage.astro`. The Writer, Architect, and Painter holder
-pairs opt into `BaseLayout.astro`'s server-rendered main reveal so their complete canvas and
-content start hidden over white before using the universal page fade. The Buy pair retains
-the layout's automatic reveal fallback. Do not populate or restyle them.
+All four pairs render `WorkInProgressPage.astro` and opt into `BaseLayout.astro`'s
+server-rendered main reveal so their complete canvas and content start hidden over white
+before using the universal page fade. Do not populate or restyle them.
 
 The project holder has three old example project detail routes in each language because `src/content/projects/` is still built by dynamic routes. They are not the active portfolio system, are not linked from the holder index, and must not be edited as part of `/architect/portfolios/` population.
 
@@ -62,6 +61,10 @@ The project holder has three old example project detail routes in each language 
 | Architect landing | `/architect/` | `/esp/arquitecto/` | completed 3D landing pages |
 | Painter landing | `/painter/` | `/esp/pintor/` | completed animated landing pages |
 | Header, footer, language switch, transitions | all pages using the shared shell | all Spanish routes | `src/layouts/BaseLayout.astro` and `src/styles/global.css` |
+
+The Contact pair also opts into the server-rendered main reveal. `ContactPage.astro` must not
+add a second opacity reveal; its viewport positioning and email interaction behavior remain
+component-specific.
 
 Do not use the legacy root routes `/books/`, `/booklist/`, or `/memories/` as population sources. They are unrelated to the three active archives. The repository `README.md` also predates the active archive architecture; this runbook and the implementation are authoritative.
 
@@ -139,10 +142,11 @@ There are two committed browser regressions:
 - `npm run test:home-mobile` rebuilds, starts a preview, uses Chrome/Edge at 390 x
   844 with DPR 3, throttles CPU/network, and confirms cold taps on all three
   homepage columns navigate correctly.
-- `npm run test:holder-reveal` rebuilds, serves the generated output locally, and checks the six
-  Writer, Architect, and Painter holder routes at desktop and phone sizes. It
+- `npm run test:holder-reveal` rebuilds, serves the generated output locally, and checks all
+  eight holder routes plus both Contact routes (ten total) at desktop and phone sizes. It
   verifies a hidden first main frame over white, the universal 450ms ease opacity
-  reveal activity, and the visible interactive final state.
+  reveal activity, the visible interactive final state, and the absence of a
+  duplicate Contact opacity reveal.
 
 The homepage test is valuable as a global regression but does not validate the three archives.
 
@@ -680,8 +684,9 @@ Across applicable routes verify:
 Run `npm run test:home-mobile` for every completed population batch. It requires Chrome or Edge (or `CHROME_PATH`); if that browser prerequisite is unavailable, report the test as not run and do not describe the batch as fully verified. It cannot replace the archive-specific manual checks.
 
 Run `npm run test:holder-reveal` after any separately authorized change to the holder pages,
-`BaseLayout.astro`'s main reveal opt-in, or the universal route-reveal timing. It checks all
-six Writer, Architect, and Painter holders at desktop and phone sizes.
+the Contact routes or `ContactPage.astro`, `BaseLayout.astro`'s main reveal opt-in, or the
+universal route-reveal timing. It checks all eight holder routes plus both Contact routes
+(ten total) at desktop and phone sizes.
 
 ### Stop conditions
 
