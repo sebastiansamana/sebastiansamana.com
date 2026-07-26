@@ -133,8 +133,9 @@ const globalPreloaderPaths = [
     {indexable && <link rel="canonical" href={canonicalUrl} />}
     {indexable && <meta property="og:url" content={canonicalUrl} />}
     {!indexable && <meta name="robots" content="noindex" />}
-    <link rel="icon" href="/favicon.ico?v=3" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg?v=5" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=5" />
+    <link rel="shortcut icon" href="/favicon.ico?v=5" />
     {
       shouldPreloadLightFont && (
         <link

@@ -1,10 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 256" fill="none">
-  <rect width="352" height="256" fill="#ffffff" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 352" fill="none">
+  <circle cx="176" cy="176" r="164" fill="#ffffff" stroke="#d7d7d7" stroke-width="8" />
   <path
     d="M26 219C42 212 54 202 68 186C98 153 121 119 149 86C177 54 208 28 237 18C242 47 260 81 283 117C305 151 320 181 318 208C283 196 245 194 202 201C158 209 119 220 82 222C59 224 38 223 26 219Z"
     stroke="#000000"
     stroke-linecap="round"
     stroke-linejoin="round"
-    stroke-width="11"
+    stroke-width="16"
+    transform="translate(31.68 71.04) scale(0.82)"
   />
 </svg>

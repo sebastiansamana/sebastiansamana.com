@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "generate:favicon": "node scripts/generate-favicon.mjs",
     "new-artwork": "node scripts/new-artwork.mjs",
     "test:home-mobile": "npm run build && node tests/home-cold-mobile-tap.mjs",
     "test:holder-reveal": "npm run build && node tests/holder-route-reveal.mjs",
