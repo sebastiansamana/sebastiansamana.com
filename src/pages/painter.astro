@@ -14,19 +14,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         stroke-width="0.28"
         vector-effect="non-scaling-stroke"
       ></path>
-      <line
-        class="artist-stroke-nib"
-        data-artist-stroke-nib
-        opacity="0"
-        stroke="#000000"
-        stroke-linecap="round"
-        stroke-width="1.4"
-        vector-effect="non-scaling-stroke"
-        x1="-8"
-        x2="0"
-        y1="0"
-        y2="0"
-      ></line>
     </svg>
 
     <nav class="artist-links" aria-label="Painter sections">
@@ -53,7 +40,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const TEXT_TO_LINE_GAP = 10;
     const DEFAULT_HORIZONTAL_LEAD_LENGTH = 64;
     const MOBILE_ARTIST_VIEWPORT_QUERY = '(max-width: 1199px)';
-    const DESKTOP_POINTER_QUERY = '(hover: hover) and (pointer: fine)';
     const TOUCH_VIEWPORT_QUERY = '(any-pointer: coarse), (pointer: coarse)';
     const VIEWPORT_RESIZE_EPSILON = 1;
     const DEBUG_ARTIST_CONNECTOR = false;
@@ -967,7 +953,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       const connector = stage.querySelector('[data-artist-connector]');
       const path = stage.querySelector('[data-artist-connector-path]');
-      const strokeNib = stage.querySelector('[data-artist-stroke-nib]');
       const exhibitionsLink = stage.querySelector('[data-artist-link="exhibitions"]');
       const everythingLink = stage.querySelector('[data-artist-link="everything"]');
       const shell = stage.closest('.site-shell');
@@ -1015,24 +1000,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       const isMobileArtistViewport = () =>
         Boolean(window.matchMedia?.(MOBILE_ARTIST_VIEWPORT_QUERY)?.matches);
-
-      const isDesktopPointerViewport = () =>
-        Boolean(window.matchMedia?.(DESKTOP_POINTER_QUERY)?.matches);
-
-      const hideStrokeNib = () => {
-        if (!isSvgElementTag(strokeNib, 'line')) return;
-
-        strokeNib.style.opacity = '0';
-        strokeNib.removeAttribute('transform');
-      };
-
-      const showCompletedPath = () => {
-        path.style.transition = 'none';
-        path.style.removeProperty('stroke-dasharray');
-        path.style.removeProperty('stroke-dashoffset');
-        path.style.opacity = '1';
-        hideStrokeNib();
-      };
 
       const getViewportDelta = (nextViewport) => ({
         heightChanged: Math.abs(nextViewport.height - viewportSnapshot.height) > VIEWPORT_RESIZE_EPSILON,
@@ -1131,7 +1098,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           'is-line-drawing',
           'is-everything-visible'
         );
-        showCompletedPath();
+        path.style.opacity = '1';
+        path.style.strokeDashoffset = '0';
+        path.style.transition = 'none';
       };
 
       const getRevealSnapshot = () => ({
@@ -1161,7 +1130,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           hasStartedSequence = true;
           sequenceComplete = false;
           stage.classList.add('is-positioned', 'is-exhibitions-visible', 'is-everything-visible', 'is-line-drawing');
-          showCompletedPath();
+          path.style.opacity = '1';
+          path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+          path.style.strokeDashoffset = '0';
+          path.style.transition = 'none';
           setTimer(finishLineReveal, 220);
           return true;
         }
@@ -1210,7 +1182,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const resetStage = () => {
         cleanupAnimation();
         cleanupAnimation = () => {};
-        hideStrokeNib();
         clearPendingWork();
         resetRevealClasses();
         clearInlinePositions();
@@ -1223,57 +1194,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const animatePath = (onComplete) => {
         const viewport = getViewportSnapshot();
         const isPhoneViewport = viewport.width <= 600 || isPortraitPhoneViewport(viewport.width, viewport.height);
-        const drawLength = Math.max(path.getTotalLength(), 1);
-        const baseDuration = clamp(drawLength * 5, 2400, 5600);
+        const baseDuration = clamp(pathLength * 5, 2400, 5600);
         const duration = isPhoneViewport ? baseDuration : baseDuration * NON_PHONE_DRAW_DURATION_SCALE;
-        const usesDesktopNib =
-          isDesktopPointerViewport() && isSvgElementTag(strokeNib, 'line');
-        const dashLength = usesDesktopNib ? Math.ceil(drawLength) + 8 : drawLength;
         let hasFinished = false;
         let fallbackTimer = 0;
-        let drawFrame = 0;
-        let drawStartedAt = 0;
-
-        pathLength = drawLength;
-
-        const stopDesktopReveal = () => {
-          if (drawFrame) {
-            window.cancelAnimationFrame(drawFrame);
-            animationFrames.delete(drawFrame);
-            drawFrame = 0;
-          }
-
-          hideStrokeNib();
-        };
-
-        const updateDesktopReveal = (progress) => {
-          if (!usesDesktopNib || !isSvgElementTag(strokeNib, 'line')) return;
-
-          const distance = drawLength * clamp(progress, 0, 1);
-          const sampleDistance = Math.min(2, Math.max(0.5, drawLength * 0.002));
-          const point = path.getPointAtLength(distance);
-          const previousPoint = path.getPointAtLength(Math.max(0, distance - sampleDistance));
-          const nextPoint = path.getPointAtLength(Math.min(drawLength, distance + sampleDistance));
-          const angle = Math.atan2(
-            nextPoint.y - previousPoint.y,
-            nextPoint.x - previousPoint.x
-          ) * 180 / Math.PI;
-
-          path.style.strokeDashoffset = `${dashLength - distance}`;
-          strokeNib.setAttribute(
-            'transform',
-            `translate(${formatPathNumber(point.x)} ${formatPathNumber(point.y)}) rotate(${formatPathNumber(angle)})`
-          );
-          strokeNib.style.opacity = progress < 1 ? '0.62' : '0';
-        };
 
         const finish = () => {
           if (hasFinished) return;
 
           hasFinished = true;
           path.removeEventListener('transitionend', onTransitionEnd);
-          stopDesktopReveal();
-          showCompletedPath();
+          path.style.transition = 'none';
+          path.style.strokeDashoffset = '0';
+          path.style.opacity = '1';
 
           if (fallbackTimer) {
             window.clearTimeout(fallbackTimer);
@@ -1283,27 +1216,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           onComplete();
         };
 
-        const drawDesktopFrame = (timestamp) => {
-          if (drawFrame) {
-            animationFrames.delete(drawFrame);
-            drawFrame = 0;
-          }
-
-          if (hasFinished) return;
-          if (!drawStartedAt) drawStartedAt = timestamp;
-
-          const progress = clamp((timestamp - drawStartedAt) / duration, 0, 1);
-          updateDesktopReveal(progress);
-
-          if (progress >= 1) {
-            finish();
-            return;
-          }
-
-          drawFrame = window.requestAnimationFrame(drawDesktopFrame);
-          animationFrames.add(drawFrame);
-        };
-
         const onTransitionEnd = (event) => {
           if (event.target === path && event.propertyName === 'stroke-dashoffset') {
             finish();
@@ -1311,28 +1223,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         };
 
         path.style.opacity = '1';
-        path.style.strokeDasharray = `${dashLength} ${dashLength}`;
-        path.style.strokeDashoffset = `${dashLength}`;
+        path.style.strokeDasharray = `${pathLength} ${pathLength}`;
+        path.style.strokeDashoffset = `${pathLength}`;
         path.style.transition = 'none';
         path.getBoundingClientRect();
-
-        if (usesDesktopNib) {
-          updateDesktopReveal(0);
-          drawFrame = window.requestAnimationFrame(drawDesktopFrame);
-          animationFrames.add(drawFrame);
-        } else {
-          hideStrokeNib();
-          path.addEventListener('transitionend', onTransitionEnd);
-          path.style.transition = `stroke-dashoffset ${duration}ms linear`;
-          path.style.strokeDashoffset = '0';
-        }
+        path.addEventListener('transitionend', onTransitionEnd);
+        path.style.transition = `stroke-dashoffset ${duration}ms linear`;
+        path.style.strokeDashoffset = '0';
 
         fallbackTimer = setTimer(finish, duration + 120);
 
         return () => {
           path.removeEventListener('transitionend', onTransitionEnd);
           path.style.transition = 'none';
-          stopDesktopReveal();
         };
       };
 
@@ -1683,12 +1586,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     vector-effect: non-scaling-stroke;
   }
 
-  :global(.artist-stroke-nib) {
-    display: none;
-    opacity: 0;
-    pointer-events: none;
-  }
-
   .artist-links {
     height: 100%;
     inset: 0;
@@ -1750,10 +1647,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   @media (hover: hover) and (pointer: fine) {
-    :global(.artist-stroke-nib) {
-      display: block;
-    }
-
     .artist-link:hover {
       color: #000000;
     }
