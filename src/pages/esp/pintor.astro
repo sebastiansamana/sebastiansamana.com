@@ -1001,6 +1001,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       const isMobileArtistViewport = () =>
         Boolean(window.matchMedia?.(MOBILE_ARTIST_VIEWPORT_QUERY)?.matches);
 
+      const showCompletedPath = () => {
+        path.style.transition = 'none';
+        path.style.removeProperty('stroke-dasharray');
+        path.style.removeProperty('stroke-dashoffset');
+        path.style.opacity = '1';
+      };
+
       const getViewportDelta = (nextViewport) => ({
         heightChanged: Math.abs(nextViewport.height - viewportSnapshot.height) > VIEWPORT_RESIZE_EPSILON,
         scaleChanged: Math.abs(nextViewport.scale - viewportSnapshot.scale) > 0.001,
@@ -1098,9 +1105,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           'is-line-drawing',
           'is-everything-visible'
         );
-        path.style.opacity = '1';
-        path.style.strokeDashoffset = '0';
-        path.style.transition = 'none';
+        showCompletedPath();
       };
 
       const getRevealSnapshot = () => ({
@@ -1130,10 +1135,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           hasStartedSequence = true;
           sequenceComplete = false;
           stage.classList.add('is-positioned', 'is-exhibitions-visible', 'is-everything-visible', 'is-line-drawing');
-          path.style.opacity = '1';
-          path.style.strokeDasharray = `${pathLength} ${pathLength}`;
-          path.style.strokeDashoffset = '0';
-          path.style.transition = 'none';
+          showCompletedPath();
           setTimer(finishLineReveal, 220);
           return true;
         }
@@ -1194,19 +1196,23 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       const animatePath = (onComplete) => {
         const viewport = getViewportSnapshot();
         const isPhoneViewport = viewport.width <= 600 || isPortraitPhoneViewport(viewport.width, viewport.height);
-        const baseDuration = clamp(pathLength * 5, 2400, 5600);
+        const drawLength = Math.max(path.getTotalLength(), 1);
+        const baseDuration = clamp(drawLength * 5, 2400, 5600);
         const duration = isPhoneViewport ? baseDuration : baseDuration * NON_PHONE_DRAW_DURATION_SCALE;
+        const usesSafeDesktopDash = !isMobileArtistViewport();
+        const dashLength = usesSafeDesktopDash ? Math.ceil(drawLength) + 8 : drawLength;
+        const completedDashOffset = usesSafeDesktopDash ? dashLength - drawLength : 0;
         let hasFinished = false;
         let fallbackTimer = 0;
+
+        pathLength = drawLength;
 
         const finish = () => {
           if (hasFinished) return;
 
           hasFinished = true;
           path.removeEventListener('transitionend', onTransitionEnd);
-          path.style.transition = 'none';
-          path.style.strokeDashoffset = '0';
-          path.style.opacity = '1';
+          showCompletedPath();
 
           if (fallbackTimer) {
             window.clearTimeout(fallbackTimer);
@@ -1223,13 +1229,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         };
 
         path.style.opacity = '1';
-        path.style.strokeDasharray = `${pathLength} ${pathLength}`;
-        path.style.strokeDashoffset = `${pathLength}`;
+        path.style.strokeDasharray = `${dashLength} ${dashLength}`;
+        path.style.strokeDashoffset = `${dashLength}`;
         path.style.transition = 'none';
         path.getBoundingClientRect();
         path.addEventListener('transitionend', onTransitionEnd);
         path.style.transition = `stroke-dashoffset ${duration}ms linear`;
-        path.style.strokeDashoffset = '0';
+        path.style.strokeDashoffset = `${completedDashOffset}`;
 
         fallbackTimer = setTimer(finish, duration + 120);
 
