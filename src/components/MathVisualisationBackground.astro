@@ -1,15 +1,4 @@
-<div class="math-visualisation-background" aria-hidden="true" data-varelism-math-background>
-  <canvas
-    class="math-visualisation-background__canvas"
-    width="992"
-    height="1772"
-    data-math-hero-canvas
-    data-math-desktop-point-scale="0.72"
-    data-math-initial-offset-ms="146000"
-  ></canvas>
-</div>
-
-<script src="/scripts/math-visualisation-canvas.js?v=20260711-varelism-red-smooth-point68-offset146-continuous-scroll" defer data-astro-rerun></script>
+<div class="math-visualisation-background" aria-hidden="true" data-varelism-math-background></div>
 
 <script is:inline data-astro-rerun>
   (() => {
@@ -41,9 +30,6 @@
       stableOrientation = nextOrientation;
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1;
       main.style.setProperty('--home-viewport-height', `${viewportHeight}px`);
-      main.style.setProperty('--home-canvas-ratio-width-102', `${viewportHeight * 1.02 * 992 / 1772}px`);
-      main.style.setProperty('--home-canvas-ratio-width-104', `${viewportHeight * 1.04 * 992 / 1772}px`);
-      main.style.setProperty('--home-canvas-height-104', `${viewportHeight * 1.04}px`);
     };
     const forceSyncViewportHeight = () => syncViewportHeight({ force: true });
 
@@ -57,9 +43,6 @@
       window.removeEventListener('orientationchange', forceSyncViewportHeight);
       window.visualViewport?.removeEventListener('resize', syncViewportHeight);
       main.style.removeProperty('--home-viewport-height');
-      main.style.removeProperty('--home-canvas-ratio-width-102');
-      main.style.removeProperty('--home-canvas-ratio-width-104');
-      main.style.removeProperty('--home-canvas-height-104');
       document.removeEventListener('astro:before-swap', dispose);
       if (window[runtimeKey]?.dispose === dispose) delete window[runtimeKey];
     };
@@ -84,39 +67,11 @@
     z-index: 0;
   }
 
-  .math-visualisation-background__canvas {
-    display: block;
-    height: auto;
-    left: 50%;
-    max-height: none;
-    max-width: none;
-    opacity: 1;
-    position: absolute;
-    top: 50%;
-    transform-origin: center center;
-    transform: translate3d(-50%, -50%, 0);
-    width: max(102vw, var(--home-canvas-ratio-width-102, 57.1svh));
-    will-change: transform;
-  }
-
   :global(.site-shell) {
     isolation: isolate;
   }
 
   :global(.site-shell > main) {
     position: relative;
-  }
-
-  @media (max-width: 560px) {
-    .math-visualisation-background__canvas {
-      width: max(116vw, var(--home-canvas-ratio-width-104, 58.2svh));
-    }
-  }
-
-  @media (max-width: 640px) and (orientation: portrait) {
-    .math-visualisation-background__canvas {
-      transform: translate3d(-50%, -50%, 0) rotate(90deg);
-      width: max(var(--home-canvas-height-104, 104svh), calc(118vw * 992 / 1772));
-    }
   }
 </style>

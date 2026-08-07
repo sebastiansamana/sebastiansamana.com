@@ -517,9 +517,9 @@ const getTargetPoint = async (client, index) =>
   runtimeValue(
     client,
     `(() => {
-      const stack = document.querySelectorAll('.column-stack')[${index}];
-      if (!stack) return null;
-      const rect = stack.getBoundingClientRect();
+      const link = document.querySelectorAll('.triptych-link')[${index}];
+      if (!link) return null;
+      const rect = link.getBoundingClientRect();
       return {
         x: Math.round(rect.left + rect.width / 2),
         y: Math.round(rect.top + rect.height / 2)
