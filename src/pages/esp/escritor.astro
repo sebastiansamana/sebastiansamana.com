@@ -27,6 +27,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     chooseDesktopConnectorPreset,
     createDesktopConnectorCurveRandom,
   } from '../../lib/desktopConnectorPresets';
+  import {
+    chooseTabletConnectorPreset,
+    createTabletConnectorCurveRandom,
+  } from '../../lib/tabletConnectorPresets';
 
   (() => {
     const stateKey = '__varelismAuthorPage';
@@ -44,6 +48,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const TEXT_TO_LINE_GAP = 10;
     const DEFAULT_HORIZONTAL_LEAD_LENGTH = 64;
     const MOBILE_AUTHOR_VIEWPORT_QUERY = '(max-width: 1199px)';
+    const TABLET_CONNECTOR_VIEWPORT_QUERY = '(min-width: 601px) and (max-width: 1199px)';
     const TOUCH_VIEWPORT_QUERY = '(any-pointer: coarse), (pointer: coarse)';
     const VIEWPORT_RESIZE_EPSILON = 1;
     const DEBUG_AUTHOR_CONNECTOR = false;
@@ -310,7 +315,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       y: range.minY + (range.maxY - range.minY) * presetPoint.y,
     });
 
-    function getDesktopPresetPlacement(stage, startLink, endLink, preset) {
+    function getConnectorPresetPlacement(stage, startLink, endLink, preset) {
       const stageRect = stage.getBoundingClientRect();
       const stageWidth = Math.max(stageRect.width, 1);
       const stageHeight = Math.max(stageRect.height, 1);
@@ -1031,6 +1036,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         desktopConnectorPreset ||= chooseDesktopConnectorPreset();
         return desktopConnectorPreset;
       };
+      let tabletConnectorPreset = null;
+      const getTabletConnectorPreset = () => {
+        tabletConnectorPreset ||= chooseTabletConnectorPreset();
+        return tabletConnectorPreset;
+      };
       let sequenceComplete = false;
       let ignoreTouchResizeUntil = 0;
 
@@ -1050,6 +1060,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
       const isMobileAuthorViewport = () =>
         Boolean(window.matchMedia?.(MOBILE_AUTHOR_VIEWPORT_QUERY)?.matches);
+
+      const isTabletConnectorViewport = () =>
+        Boolean(window.matchMedia?.(TABLET_CONNECTOR_VIEWPORT_QUERY)?.matches);
 
       const getViewportDelta = (nextViewport) => ({
         heightChanged: Math.abs(nextViewport.height - viewportSnapshot.height) > VIEWPORT_RESIZE_EPSILON,
@@ -1369,22 +1382,33 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         const measuredStageRect = stage.getBoundingClientRect();
         const measuredStageHeight = Math.max(measuredStageRect.height, 1);
         stage.style.setProperty('--author-stage-height', `${measuredStageHeight}px`);
+        const portraitPhoneViewport = isPortraitPhoneViewport(
+          measuredStageRect.width,
+          measuredStageHeight
+        );
         const selectedDesktopPreset = isMobileAuthorViewport()
           ? null
           : getDesktopConnectorPreset();
+        const selectedTabletPreset =
+          isTabletConnectorViewport() && !portraitPhoneViewport
+            ? getTabletConnectorPreset()
+            : null;
+        const selectedConnectorPreset = selectedDesktopPreset || selectedTabletPreset;
         const layoutRandom = selectedDesktopPreset
           ? createDesktopConnectorCurveRandom(selectedDesktopPreset)
-          : Math.random;
-        const desktopPlacement = selectedDesktopPreset
-          ? getDesktopPresetPlacement(
+          : selectedTabletPreset
+            ? createTabletConnectorCurveRandom(selectedTabletPreset)
+            : Math.random;
+        const presetPlacement = selectedConnectorPreset
+          ? getConnectorPresetPlacement(
               stage,
               booklistLink,
               everythingLink,
-              selectedDesktopPreset
+              selectedConnectorPreset
             )
           : null;
-        const placements = desktopPlacement
-          ? { books: desktopPlacement.start, everything: desktopPlacement.end }
+        const placements = presetPlacement
+          ? { books: presetPlacement.start, everything: presetPlacement.end }
           : placeAuthorLinks(
               stage,
               booklistLink,
@@ -1396,13 +1420,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         if (selectedDesktopPreset) {
           stage.dataset.connectorMode = 'desktop-preset';
           stage.dataset.connectorPresetId = selectedDesktopPreset.id;
+        } else if (selectedTabletPreset) {
+          stage.dataset.connectorMode = 'tablet-preset';
+          stage.dataset.connectorPresetId = selectedTabletPreset.id;
         } else {
-          stage.dataset.connectorMode = isPortraitPhoneViewport(
-            measuredStageRect.width,
-            measuredStageHeight
-          )
-            ? 'portrait-phone'
-            : 'procedural';
+          stage.dataset.connectorMode = portraitPhoneViewport ? 'portrait-phone' : 'procedural';
           delete stage.dataset.connectorPresetId;
         }
 
