@@ -23,6 +23,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
+  import {
+    chooseDesktopConnectorPreset,
+    createDesktopConnectorCurveRandom,
+  } from '../lib/desktopConnectorPresets';
+
   (() => {
     const stateKey = '__varelismArtistPage';
     const state = (window[stateKey] ||= {
@@ -81,7 +86,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     ];
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-    const randomBetween = (min, max) => (max <= min ? min : min + Math.random() * (max - min));
+    const randomBetween = (min, max, random = Math.random) =>
+      max <= min ? min : min + random() * (max - min);
     const smootherstep = (value) => {
       const t = clamp(value, 0, 1);
 
@@ -90,8 +96,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const formatPathNumber = (value) => (Number.isFinite(value) ? String(value) : '0');
     const isPortraitPhoneViewport = (stageWidth, stageHeight) =>
       stageWidth <= 600 && stageHeight > stageWidth * 1.35;
-    const getRandomPortraitPhonePreset = () =>
-      PORTRAIT_PHONE_PRESETS[Math.floor(Math.random() * PORTRAIT_PHONE_PRESETS.length)];
+    const getRandomPortraitPhonePreset = (random = Math.random) =>
+      PORTRAIT_PHONE_PRESETS[Math.floor(random() * PORTRAIT_PHONE_PRESETS.length)];
     const getArtistCurveScale = ({ stageHeight = window.innerHeight, stageWidth }) => {
       const portraitPhoneViewport = isPortraitPhoneViewport(stageWidth, stageHeight);
       const mobileViewport = stageWidth <= 560 || portraitPhoneViewport;
@@ -294,9 +300,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       };
     };
 
-    const getRandomPointInRange = (range) => ({
-      x: randomBetween(range.minX, range.maxX),
-      y: randomBetween(range.minY, range.maxY),
+    const getRandomPointInRange = (range, random = Math.random) => ({
+      x: randomBetween(range.minX, range.maxX, random),
+      y: randomBetween(range.minY, range.maxY, random),
     });
 
     const getPresetPointInRange = (range, presetPoint) => ({
@@ -304,10 +310,35 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       y: range.minY + (range.maxY - range.minY) * presetPoint.y,
     });
 
+    function getDesktopPresetPlacement(stage, startLink, endLink, preset) {
+      const stageRect = stage.getBoundingClientRect();
+      const stageWidth = Math.max(stageRect.width, 1);
+      const stageHeight = Math.max(stageRect.height, 1);
+      const safeX = clamp(stageWidth * 0.08, 32, 96);
+      const safeY = clamp(stageHeight * 0.12, 48, 120);
+      const getPoint = (normalizedPoint, size) => {
+        const minimumX = Math.min(stageWidth / 2, safeX + size.width / 2);
+        const maximumX = Math.max(minimumX, stageWidth - safeX - size.width / 2);
+        const minimumY = Math.min(stageHeight / 2, safeY + size.height / 2);
+        const maximumY = Math.max(minimumY, stageHeight - safeY - size.height / 2);
+
+        return {
+          x: clamp(normalizedPoint.x * stageWidth, minimumX, maximumX),
+          y: clamp(normalizedPoint.y * stageHeight, minimumY, maximumY),
+        };
+      };
+
+      return {
+        start: getPoint(preset.start, getLinkSize(startLink)),
+        end: getPoint(preset.end, getLinkSize(endLink)),
+      };
+    }
+
     function getPortraitPhonePlacement({
       exhibitionsRange,
       everythingRange,
       preset,
+      random,
       stageHeight,
     }) {
       if (preset) {
@@ -322,7 +353,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const requestedMinimumVerticalDistance = viewportHeight * 0.62;
       const requestedMinimumPathDistance = viewportHeight * 0.66;
       const getPointAtRandomX = (range, y) => ({
-        x: randomBetween(range.minX, range.maxX),
+        x: randomBetween(range.minX, range.maxX, random),
         y,
       });
       const getCandidate = ({ lowerKey, lowerRange, upperKey, upperRange }) => {
@@ -335,10 +366,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         if (maxDistance < minDistance) return null;
 
-        const distance = randomBetween(minDistance, maxDistance);
+        const distance = randomBetween(minDistance, maxDistance, random);
         const upperMinY = Math.max(upperRange.minY, lowerRange.minY - distance);
         const upperMaxY = Math.min(upperRange.maxY, lowerRange.maxY - distance);
-        const upperY = randomBetween(upperMinY, upperMaxY);
+        const upperY = randomBetween(upperMinY, upperMaxY, random);
         const lowerY = upperY + distance;
         const upperPoint = getPointAtRandomX(upperRange, upperY);
         const lowerPoint = getPointAtRandomX(lowerRange, lowerY);
@@ -374,12 +405,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
 
       if (candidates.length) {
-        const { exhibitions, everything } = candidates[Math.floor(Math.random() * candidates.length)];
+        const { exhibitions, everything } = candidates[Math.floor(random() * candidates.length)];
 
         return { exhibitions, everything };
       }
 
-      const exhibitionsAreLower = Math.random() < 0.5;
+      const exhibitionsAreLower = random() < 0.5;
       const topRange = exhibitionsAreLower ? everythingRange : exhibitionsRange;
       const bottomRange = exhibitionsAreLower ? exhibitionsRange : everythingRange;
       const topY = topRange.minY;
@@ -391,7 +422,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       };
     }
 
-    function placeArtistLinks(stage, exhibitionsLink, everythingLink, portraitPhonePreset = null) {
+    function placeArtistLinks(
+      stage,
+      exhibitionsLink,
+      everythingLink,
+      portraitPhonePreset = null,
+      random = Math.random
+    ) {
       const stageRect = stage.getBoundingClientRect();
       const stageWidth = Math.max(stageRect.width, 1);
       const stageHeight = Math.max(stageRect.height, 1);
@@ -424,6 +461,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           exhibitionsRange,
           everythingRange,
           preset: portraitPhonePreset,
+          random,
           stageHeight,
         });
       }
@@ -442,8 +480,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const maximumVerticalDistance = curveScale.maximumVerticalDistance;
 
       for (let attempt = 0; attempt < 80; attempt += 1) {
-        const exhibitionsPoint = getRandomPointInRange(exhibitionsRange);
-        const everythingPoint = getRandomPointInRange(everythingRange);
+        const exhibitionsPoint = getRandomPointInRange(exhibitionsRange, random);
+        const everythingPoint = getRandomPointInRange(everythingRange, random);
         const horizontalDistance = Math.abs(everythingPoint.x - exhibitionsPoint.x);
         const verticalDistance = Math.abs(everythingPoint.y - exhibitionsPoint.y);
 
@@ -520,7 +558,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
 
-    function buildConnectorPath(endpointData, portraitPhonePreset = null) {
+    function buildConnectorPath(endpointData, portraitPhonePreset = null, random = Math.random) {
       const {
         endPoint,
         horizontalDirection,
@@ -573,7 +611,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       };
       const amplitudeFactor = portraitPhoneCurve && portraitPhonePreset
         ? portraitPhonePreset.amplitudeFactor
-        : randomBetween(curveScale.amplitudeFactorMin, curveScale.amplitudeFactorMax);
+        : randomBetween(curveScale.amplitudeFactorMin, curveScale.amplitudeFactorMax, random);
       const amplitude = clamp(
         distance * amplitudeFactor,
         curveScale.amplitudeMinimum,
@@ -581,18 +619,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       );
       const bendSign = portraitPhoneCurve && portraitPhonePreset
         ? portraitPhonePreset.bendSign
-        : Math.random() < 0.5 ? -1 : 1;
+        : random() < 0.5 ? -1 : 1;
       const bodySegmentCount =
         curveScale.bodySegmentCount || (distance > 620 ? 4 : distance > 240 ? 3 : 2);
       const bodyPoints = [{ ...bodyStart, curveT: 0 }];
       const portraitPhoneCycles = portraitPhoneCurve
-        ? portraitPhonePreset?.waveCycles ?? randomBetween(1.88, 2.08)
+        ? portraitPhonePreset?.waveCycles ?? randomBetween(1.88, 2.08, random)
         : 0;
       const portraitPhonePhase = portraitPhoneCurve
-        ? portraitPhonePreset?.phase ?? randomBetween(-0.1, 0.1)
+        ? portraitPhonePreset?.phase ?? randomBetween(-0.1, 0.1, random)
         : 0;
       const portraitPhoneWarp = portraitPhoneCurve
-        ? portraitPhonePreset?.warp ?? randomBetween(-0.032, 0.032)
+        ? portraitPhonePreset?.warp ?? randomBetween(-0.032, 0.032, random)
         : 0;
       const getPortraitPhoneSampleT = (index) => {
         const internalCount = Math.max(1, bodySegmentCount - 1);
@@ -673,7 +711,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       };
       const terminalTangentLength = clamp(
         distance *
-          randomBetween(curveScale.terminalTangentFactorMin, curveScale.terminalTangentFactorMax),
+          randomBetween(
+            curveScale.terminalTangentFactorMin,
+            curveScale.terminalTangentFactorMax,
+            random
+          ),
         curveScale.terminalTangentMinimum,
         curveScale.terminalTangentMaximum
       );
@@ -684,7 +726,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           ? 0
           : Math.min(curveScale.waveTJitter, curveScale.waveTJitterFactor / bodySegmentCount);
         const t = clamp(
-          baseT + randomBetween(-jitter, jitter),
+          baseT + randomBetween(-jitter, jitter, random),
           portraitPhoneCurve ? 0 : curveScale.waveTMin,
           portraitPhoneCurve ? 1 : curveScale.waveTMax
         );
@@ -695,11 +737,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           ? 0
           : amplitude *
             waveEnvelope *
-            randomBetween(curveScale.waveMagnitudeMin, curveScale.waveMagnitudeMax);
+            randomBetween(curveScale.waveMagnitudeMin, curveScale.waveMagnitudeMax, random);
         const wavelengthDrift = portraitPhoneCurve
           ? 0
           : distance *
-            randomBetween(-curveScale.wavelengthDriftFactor, curveScale.wavelengthDriftFactor) *
+            randomBetween(
+              -curveScale.wavelengthDriftFactor,
+              curveScale.wavelengthDriftFactor,
+              random
+            ) *
             waveEnvelope;
 
         if (portraitPhoneCurve) {
@@ -823,7 +869,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           }
         }
 
-        const tension = randomBetween(curveScale.tensionMin, curveScale.tensionMax);
+        const tension = randomBetween(curveScale.tensionMin, curveScale.tensionMax, random);
 
         return {
           x: (nextPoint.x - previousPoint.x) * tension,
@@ -980,6 +1026,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       let returnBlankComplete = !shouldForceReplay;
       let preloaderComplete = returnBlankComplete && !isRouteEntering() && !hasActivePreloaderSurface();
       const portraitPhonePreset = getRandomPortraitPhonePreset();
+      let desktopConnectorPreset = null;
+      const getDesktopConnectorPreset = () => {
+        desktopConnectorPreset ||= chooseDesktopConnectorPreset();
+        return desktopConnectorPreset;
+      };
       let sequenceComplete = false;
       let ignoreTouchResizeUntil = 0;
 
@@ -1183,6 +1234,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         cleanupAnimation = () => {};
         clearPendingWork();
         resetRevealClasses();
+        delete stage.dataset.connectorMode;
+        delete stage.dataset.connectorPresetId;
         clearInlinePositions();
         connector.removeAttribute('height');
         connector.removeAttribute('viewBox');
@@ -1316,8 +1369,42 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const measuredStageRect = stage.getBoundingClientRect();
         const measuredStageHeight = Math.max(measuredStageRect.height, 1);
         stage.style.setProperty('--artist-stage-height', `${measuredStageHeight}px`);
+        const selectedDesktopPreset = isMobileArtistViewport()
+          ? null
+          : getDesktopConnectorPreset();
+        const layoutRandom = selectedDesktopPreset
+          ? createDesktopConnectorCurveRandom(selectedDesktopPreset)
+          : Math.random;
+        const desktopPlacement = selectedDesktopPreset
+          ? getDesktopPresetPlacement(
+              stage,
+              exhibitionsLink,
+              everythingLink,
+              selectedDesktopPreset
+            )
+          : null;
+        const placements = desktopPlacement
+          ? { exhibitions: desktopPlacement.start, everything: desktopPlacement.end }
+          : placeArtistLinks(
+              stage,
+              exhibitionsLink,
+              everythingLink,
+              portraitPhonePreset,
+              layoutRandom
+            );
 
-        const placements = placeArtistLinks(stage, exhibitionsLink, everythingLink, portraitPhonePreset);
+        if (selectedDesktopPreset) {
+          stage.dataset.connectorMode = 'desktop-preset';
+          stage.dataset.connectorPresetId = selectedDesktopPreset.id;
+        } else {
+          stage.dataset.connectorMode = isPortraitPhoneViewport(
+            measuredStageRect.width,
+            measuredStageHeight
+          )
+            ? 'portrait-phone'
+            : 'procedural';
+          delete stage.dataset.connectorPresetId;
+        }
 
         exhibitionsLink.style.setProperty('--artist-link-x', `${placements.exhibitions.x}px`);
         exhibitionsLink.style.setProperty('--artist-link-y', `${placements.exhibitions.y}px`);
@@ -1333,7 +1420,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const stageWidth = Math.max(stageRect.width, 1);
         const stageHeight = Math.max(stageRect.height, 1);
         const endpointData = computeConnectorEndpoints(exhibitionsLink, everythingLink, stageRect);
-        const pathData = buildConnectorPath(endpointData, portraitPhonePreset);
+        const pathData = buildConnectorPath(endpointData, portraitPhonePreset, layoutRandom);
 
         connector.setAttribute('height', `${stageHeight}`);
         connector.setAttribute('viewBox', `0 0 ${stageWidth} ${stageHeight}`);
