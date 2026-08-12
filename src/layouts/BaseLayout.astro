@@ -133,9 +133,10 @@ const globalPreloaderPaths = [
     {indexable && <link rel="canonical" href={canonicalUrl} />}
     {indexable && <meta property="og:url" content={canonicalUrl} />}
     {!indexable && <meta name="robots" content="noindex" />}
-    <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg?v=6" />
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=6" />
-    <link rel="shortcut icon" href="/favicon.ico?v=6" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     {
       shouldPreloadLightFont && (
         <link

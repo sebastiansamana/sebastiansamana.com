@@ -6,15 +6,20 @@ import sharp from 'sharp';
 const root = process.cwd();
 const sourcePath = path.join(root, 'public', 'favicon.svg');
 const icoPath = path.join(root, 'public', 'favicon.ico');
-const pngPath = path.join(root, 'public', 'favicon-96x96.png');
 const icoSizes = [16, 32, 48, 64, 128, 256];
+const pngOutputs = new Map([
+  [96, path.join(root, 'public', 'favicon-96x96.png')],
+  [180, path.join(root, 'public', 'apple-touch-icon.png')],
+  [192, path.join(root, 'public', 'favicon-192x192.png')],
+  [512, path.join(root, 'public', 'favicon-512x512.png')],
+]);
 
 const source = await readFile(sourcePath);
 const metadata = await sharp(source).metadata();
 assert.equal(metadata.width, metadata.height, 'The favicon source must be square');
 
 const renderPng = (size) =>
-  sharp(source, { density: 192 })
+  sharp(source, { density: 384 })
     .resize(size, size, {
       fit: 'contain',
       kernel: sharp.kernel.lanczos3,
@@ -27,7 +32,9 @@ const renderPng = (size) =>
     .toBuffer();
 
 const pngBuffers = await Promise.all(icoSizes.map(renderPng));
-const png96 = await renderPng(96);
+const standalonePngs = await Promise.all(
+  [...pngOutputs].map(async ([size, outputPath]) => [outputPath, await renderPng(size)]),
+);
 const directorySize = 6 + icoSizes.length * 16;
 const directory = Buffer.alloc(directorySize);
 
@@ -53,9 +60,11 @@ pngBuffers.forEach((png, index) => {
 
 await Promise.all([
   writeFile(icoPath, Buffer.concat([directory, ...pngBuffers])),
-  writeFile(pngPath, png96),
+  ...standalonePngs.map(([outputPath, png]) => writeFile(outputPath, png)),
 ]);
 
 console.log(
-  `Generated ${path.relative(root, icoPath)} (${icoSizes.join(', ')}px) and ${path.relative(root, pngPath)}.`,
+  `Generated ${path.relative(root, icoPath)} (${icoSizes.join(', ')}px) and ${standalonePngs
+    .map(([outputPath]) => path.relative(root, outputPath))
+    .join(', ')}.`,
 );
