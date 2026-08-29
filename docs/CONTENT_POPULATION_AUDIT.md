@@ -346,7 +346,9 @@ Validate any custom slug against `^[a-z0-9]+(?:-[a-z0-9]+)*$` and reject path se
 
 For every public artwork image and hover image, `npm run generate:artwork-thumbnails` creates uncropped WebP derivatives at 320, 336, 384, 480, 640, and 960 pixels wide under `public/images/artworks/archive/`. It also writes a manifest containing source and derivative hashes. The committed derivatives are archive-only; the supplied originals remain unchanged and continue to serve detail pages. `npm run build` runs the manifest check first and fails when a public source or required derivative is missing or stale.
 
-Only the English and Spanish Painter archive routes select the matching Latin/Spanish subsets under `public/fonts/painter-archive/` and the responsive logo/basket images under `public/images/painter-archive/`. They preserve the same font outlines, weights, image states, dimensions, and interaction behavior; the full font family remains the glyph fallback. Other routes retain their existing shell assets.
+The English and Spanish Painter archive routes and Architect landing routes select the matching Latin/Spanish subsets under `public/fonts/painter-archive/` and the responsive logo/basket images under `public/images/painter-archive/`. They preserve the same font outlines, weights, image states, dimensions, and interaction behavior; the full font family remains the glyph fallback. Other routes retain their existing shell assets.
+
+The two Architect landing routes load `public/models/Processed_Rock_Model_web.glb`, a Meshopt-compressed web derivative of `Processed_Rock_Model_optimized.glb`. The source models remain unchanged. The derivative preserves the scene, node, and material structure with near-identical bounds; the routes keep the same camera fitting, controls, reveal timing, navigation, and continuous orbit while reducing transfer and rendering work. Routine content population must not regenerate the derivative or change either route's model reference.
 
 ### English/Spanish behavior
 

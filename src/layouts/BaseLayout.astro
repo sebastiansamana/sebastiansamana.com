@@ -96,43 +96,46 @@ const getLanguageSwitchHref = (pathname: string) => {
 const normalizedPath = normalizeRoutePath(Astro.url.pathname);
 const canonicalPath = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
 const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href;
+const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '');
 const isSpanishRoute = normalizedPath === '/esp' || normalizedPath.startsWith('/esp/');
 const isHomeRoute = normalizedPath === '/' || normalizedPath === '/esp';
 const isArchitectLandingRoute = normalizedPath === '/architect' || normalizedPath === '/esp/arquitecto';
 const isPainterArchiveRoute =
   normalizedPath === '/painter/everything' || normalizedPath === '/esp/pintor/todo';
+const isLightweightShellRoute = isPainterArchiveRoute || isArchitectLandingRoute;
+const architectModelHref = `${basePath}/models/Processed_Rock_Model_web.glb`;
 const shouldPreloadLightFont = !isHomeRoute && !isArchitectLandingRoute;
-const lightFontHref = isPainterArchiveRoute
+const lightFontHref = isLightweightShellRoute
   ? '/fonts/painter-archive/SF-Pro-Display-Light-latin.woff2'
   : '/fonts/SF-Pro-Display-Light.woff2';
-const ultralightFontHref = isPainterArchiveRoute
+const ultralightFontHref = isLightweightShellRoute
   ? '/fonts/painter-archive/SF-Pro-Display-Ultralight-latin.woff2'
   : '/fonts/SF-Pro-Display-Ultralight.woff2';
-const thinFontHref = isPainterArchiveRoute
+const thinFontHref = isLightweightShellRoute
   ? '/fonts/painter-archive/SF-Pro-Display-Thin-latin.woff2'
   : '/fonts/SF-Pro-Display-Thin.woff2';
-const logoBaseSrc = isPainterArchiveRoute
+const logoBaseSrc = isLightweightShellRoute
   ? '/images/painter-archive/Samana_Logo_Text-240.png'
   : '/images/Samana_Logo_Text.png';
-const logoHoverSrc = isPainterArchiveRoute
+const logoHoverSrc = isLightweightShellRoute
   ? '/images/painter-archive/Samana_Logo_Text_Cursor-240.png'
   : '/images/Samana_Logo_Text_Cursor.png';
-const logoBaseSrcset = isPainterArchiveRoute
+const logoBaseSrcset = isLightweightShellRoute
   ? '/images/painter-archive/Samana_Logo_Text-160.png 160w, /images/painter-archive/Samana_Logo_Text-240.png 240w, /images/painter-archive/Samana_Logo_Text-320.png 320w'
   : undefined;
-const logoHoverSrcset = isPainterArchiveRoute
+const logoHoverSrcset = isLightweightShellRoute
   ? '/images/painter-archive/Samana_Logo_Text_Cursor-160.png 160w, /images/painter-archive/Samana_Logo_Text_Cursor-240.png 240w, /images/painter-archive/Samana_Logo_Text_Cursor-320.png 320w'
   : undefined;
-const basketBaseSrc = isPainterArchiveRoute
+const basketBaseSrc = isLightweightShellRoute
   ? '/images/painter-archive/Basket-48.png'
   : '/images/Basket.png';
-const basketHoverSrc = isPainterArchiveRoute
+const basketHoverSrc = isLightweightShellRoute
   ? '/images/painter-archive/Basket_Cursor-48.png'
   : '/images/Basket_Cursor.png';
-const basketBaseSrcset = isPainterArchiveRoute
+const basketBaseSrcset = isLightweightShellRoute
   ? '/images/painter-archive/Basket-32.png 32w, /images/painter-archive/Basket-48.png 48w, /images/painter-archive/Basket-72.png 72w'
   : undefined;
-const basketHoverSrcset = isPainterArchiveRoute
+const basketHoverSrcset = isLightweightShellRoute
   ? '/images/painter-archive/Basket_Cursor-32.png 32w, /images/painter-archive/Basket_Cursor-48.png 48w, /images/painter-archive/Basket_Cursor-72.png 72w'
   : undefined;
 const siteNavLabel = isSpanishRoute ? 'Navegación del sitio' : 'Site navigation';
@@ -161,6 +164,7 @@ const globalPreloaderPaths = [
   lang={isSpanishRoute ? 'es' : 'en'}
   data-varelism-home-route={isHomeRoute ? '' : undefined}
   data-painter-archive-route={isPainterArchiveRoute ? '' : undefined}
+  data-lightweight-shell-route={isLightweightShellRoute ? '' : undefined}
 >
   <head>
     <meta charset="UTF-8" />
@@ -196,7 +200,7 @@ const globalPreloaderPaths = [
         <link
           rel="preload"
           as="fetch"
-          href="/models/Processed_Rock_Model_optimized.glb"
+          href={architectModelHref}
           type="model/gltf-binary"
           crossorigin
           fetchpriority="high"
@@ -1046,19 +1050,21 @@ const globalPreloaderPaths = [
               class="image-swap__base"
               src={logoBaseSrc}
               srcset={logoBaseSrcset}
-              sizes={isPainterArchiveRoute ? '(max-width: 560px) 85px, 150px' : undefined}
+              sizes={isLightweightShellRoute ? '(max-width: 560px) 85px, 150px' : undefined}
               alt="Sebastian Samana"
               width="1095"
               height="398"
+              fetchpriority={isArchitectLandingRoute ? 'high' : undefined}
             />
             <img
               class="image-swap__hover"
               src={logoHoverSrc}
               srcset={logoHoverSrcset}
-              sizes={isPainterArchiveRoute ? '(max-width: 560px) 85px, 150px' : undefined}
+              sizes={isLightweightShellRoute ? '(max-width: 560px) 85px, 150px' : undefined}
               alt=""
               width="1095"
               height="398"
+              fetchpriority={isArchitectLandingRoute ? 'low' : undefined}
               aria-hidden="true"
             />
           </span>
@@ -1073,22 +1079,22 @@ const globalPreloaderPaths = [
                 class="image-swap__base"
                 src={basketBaseSrc}
                 srcset={basketBaseSrcset}
-                sizes={isPainterArchiveRoute ? '23px' : undefined}
+                sizes={isLightweightShellRoute ? '23px' : undefined}
                 alt=""
                 width="370"
                 height="368"
-                fetchpriority={isPainterArchiveRoute ? 'low' : undefined}
+                fetchpriority={isLightweightShellRoute ? 'low' : undefined}
                 aria-hidden="true"
               />
               <img
                 class="image-swap__hover"
                 src={basketHoverSrc}
                 srcset={basketHoverSrcset}
-                sizes={isPainterArchiveRoute ? '23px' : undefined}
+                sizes={isLightweightShellRoute ? '23px' : undefined}
                 alt=""
                 width="370"
                 height="368"
-                fetchpriority={isPainterArchiveRoute ? 'low' : undefined}
+                fetchpriority={isLightweightShellRoute ? 'low' : undefined}
                 aria-hidden="true"
               />
             </span>
