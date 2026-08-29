@@ -16,7 +16,7 @@ export const getArtworkArchiveImageSet = (source: string) => {
 
   return {
     sizes: artworkArchiveImageSizes,
-    src: getVariant(640),
+    src: getVariant(336),
     srcset: artworkArchiveWidths.map((width) => `${getVariant(width)} ${width}w`).join(', '),
   };
 };
