@@ -99,7 +99,42 @@ const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href
 const isSpanishRoute = normalizedPath === '/esp' || normalizedPath.startsWith('/esp/');
 const isHomeRoute = normalizedPath === '/' || normalizedPath === '/esp';
 const isArchitectLandingRoute = normalizedPath === '/architect' || normalizedPath === '/esp/arquitecto';
+const isPainterArchiveRoute =
+  normalizedPath === '/painter/everything' || normalizedPath === '/esp/pintor/todo';
 const shouldPreloadLightFont = !isHomeRoute && !isArchitectLandingRoute;
+const lightFontHref = isPainterArchiveRoute
+  ? '/fonts/painter-archive/SF-Pro-Display-Light-latin.woff2'
+  : '/fonts/SF-Pro-Display-Light.woff2';
+const ultralightFontHref = isPainterArchiveRoute
+  ? '/fonts/painter-archive/SF-Pro-Display-Ultralight-latin.woff2'
+  : '/fonts/SF-Pro-Display-Ultralight.woff2';
+const thinFontHref = isPainterArchiveRoute
+  ? '/fonts/painter-archive/SF-Pro-Display-Thin-latin.woff2'
+  : '/fonts/SF-Pro-Display-Thin.woff2';
+const logoBaseSrc = isPainterArchiveRoute
+  ? '/images/painter-archive/Samana_Logo_Text-240.png'
+  : '/images/Samana_Logo_Text.png';
+const logoHoverSrc = isPainterArchiveRoute
+  ? '/images/painter-archive/Samana_Logo_Text_Cursor-240.png'
+  : '/images/Samana_Logo_Text_Cursor.png';
+const logoBaseSrcset = isPainterArchiveRoute
+  ? '/images/painter-archive/Samana_Logo_Text-160.png 160w, /images/painter-archive/Samana_Logo_Text-240.png 240w, /images/painter-archive/Samana_Logo_Text-320.png 320w'
+  : undefined;
+const logoHoverSrcset = isPainterArchiveRoute
+  ? '/images/painter-archive/Samana_Logo_Text_Cursor-160.png 160w, /images/painter-archive/Samana_Logo_Text_Cursor-240.png 240w, /images/painter-archive/Samana_Logo_Text_Cursor-320.png 320w'
+  : undefined;
+const basketBaseSrc = isPainterArchiveRoute
+  ? '/images/painter-archive/Basket-48.png'
+  : '/images/Basket.png';
+const basketHoverSrc = isPainterArchiveRoute
+  ? '/images/painter-archive/Basket_Cursor-48.png'
+  : '/images/Basket_Cursor.png';
+const basketBaseSrcset = isPainterArchiveRoute
+  ? '/images/painter-archive/Basket-32.png 32w, /images/painter-archive/Basket-48.png 48w, /images/painter-archive/Basket-72.png 72w'
+  : undefined;
+const basketHoverSrcset = isPainterArchiveRoute
+  ? '/images/painter-archive/Basket_Cursor-32.png 32w, /images/painter-archive/Basket_Cursor-48.png 48w, /images/painter-archive/Basket_Cursor-72.png 72w'
+  : undefined;
 const siteNavLabel = isSpanishRoute ? 'Navegación del sitio' : 'Site navigation';
 const primaryNavLabel = isSpanishRoute ? 'Navegación principal' : 'Primary navigation';
 const homeHref = isSpanishRoute ? '/esp' : '/';
@@ -125,6 +160,7 @@ const globalPreloaderPaths = [
 <html
   lang={isSpanishRoute ? 'es' : 'en'}
   data-varelism-home-route={isHomeRoute ? '' : undefined}
+  data-painter-archive-route={isPainterArchiveRoute ? '' : undefined}
 >
   <head>
     <meta charset="UTF-8" />
@@ -142,7 +178,7 @@ const globalPreloaderPaths = [
         <link
           rel="preload"
           as="font"
-          href="/fonts/SF-Pro-Display-Light.woff2"
+          href={lightFontHref}
           type="font/woff2"
           crossorigin
         />
@@ -151,7 +187,7 @@ const globalPreloaderPaths = [
     <link
       rel="preload"
       as="font"
-      href="/fonts/SF-Pro-Display-Ultralight.woff2"
+      href={ultralightFontHref}
       type="font/woff2"
       crossorigin
     />
@@ -170,7 +206,7 @@ const globalPreloaderPaths = [
     <link
       rel="preload"
       as="font"
-      href="/fonts/SF-Pro-Display-Thin.woff2"
+      href={thinFontHref}
       type="font/woff2"
       crossorigin
     />
@@ -1008,14 +1044,18 @@ const globalPreloaderPaths = [
           <span class="image-swap">
             <img
               class="image-swap__base"
-              src="/images/Samana_Logo_Text.png"
+              src={logoBaseSrc}
+              srcset={logoBaseSrcset}
+              sizes={isPainterArchiveRoute ? '(max-width: 560px) 85px, 150px' : undefined}
               alt="Sebastian Samana"
               width="1095"
               height="398"
             />
             <img
               class="image-swap__hover"
-              src="/images/Samana_Logo_Text_Cursor.png"
+              src={logoHoverSrc}
+              srcset={logoHoverSrcset}
+              sizes={isPainterArchiveRoute ? '(max-width: 560px) 85px, 150px' : undefined}
               alt=""
               width="1095"
               height="398"
@@ -1031,18 +1071,24 @@ const globalPreloaderPaths = [
             <span class="image-swap">
               <img
                 class="image-swap__base"
-                src="/images/Basket.png"
+                src={basketBaseSrc}
+                srcset={basketBaseSrcset}
+                sizes={isPainterArchiveRoute ? '23px' : undefined}
                 alt=""
                 width="370"
                 height="368"
+                fetchpriority={isPainterArchiveRoute ? 'low' : undefined}
                 aria-hidden="true"
               />
               <img
                 class="image-swap__hover"
-                src="/images/Basket_Cursor.png"
+                src={basketHoverSrc}
+                srcset={basketHoverSrcset}
+                sizes={isPainterArchiveRoute ? '23px' : undefined}
                 alt=""
                 width="370"
                 height="368"
+                fetchpriority={isPainterArchiveRoute ? 'low' : undefined}
                 aria-hidden="true"
               />
             </span>

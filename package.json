@@ -6,6 +6,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "generate:favicon": "node scripts/generate-favicon.mjs",
+    "generate:artwork-thumbnails": "node scripts/generate-artwork-thumbnails.mjs",
+    "check:artwork-thumbnails": "node scripts/generate-artwork-thumbnails.mjs --check",
+    "prebuild": "npm run check:artwork-thumbnails",
     "test:favicon": "node tests/favicon-assets.mjs",
     "new-artwork": "node scripts/new-artwork.mjs",
     "test:home-mobile": "npm run build && node tests/home-cold-mobile-tap.mjs",
@@ -29,6 +32,7 @@
   },
   "devDependencies": {
     "@types/imagesloaded": "^4.1.7",
-    "@types/masonry-layout": "^4.2.8"
+    "@types/masonry-layout": "^4.2.8",
+    "sharp": "^0.34.5"
   }
 }

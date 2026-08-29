@@ -3,6 +3,7 @@
 - Audited: 11 July 2026
 - Repository state audited: `fceb101` on `main`
 - Route naming updated: 13 July 2026 (`Writer` / `Escritor` and `Painter` / `Pintor`; internal `authorItems` and `artist` identifiers retained).
+- Painter archive responsive-asset pipeline updated: 29 August 2026.
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -297,6 +298,7 @@ Do not ask for unsupported IDs, pair keys, original language, SEO fields, canoni
 - Records: `src/data/artworks/*.md`
 - Assets: `public/images/artworks/`
 - Generator: `scripts/new-artwork.mjs` via `npm run new-artwork`
+- Archive-thumbnail generator: `scripts/generate-artwork-thumbnails.mjs` via `npm run generate:artwork-thumbnails`
 - Filtering, sorting, metadata: `src/lib/artworks.ts`
 - Archive component: `src/components/ArtworkArchive.astro`
 - Archive routes: `src/pages/painter/everything.astro` and `src/pages/esp/pintor/todo.astro`
@@ -320,8 +322,8 @@ The repository rule is strict: create/update artwork Markdown records only; neve
 | `dimensions` | optional string | shared | index/detail physical dimensions; never derive from pixels |
 | `location` | optional string | shared | stored but currently not rendered, sorted, included in enquiry, or used for SEO |
 | `description` | optional plain string | shared | detail caption paragraph and meta description; title is SEO fallback |
-| `image` | optional path | shared | same original image in grid and detail |
-| `hoverImage` | optional path | shared | separate red image used only in grid hover/focus/touch |
+| `image` | optional path | shared | original detail image and source for generated responsive archive thumbnails |
+| `hoverImage` | optional path | shared | original red source for generated responsive grid hover/focus/touch thumbnails |
 | `imageWidth` / `imageHeight` | optional integers | derived from supplied main image | all three `image` fields must be truthy for image markup to render |
 | `imageAlt` | optional string | shared | falls back to title |
 
@@ -341,6 +343,10 @@ The generator:
 - does not validate a user-supplied custom slug.
 
 Validate any custom slug against `^[a-z0-9]+(?:-[a-z0-9]+)*$` and reject path separators or `..`. Existing assets generally use `<slug>.jpg` and optional `<slug>-red.webp`. Preserve the existing `retatro-abuelo.*` typo but do not copy it as a convention.
+
+For every public artwork image and hover image, `npm run generate:artwork-thumbnails` creates uncropped WebP derivatives at 320, 336, 384, 480, 640, and 960 pixels wide under `public/images/artworks/archive/`. It also writes a manifest containing source and derivative hashes. The committed derivatives are archive-only; the supplied originals remain unchanged and continue to serve detail pages. `npm run build` runs the manifest check first and fails when a public source or required derivative is missing or stale.
+
+Only the English and Spanish Painter archive routes select the matching Latin/Spanish subsets under `public/fonts/painter-archive/` and the responsive logo/basket images under `public/images/painter-archive/`. They preserve the same font outlines, weights, image states, dimensions, and interaction behavior; the full font family remains the glyph fallback. Other routes retain their existing shell assets.
 
 ### English/Spanish behavior
 
@@ -383,7 +389,7 @@ Grid implementation:
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
-The main original is downloaded for both grid and detail; there is no separate normal thumbnail or optimization pipeline. `hoverImage` is layered over it and uses the main image’s width/height attributes, so it may be downscaled but must match the main image aspect ratio. Without it, title/meta hover still works but no red image appears.
+The grid uses generated responsive WebP derivatives selected through `srcset` and `sizes`; the detail continues to use the unchanged original. Up to the first five small base derivatives load eagerly because they compose the initial mobile viewport; the first and final candidates within that bounded group receive high priority. Their small hover derivatives also load eagerly at low priority so hover/focus/touch behavior remains immediate. Any later base and hover derivatives retain native lazy loading. `hoverImage` is layered over the base and uses the main image’s width/height attributes, so it must match the main image aspect ratio. Without it, title/meta hover still works but no red image appears.
 
 Hover/focus behavior:
 
@@ -408,7 +414,7 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 1. The glob loader validates it and derives ID `yozo`.
 2. `status: public` passes the filter.
 3. September 2025 sort fields place it first in the audited public set.
-4. Grid uses `yozo.jpg`, `yozo-red.webp`, title, and archive label `2025`.
+4. Grid uses responsive derivatives generated from `yozo.jpg` and `yozo-red.webp`, plus the title and archive label `2025`; detail uses the originals.
 5. Index shows `2025 / Pastels / 420 mm x 297 mm`.
 6. Both detail route generators use ID `yozo`.
 7. English detail displays `September 2025`; Spanish displays `septiembre 2025` and `Pasteles`.
@@ -442,13 +448,14 @@ If a new medium has no current Spanish mapping, disclose that it will remain unc
 3. Decode optional red hover image and compare aspect ratio. Do not generate one without explicit instruction.
 4. Check record, asset, case-sensitive filename, slug, and route collisions.
 5. Run `npm run new-artwork` or create the same schema manually. Use one shared record only. Keep it draft until approval.
-6. Copy supplied assets to `public/images/artworks/`. Add `hoverImage` manually because the generator omits it.
-7. Leave every unknown optional field blank. Do not create unsupported translation/gallery/SEO fields.
-8. Validate the sort tuple and verify it does not change existing relative order unexpectedly.
-9. Check both grid and index, both detail routes, language switch, metadata omission, enquiry, and asset URLs.
-10. Check 1440, 1024, near 700, and 390px plus fine-pointer hover, keyboard focus, and coarse-pointer press.
-11. Run the common completion gate.
-12. Review `dist`: public needs both details and both rows; draft needs neither detail/row. Regardless of status, remember any copied public asset is deployable.
+6. Copy supplied assets to `public/images/artworks/`. Add `hoverImage` manually because the record generator omits it.
+7. For a public record, run `npm run generate:artwork-thumbnails` and commit its generated archive derivatives plus the updated manifest. Do not replace or recompress the supplied originals.
+8. Leave every unknown optional field blank. Do not create unsupported translation/gallery/SEO fields.
+9. Validate the sort tuple and verify it does not change existing relative order unexpectedly.
+10. Check both grid and index, both detail routes, language switch, metadata omission, enquiry, and asset URLs. Confirm archives request responsive WebP derivatives while details still request originals.
+11. Check 1440, 1024, near 700, and 390px plus fine-pointer hover, keyboard focus, and coarse-pointer press.
+12. Run the common completion gate.
+13. Review `dist`: public needs both details and both rows; draft needs neither detail/row. Regardless of status, remember any copied public asset is deployable.
 
 ## 6. Architect portfolio system
 

@@ -1,6 +1,7 @@
 ---
 import type { Artwork } from '../lib/artworks';
 import { getArtworkDateLabel, getArtworkMetadata } from '../lib/artworks';
+import { getArtworkArchiveImageSet } from '../lib/artworkArchiveImages';
 
 interface Props {
   artworks: Artwork[];
@@ -25,6 +26,7 @@ const {
 } = Astro.props;
 const normalizedDetailBasePath = detailBasePath.endsWith('/') ? detailBasePath : `${detailBasePath}/`;
 const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwork.id}/`;
+const initialArtworkCandidateCount = Math.min(5, artworks.length);
 ---
 
 <section class="artwork-archive" data-artwork-archive data-archive-view="grid" aria-label={labels.title}>
@@ -46,47 +48,67 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
           <div class="artwork-column-sizer" aria-hidden="true"></div>
           <div class="artwork-gutter-sizer" aria-hidden="true"></div>
           {
-            artworks.map((artwork) => (
-              <article class="artwork-card">
-                <a href={getArtworkHref(artwork)}>
-                  {
-                    artwork.data.image && artwork.data.imageWidth && artwork.data.imageHeight && (
-                      <span class="artwork-card__image-stack" data-card-hover-hit>
-                        <img
-                          class="artwork-card__image artwork-card__image--base"
-                          src={artwork.data.image}
-                          alt={artwork.data.imageAlt ?? artwork.data.title}
-                          width={artwork.data.imageWidth}
-                          height={artwork.data.imageHeight}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        {
-                          artwork.data.hoverImage && (
-                            <img
-                              class="artwork-card__image artwork-card__image--hover"
-                              src={artwork.data.hoverImage}
-                              alt=""
-                              width={artwork.data.imageWidth}
-                              height={artwork.data.imageHeight}
-                              loading="eager"
-                              decoding="async"
-                              aria-hidden="true"
-                            />
-                          )
-                        }
-                      </span>
-                    )
-                  }
-                  <span class="artwork-card__title" data-card-hover-hit>{artwork.data.title}</span>
-                  {
-                    getArtworkDateLabel(artwork) && (
-                      <span class="artwork-card__meta" data-card-hover-hit>{getArtworkDateLabel(artwork)}</span>
-                    )
-                  }
-                </a>
-              </article>
-            ))
+            artworks.map((artwork, index) => {
+              const isInitialArtworkCandidate = index < initialArtworkCandidateCount;
+              const isPriorityArtworkCandidate =
+                index === 0 || index === initialArtworkCandidateCount - 1;
+              const baseImage = artwork.data.image
+                ? getArtworkArchiveImageSet(artwork.data.image)
+                : undefined;
+              const hoverImage = artwork.data.hoverImage
+                ? getArtworkArchiveImageSet(artwork.data.hoverImage)
+                : undefined;
+
+              return (
+                <article class="artwork-card">
+                  <a href={getArtworkHref(artwork)}>
+                    {
+                      baseImage && artwork.data.imageWidth && artwork.data.imageHeight && (
+                        <span class="artwork-card__image-stack" data-card-hover-hit>
+                          <img
+                            class="artwork-card__image artwork-card__image--base"
+                            src={baseImage.src}
+                            srcset={baseImage.srcset}
+                            sizes={baseImage.sizes}
+                            alt={artwork.data.imageAlt ?? artwork.data.title}
+                            width={artwork.data.imageWidth}
+                            height={artwork.data.imageHeight}
+                            loading={isInitialArtworkCandidate ? 'eager' : 'lazy'}
+                            fetchpriority={isPriorityArtworkCandidate ? 'high' : 'auto'}
+                            decoding="async"
+                          />
+                          {
+                            hoverImage && (
+                              <img
+                                class="artwork-card__image artwork-card__image--hover"
+                                src={hoverImage.src}
+                                srcset={hoverImage.srcset}
+                                sizes={hoverImage.sizes}
+                                alt=""
+                                width={artwork.data.imageWidth}
+                                height={artwork.data.imageHeight}
+                                loading={isInitialArtworkCandidate ? 'eager' : 'lazy'}
+                                fetchpriority="low"
+                                decoding="async"
+                                aria-hidden="true"
+                              />
+                            )
+                          }
+                        </span>
+                      )
+                    }
+                    <span class="artwork-card__title" data-card-hover-hit>{artwork.data.title}</span>
+                    {
+                      getArtworkDateLabel(artwork) && (
+                        <span class="artwork-card__meta" data-card-hover-hit>
+                          {getArtworkDateLabel(artwork)}
+                        </span>
+                      )
+                    }
+                  </a>
+                </article>
+              );
+            })
           }
         </div>
 
@@ -534,8 +556,7 @@ const getArtworkHref = (artwork: Artwork) => `${normalizedDetailBasePath}${artwo
   .artwork-card__title,
   .artwork-card__meta {
     display: block;
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-sans);
     letter-spacing: 0;
     line-height: 1.2;
     max-width: 100%;

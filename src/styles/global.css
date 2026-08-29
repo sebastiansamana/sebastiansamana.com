@@ -45,6 +45,35 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'SF Pro Display Painter Archive';
+  font-style: normal;
+  font-weight: 200;
+  src: url('/fonts/painter-archive/SF-Pro-Display-Thin-latin.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display Painter Archive';
+  font-style: normal;
+  font-weight: 300;
+  src: url('/fonts/painter-archive/SF-Pro-Display-Ultralight-latin.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display Painter Archive';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/painter-archive/SF-Pro-Display-Light-latin.woff2') format('woff2');
+  font-display: swap;
+}
+
+html[data-painter-archive-route] {
+  --font-sans: 'SF Pro Display Painter Archive', 'SF Pro Display', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
