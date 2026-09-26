@@ -62,7 +62,18 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   <section class="author-item-body">
     {
       locale === 'es'
-        ? spanishParagraphs.map((paragraph) => <p>{paragraph}</p>)
+        ? spanishParagraphs.map((paragraph) => (
+            <p>
+              {
+                paragraph.split(/\r?\n/).map((line, index) => (
+                  <>
+                    {index > 0 && <br />}
+                    {line}
+                  </>
+                ))
+              }
+            </p>
+          ))
         : <Content />
     }
   </section>

@@ -199,7 +199,7 @@ Optional strings and integers use the blank preprocessors at `src/content.config
 | `wordCount` | optional display string | English | manual, e.g. `436 words`; never runtime-derived |
 | `spanishWordCount` | optional display string | Spanish | manual, e.g. `467 palabras` |
 | Markdown after frontmatter | technically optional | English | rendered with Astro Markdown |
-| `spanishBody` | technically optional string | Spanish | split on two or more newlines; each piece becomes a plain `<p>` |
+| `spanishBody` | technically optional string | Spanish | split on two or more newlines into `<p>` elements; single newlines inside each piece render as `<br>` line breaks |
 
 Operationally, a meaningful public item requires a unique slug, both exact titles, and both final bodies. If the Spanish body is not ready, keep the shared record draft: a public record with blank `spanishBody` still generates an empty Spanish detail page.
 
@@ -208,7 +208,7 @@ Fields that do not exist: internal frontmatter ID, pair ID, original language, p
 ### English and Spanish formatting
 
 - The English body is Markdown-rendered (`AuthorItemDetail.astro:16,62-67`). Normal Markdown links can hold external references, but unusual headings, lists, images, code, or embeds require visual review because the component specifically styles paragraphs only.
-- `spanishBody` is not Markdown. Use a YAML literal block (`|-`) with blank lines for multiple paragraphs. Markdown/HTML text will be escaped rather than rendered.
+- `spanishBody` is not Markdown. Use a YAML literal block (`|-`) with single newlines for line breaks and blank lines for multiple paragraphs. Markdown/HTML text will be escaped rather than rendered.
 - Spanish inline links are unsupported. Do not change the component during routine population to add them.
 
 ### Sorting, metadata, numbering, and responsive layout
