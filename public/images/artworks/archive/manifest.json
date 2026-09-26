@@ -114,6 +114,104 @@
       },
       "width": 3007
     },
+    "/images/artworks/chequered-forest-red.png": {
+      "height": 5153,
+      "sha256": "88ceece13cc90b4ce3788756fc2efcb013cd031303cb153e3fd828fcbdc16eb9",
+      "variants": {
+        "320": {
+          "bytes": 15766,
+          "height": 455,
+          "path": "/images/artworks/archive/chequered-forest-red-320.webp",
+          "sha256": "864d4efa0a992add968721482f0ccb867793dc50e4a073c760594c2feaaf0e35",
+          "width": 320
+        },
+        "336": {
+          "bytes": 17458,
+          "height": 478,
+          "path": "/images/artworks/archive/chequered-forest-red-336.webp",
+          "sha256": "70405addb94bde103ae9343e8b538611942d01b8b304331a77050d90a40c0913",
+          "width": 336
+        },
+        "384": {
+          "bytes": 21836,
+          "height": 546,
+          "path": "/images/artworks/archive/chequered-forest-red-384.webp",
+          "sha256": "32ae16d170c9925a7429ccc1ca76185fa71316edcc9e768472926fc6a91380a8",
+          "width": 384
+        },
+        "480": {
+          "bytes": 30698,
+          "height": 683,
+          "path": "/images/artworks/archive/chequered-forest-red-480.webp",
+          "sha256": "be4e5b4edc199ab467c1bc0e3a373009099582bf03a70c521a30861cf07f2339",
+          "width": 480
+        },
+        "640": {
+          "bytes": 51406,
+          "height": 910,
+          "path": "/images/artworks/archive/chequered-forest-red-640.webp",
+          "sha256": "b0155d272db14114ad20047ee863764ffaf73db491fd9c4b5f18235f4f0850b6",
+          "width": 640
+        },
+        "960": {
+          "bytes": 112600,
+          "height": 1365,
+          "path": "/images/artworks/archive/chequered-forest-red-960.webp",
+          "sha256": "790c6e97fb48a5267588a7de0f3d80cf06d5a44bfda61d78e208c7ba70021ca9",
+          "width": 960
+        }
+      },
+      "width": 3624
+    },
+    "/images/artworks/chequered-forest.png": {
+      "height": 5153,
+      "sha256": "d09a6ee9360ba71a56c987316504cb3916b55972cdcfc3530a8445123d45f01d",
+      "variants": {
+        "320": {
+          "bytes": 40964,
+          "height": 455,
+          "path": "/images/artworks/archive/chequered-forest-320.webp",
+          "sha256": "f991d7a1ff63d4b7b0da191907ece7f7075469be21d539e55e2aab951870319a",
+          "width": 320
+        },
+        "336": {
+          "bytes": 44514,
+          "height": 478,
+          "path": "/images/artworks/archive/chequered-forest-336.webp",
+          "sha256": "451708255f7edefd73b01bdd7ffd20ca75d33deeb513ad9410f57ce3aa8775ca",
+          "width": 336
+        },
+        "384": {
+          "bytes": 57878,
+          "height": 546,
+          "path": "/images/artworks/archive/chequered-forest-384.webp",
+          "sha256": "1ff444126caf0c816e6784930de0d3b50d7ba431d982346374c97ae105ac31cf",
+          "width": 384
+        },
+        "480": {
+          "bytes": 91298,
+          "height": 683,
+          "path": "/images/artworks/archive/chequered-forest-480.webp",
+          "sha256": "029b8ec2540cf259a50f268be411ce3d448daf724e7582749be24ebc4909d2c0",
+          "width": 480
+        },
+        "640": {
+          "bytes": 161258,
+          "height": 910,
+          "path": "/images/artworks/archive/chequered-forest-640.webp",
+          "sha256": "bea8cc89d1776370272e66c8e6f24fec4844466d2022d4ae061a98f9d36e8bef",
+          "width": 640
+        },
+        "960": {
+          "bytes": 350198,
+          "height": 1365,
+          "path": "/images/artworks/archive/chequered-forest-960.webp",
+          "sha256": "264d317985de75cbd2e7b05f80cc534062f053b5f4707c6530b8b91bc011dc91",
+          "width": 960
+        }
+      },
+      "width": 3624
+    },
     "/images/artworks/the-dive-red.webp": {
       "height": 1123,
       "sha256": "7ef419cedfced95f52c44d8590fc003093262c778124947526252134df83c69a",
