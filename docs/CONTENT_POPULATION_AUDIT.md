@@ -4,6 +4,7 @@
 - Repository state audited: `fceb101` on `main`
 - Route naming updated: 13 July 2026 (`Writer` / `Escritor` and `Painter` / `Pintor`; internal `authorItems` and `artist` identifiers retained).
 - Painter archive responsive-asset pipeline updated: 29 August 2026.
+- Painter detail responsive-image and progressive-preview pipeline updated: 26 September 2026.
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -138,7 +139,7 @@ Canonical and Open Graph URLs are derived globally from `Astro.site`; there are 
 
 ### Existing automated coverage
 
-There are two committed browser regressions:
+There are three committed browser regressions:
 
 - `npm run test:home-mobile` rebuilds, starts a preview, uses Chrome/Edge at 390 x
   844 with DPR 3, throttles CPU/network, and confirms cold taps on all three
@@ -155,10 +156,16 @@ There are two committed browser regressions:
   effective header/footer visibility, checks both visualisation routes, and
   verifies client-side language/category navigation keeps the persistent shell
   painted above the white route overlay.
+- `npm run test:artwork-details` rebuilds and statically checks all twelve generated
+  bilingual Painter details for AVIF/WebP source sets, inline previews, and the absence
+  of direct original-image requests. It then holds the selected detail asset for four
+  seconds in a cold 390 x 844, DPR 3 Chrome/Edge session and confirms that the article
+  and blur reveal first, the sharp image crossfades after decode, EN/ES select the same
+  responsive asset, and cumulative layout shift remains at or below 0.01.
 
 The homepage test is valuable as a global regression but does not validate the three archives.
 
-There is no Writer archive-, Painter archive-, or portfolio-specific automated content test,
+There is still no dedicated Writer-archive, Painter-archive, or Architect-portfolio content-validation test,
 no standalone content validation script, and no configured `astro check` script. The manual
 matrices below are therefore mandatory.
 
@@ -299,6 +306,8 @@ Do not ask for unsupported IDs, pair keys, original language, SEO fields, canoni
 - Assets: `public/images/artworks/`
 - Generator: `scripts/new-artwork.mjs` via `npm run new-artwork`
 - Archive-thumbnail generator: `scripts/generate-artwork-thumbnails.mjs` via `npm run generate:artwork-thumbnails`
+- Detail-image generator: `scripts/generate-artwork-detail-images.mjs` via `npm run generate:artwork-details`
+- Shared detail-image component: `src/components/ArtworkDetailImage.astro`
 - Filtering, sorting, metadata: `src/lib/artworks.ts`
 - Archive component: `src/components/ArtworkArchive.astro`
 - Archive routes: `src/pages/painter/everything.astro` and `src/pages/esp/pintor/todo.astro`
@@ -322,7 +331,7 @@ The repository rule is strict: create/update artwork Markdown records only; neve
 | `dimensions` | optional string | shared | index/detail physical dimensions; never derive from pixels |
 | `location` | optional string | shared | stored but currently not rendered, sorted, included in enquiry, or used for SEO |
 | `description` | optional plain string | shared | detail caption paragraph and meta description; title is SEO fallback |
-| `image` | optional path | shared | original detail image and source for generated responsive archive thumbnails |
+| `image` | optional path | shared | unchanged master source for generated responsive archive and detail images |
 | `hoverImage` | optional path | shared | original red source for generated responsive grid hover/focus/touch thumbnails |
 | `imageWidth` / `imageHeight` | optional integers | derived from supplied main image | all three `image` fields must be truthy for image markup to render |
 | `imageAlt` | optional string | shared | falls back to title |
@@ -344,9 +353,13 @@ The generator:
 
 Validate any custom slug against `^[a-z0-9]+(?:-[a-z0-9]+)*$` and reject path separators or `..`. Existing assets generally use `<slug>.jpg` and optional `<slug>-red.webp`. Preserve the existing `retatro-abuelo.*` typo but do not copy it as a convention.
 
-For every public artwork image and hover image, `npm run generate:artwork-thumbnails` creates uncropped WebP derivatives at 320, 336, 384, 480, 640, and 960 pixels wide under `public/images/artworks/archive/`. It also writes a manifest containing source and derivative hashes. The committed derivatives are archive-only; the supplied originals remain unchanged and continue to serve detail pages. `npm run build` runs the manifest check first and fails when a public source or required derivative is missing or stale.
+For every public artwork image and hover image, `npm run generate:artwork-thumbnails` creates uncropped WebP derivatives at 320, 336, 384, 480, 640, and 960 pixels wide under `public/images/artworks/archive/`. It also writes a manifest containing source and derivative hashes.
 
-The English and Spanish Painter archive routes and Architect landing routes select the matching Latin/Spanish subsets under `public/fonts/painter-archive/` and the responsive logo/basket images under `public/images/painter-archive/`. They preserve the same font outlines, weights, image states, dimensions, and interaction behavior; the full font family remains the glyph fallback. Other routes retain their existing shell assets.
+For every public main `image`, `npm run generate:artwork-details` creates uncropped AVIF and WebP detail derivatives at 480, 768, 1024, 1280, 1600, 1920, and 2560 pixels wide under `public/images/artworks/detail/`. Its generated manifest at `src/data/artwork-detail-images.generated.json` records source/derivative hashes and an inline 32px blurred WebP preview. The detail component uses `<picture>`, `srcset`, and `sizes` so the browser selects an appropriate file for the rendered size and device pixel density, while the inline preview paints without another request and crossfades after the selected image decodes. The original remains unchanged as the archival/master source and is not requested by normal detail rendering.
+
+`npm run build` checks both generated manifests first and fails when a public source or required archive/detail derivative is missing or stale. Generate and commit both derivative sets after adding or changing a public artwork source; never overwrite or recompress the supplied original.
+
+The English and Spanish Painter archive and detail routes, plus the Architect landing routes, select the matching Latin/Spanish subsets under `public/fonts/painter-archive/` and the responsive logo/basket images under `public/images/painter-archive/`. They preserve the same font outlines, weights, image states, dimensions, and interaction behavior; the full font family remains the glyph fallback. Other routes retain their existing shell assets.
 
 The two Architect landing routes load `public/models/Processed_Rock_Model_web.glb`, a Meshopt-compressed web derivative of `Processed_Rock_Model_optimized.glb`. The source models remain unchanged. The derivative preserves the scene, node, and material structure with near-identical bounds; the routes keep the same camera fitting, controls, reveal timing, navigation, and continuous orbit while reducing transfer and rendering work. Routine content population must not regenerate the derivative or change either route's model reference.
 
@@ -391,7 +404,9 @@ Grid implementation:
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
-The grid uses generated responsive WebP derivatives selected through `srcset` and `sizes`; the detail continues to use the unchanged original. Up to the first five small base derivatives load eagerly because they compose the initial mobile viewport; the first and final candidates within that bounded group receive high priority. Their small hover derivatives also load eagerly at low priority so hover/focus/touch behavior remains immediate. Any later base and hover derivatives retain native lazy loading. `hoverImage` is layered over the base and uses the main image’s width/height attributes, so it must match the main image aspect ratio. Without it, title/meta hover still works but no red image appears.
+The grid uses generated responsive WebP derivatives selected through `srcset` and `sizes`. Up to the first five small base derivatives load eagerly because they compose the initial mobile viewport; the first and final candidates within that bounded group receive high priority. Their small hover derivatives also load eagerly at low priority so hover/focus/touch behavior remains immediate. Any later base and hover derivatives retain native lazy loading. `hoverImage` is layered over the base and uses the main image’s width/height attributes, so it must match the main image aspect ratio. Without it, title/meta hover still works but no red image appears.
+
+Detail routes use the generated AVIF/WebP candidates and an inline low-quality preview. They retain the universal route fade but use a detail-only reveal opt-out for the global font and full-image waits: Return/Volver, metadata, and the preview can paint on the first usable frames while fonts and the selected image continue independently. The sharp derivative crossfades in after decode. Intrinsic dimensions and a fixed aspect ratio reserve the final image area to prevent layout shift. Other routes keep the existing font/image reveal behavior.
 
 Hover/focus behavior:
 
@@ -404,6 +419,8 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 ### Detail-derived behavior
 
 - Image markup appears only when `image`, `imageWidth`, and `imageHeight` are all present/truthy.
+- The browser selects a generated detail candidate from the shared source set; normal rendering must not request the multi-megabyte original.
+- The inline blurred preview is present during a cold/slow load and fades only after the selected candidate decodes.
 - Desktop detail is image plus a 13-18rem metadata column; it becomes one column at 760px and reduces text again at 560px.
 - `description` is one plain paragraph below the figure. No Markdown body or gallery exists.
 - Enquiry mailto is derived for `sebastian.samana@icloud.com` and includes title plus visible date/medium/dimensions, not location/description.
@@ -416,7 +433,7 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 1. The glob loader validates it and derives ID `yozo`.
 2. `status: public` passes the filter.
 3. September 2025 sort fields place it first in the audited public set.
-4. Grid uses responsive derivatives generated from `yozo.jpg` and `yozo-red.webp`, plus the title and archive label `2025`; detail uses the originals.
+4. Grid uses responsive archive derivatives generated from `yozo.jpg` and `yozo-red.webp`, plus the title and archive label `2025`; detail selects a responsive AVIF/WebP derivative generated from the unchanged `yozo.jpg` master and begins with its inline preview.
 5. Index shows `2025 / Pastels / 420 mm x 297 mm`.
 6. Both detail route generators use ID `yozo`.
 7. English detail displays `September 2025`; Spanish displays `septiembre 2025` and `Pasteles`.
@@ -451,10 +468,10 @@ If a new medium has no current Spanish mapping, disclose that it will remain unc
 4. Check record, asset, case-sensitive filename, slug, and route collisions.
 5. Run `npm run new-artwork` or create the same schema manually. Use one shared record only. Keep it draft until approval.
 6. Copy supplied assets to `public/images/artworks/`. Add `hoverImage` manually because the record generator omits it.
-7. For a public record, run `npm run generate:artwork-thumbnails` and commit its generated archive derivatives plus the updated manifest. Do not replace or recompress the supplied originals.
+7. For a public record, run `npm run generate:artwork-thumbnails` and `npm run generate:artwork-details`; commit both derivative sets and both updated manifests. Do not replace or recompress the supplied originals.
 8. Leave every unknown optional field blank. Do not create unsupported translation/gallery/SEO fields.
 9. Validate the sort tuple and verify it does not change existing relative order unexpectedly.
-10. Check both grid and index, both detail routes, language switch, metadata omission, enquiry, and asset URLs. Confirm archives request responsive WebP derivatives while details still request originals.
+10. Check both grid and index, both detail routes, language switch, metadata omission, enquiry, and asset URLs. Confirm archives request responsive WebP derivatives; details must request a size-appropriate AVIF/WebP derivative, show the inline blur before decode on a cold throttled load, and never request the original during normal rendering.
 11. Check 1440, 1024, near 700, and 390px plus fine-pointer hover, keyboard focus, and coarse-pointer press.
 12. Run the common completion gate.
 13. Review `dist`: public needs both details and both rows; draft needs neither detail/row. Regardless of status, remember any copied public asset is deployable.
@@ -663,6 +680,13 @@ For each new public Writer/Painter slug:
 - language links preserve the slug;
 - no draft slug gets either detail or an archive row.
 
+For each public Painter image:
+
+- both archive and detail manifest checks pass;
+- every manifest derivative exists in `dist` with the exact case and expected format/dimensions;
+- both localized details emit AVIF/WebP source sets plus the inline preview;
+- a cold browser load selects a responsive detail derivative and makes no request for the original master.
+
 For each portfolio ID:
 
 - both archive HTML files contain it once;
@@ -690,6 +714,7 @@ Across applicable routes verify:
 - grid/index mode and reset-on-load behavior;
 - long title/metadata wrapping;
 - image/PDF load with no console errors;
+- Painter detail placeholder visibility before full-image decode, sharp-image crossfade, and no layout shift;
 - keyboard focus and fine/coarse pointer state;
 - enquiry subject/body;
 - back-to-top and reduced-motion behavior;

@@ -1,6 +1,7 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
+import ArtworkDetailImage from '../../../components/ArtworkDetailImage.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getArtworkDetailMetadata, getPublicArtworks } from '../../../lib/artworks';
 
@@ -34,18 +35,17 @@ const hasDescription = Boolean(artwork.data.description);
 ---
 
 <BaseLayout title={`${artwork.data.title} | Samana`} description={artwork.data.description ?? artwork.data.title}>
-  <article class="artwork-detail" data-varelism-route-reveal data-varelism-route-reveal-images="true">
+  <article class="artwork-detail" data-varelism-route-reveal data-varelism-route-reveal-fonts="false">
     <a class="artwork-back" href="/painter/everything/">Return</a>
 
     <figure class="artwork-figure">
       {
         artwork.data.image && artwork.data.imageWidth && artwork.data.imageHeight && (
-          <img
+          <ArtworkDetailImage
             src={artwork.data.image}
             alt={artwork.data.imageAlt ?? artwork.data.title}
             width={artwork.data.imageWidth}
             height={artwork.data.imageHeight}
-            decoding="async"
           />
         )
       }
@@ -131,20 +131,8 @@ const hasDescription = Boolean(artwork.data.description);
     min-width: 0;
   }
 
-  .artwork-figure img {
-    align-self: start;
-    display: block;
-    height: auto;
-    justify-self: start;
-    max-height: var(--artwork-detail-image-max-height);
-    max-width: 100%;
-    object-fit: contain;
-    width: auto;
-  }
-
   .artwork-figure h1 {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-sans);
     font-size: clamp(1.35rem, 2.1vw, 2.15rem);
     font-weight: 300;
     letter-spacing: 0;
@@ -168,8 +156,7 @@ const hasDescription = Boolean(artwork.data.description);
   .artwork-figure dd,
   .artwork-enquiry,
   .artwork-description {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-sans);
     letter-spacing: 0;
   }
 
@@ -238,8 +225,7 @@ const hasDescription = Boolean(artwork.data.description);
     }
 
     .artwork-figure h1 {
-      font-family: 'SF Pro Display Thin', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-        'Helvetica Neue', Arial, sans-serif;
+      font-family: var(--font-sans);
       font-size: clamp(0.95rem, 3.8vw, 1.25rem);
       font-weight: 200;
       opacity: 1;

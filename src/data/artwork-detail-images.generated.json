@@ -1,0 +1,696 @@
+{
+  "version": 1,
+  "settings": {
+    "fallbackWidth": 1280,
+    "formats": {
+      "avif": {
+        "chromaSubsampling": "4:4:4",
+        "effort": 6,
+        "quality": 80
+      },
+      "webp": {
+        "alphaQuality": 100,
+        "effort": 6,
+        "quality": 90,
+        "smartSubsample": true
+      }
+    },
+    "placeholder": {
+      "blurSigma": 0.8,
+      "effort": 6,
+      "quality": 42,
+      "width": 32
+    },
+    "widths": [
+      480,
+      768,
+      1024,
+      1280,
+      1600,
+      1920,
+      2560
+    ]
+  },
+  "sources": {
+    "/images/artworks/cena-en-figueretas.jpg": {
+      "height": 2198,
+      "placeholder": "data:image/webp;base64,UklGRpQAAABXRUJQVlA4IIgAAABwBQCdASogABcAPulkr1ApJSSisBgIASAdCWUAuwAMG/2F47WtKQIB9OsuPVX0SUO24kQgAP7xbSc9UrbzFEo4tY15k9APuupDl9LUhdkxBext+5C8cbwiZrtZTW4GwoUSjP5okeEZstGe08ktAUHb+gpWwCn3vXyukCwwn9Lzqp7NNbzYAAAA",
+      "sha256": "64bb5cea5f0e90e81fe30042e23ba6523021d57085c360a4c61b11ec71735bd2",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 51232,
+            "height": 351,
+            "path": "/images/artworks/detail/cena-en-figueretas-480.avif",
+            "sha256": "f4ebb434cba084bedcdced9dce0c527af8a7e339c849d7db6ea8a0b4a799cf3d",
+            "width": 480
+          },
+          "768": {
+            "bytes": 135200,
+            "height": 562,
+            "path": "/images/artworks/detail/cena-en-figueretas-768.avif",
+            "sha256": "2c723f83d51518829bc68f1bb1f5986329195f13755d8971ba957eb4775e85d7",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 231865,
+            "height": 749,
+            "path": "/images/artworks/detail/cena-en-figueretas-1024.avif",
+            "sha256": "ccb6988ea4a936907bf589c5c1b7fed9f58d660996e810c164e258f04d20008d",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 334575,
+            "height": 936,
+            "path": "/images/artworks/detail/cena-en-figueretas-1280.avif",
+            "sha256": "5ef720ac7e3a104c2fac4a7df21bd7405048b63a59fb2d7f8e6a170b93140a61",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 460544,
+            "height": 1170,
+            "path": "/images/artworks/detail/cena-en-figueretas-1600.avif",
+            "sha256": "05e62d4fa3b57f2a9c661a0161fc81fb33dd7afbdeda2e2cbf58fb72991afdf3",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 580141,
+            "height": 1403,
+            "path": "/images/artworks/detail/cena-en-figueretas-1920.avif",
+            "sha256": "bb1c94fa8ba559dfc89c78231868c8f64b33d88da326682713a38659396b32e3",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 817209,
+            "height": 1871,
+            "path": "/images/artworks/detail/cena-en-figueretas-2560.avif",
+            "sha256": "9b7bc094cfb3286e65b1319ea15bfc83538ced96834a67ca826cfa1d431599ec",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 54306,
+            "height": 351,
+            "path": "/images/artworks/detail/cena-en-figueretas-480.webp",
+            "sha256": "ccba1fec0325f58348f50076c5fb8c2aa4588483857afa4e867e924e5d0d463e",
+            "width": 480
+          },
+          "768": {
+            "bytes": 136270,
+            "height": 562,
+            "path": "/images/artworks/detail/cena-en-figueretas-768.webp",
+            "sha256": "91a1de2e493d761f9365d259d296c2e3cfe4ee02ae1925cb9d1f4bb561526117",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 235682,
+            "height": 749,
+            "path": "/images/artworks/detail/cena-en-figueretas-1024.webp",
+            "sha256": "60ddbbc4cd2aafbc2b13318da4693f73377a3cfe72876b33101d45a23573a2cb",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 358072,
+            "height": 936,
+            "path": "/images/artworks/detail/cena-en-figueretas-1280.webp",
+            "sha256": "4b317295b9ef77693ae42a6a7e706c1f8f3aaad6f22c61d821ad7424683fa139",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 510070,
+            "height": 1170,
+            "path": "/images/artworks/detail/cena-en-figueretas-1600.webp",
+            "sha256": "74db3af1e31cbec7414ad9fa9a875f47ee598df909b7001a924cbcb15dafc37a",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 644808,
+            "height": 1403,
+            "path": "/images/artworks/detail/cena-en-figueretas-1920.webp",
+            "sha256": "23172b12ef477510056ea823e6cc23dbca762423147b30cee80de0247d6220cf",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 944594,
+            "height": 1871,
+            "path": "/images/artworks/detail/cena-en-figueretas-2560.webp",
+            "sha256": "04a5216d01e8f193d71602a6beb6b76ed18eb7fcd4fe0dba02e0cb1c8397ecc7",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3007
+    },
+    "/images/artworks/chequered-forest.png": {
+      "height": 5153,
+      "placeholder": "data:image/webp;base64,UklGRjABAABXRUJQVlA4ICQBAADQBwCdASogAC4APulwsFMpJiSipWgBIB0JaQAUZvSfWyNArlAZRO++phLyGrkQHSEkxG8ZbFIAn/tU6Stfy19c7QoQp6o6AADNSO6/8dKCY/PhFk6r5ABxfjPwZob/EGftjrwNrEbgH+fyHKcu+87CR2nXErLsmN2CMxOc8fKHH4wr8G1C1JnSyrVrEozliM96xv600kPkHJJHTxq58Ot+srt7vqrd5BgIdljMI+kXRvw7FAqBFnSycTJ8tRUINJ1J0fowXprYoJ+rJY+iNFGdvU/K2sGZXfarp5DTFe6REl8bKrIj8ZjH55r3fGuapRGtFoVYVs0SfXfnr5Ou94RdYgR6OtZKCb+mPvaan3mmelF/JyLjOJzkZQSV8LDUuGz+oAAA",
+      "sha256": "d09a6ee9360ba71a56c987316504cb3916b55972cdcfc3530a8445123d45f01d",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 113383,
+            "height": 683,
+            "path": "/images/artworks/detail/chequered-forest-480.avif",
+            "sha256": "40f531d4903187d6a7ba81bd45bd159db0ecf32ad2f1c73fa70e29a68e4b3304",
+            "width": 480
+          },
+          "768": {
+            "bytes": 282965,
+            "height": 1092,
+            "path": "/images/artworks/detail/chequered-forest-768.avif",
+            "sha256": "741c3aafc7e4e350c9e289db42a5fd9e94883b9ef3795111b620226619449442",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 487166,
+            "height": 1456,
+            "path": "/images/artworks/detail/chequered-forest-1024.avif",
+            "sha256": "924d01caec658b21118117802183331e23a40943ff49d0ba1c915f86d5c90639",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 709870,
+            "height": 1820,
+            "path": "/images/artworks/detail/chequered-forest-1280.avif",
+            "sha256": "cd064cb7839420d1b7d3251ffb3be3fd6e39a106b15f14de67dd1a60d5e49636",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 977593,
+            "height": 2275,
+            "path": "/images/artworks/detail/chequered-forest-1600.avif",
+            "sha256": "39862b8158013a9a51822e3815bd94e96e92d8bbf0b6b339eef256ab429d3ac7",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 1190773,
+            "height": 2730,
+            "path": "/images/artworks/detail/chequered-forest-1920.avif",
+            "sha256": "8b61bef7d38190a4422acd3aa7d8384e6f34f9a47644cb9b3394f63af8f3ca42",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 1505154,
+            "height": 3640,
+            "path": "/images/artworks/detail/chequered-forest-2560.avif",
+            "sha256": "0284752b05d19be71f4d590abf1add92ff68eccfee07091be0d65e23a0ce77d3",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 118434,
+            "height": 683,
+            "path": "/images/artworks/detail/chequered-forest-480.webp",
+            "sha256": "73911edf0aab78e37953966a2e379df30399f2fa3b563410ff51fd158f335baf",
+            "width": 480
+          },
+          "768": {
+            "bytes": 292380,
+            "height": 1092,
+            "path": "/images/artworks/detail/chequered-forest-768.webp",
+            "sha256": "46bfbf98ed51e2a31f02f16fbe9d967bd0fe026f8f473d9cf8ebc9d98546f9ed",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 513692,
+            "height": 1456,
+            "path": "/images/artworks/detail/chequered-forest-1024.webp",
+            "sha256": "c76db0033666d866d1d3c115c1766186fde517b3ef8db5fe4ea078cb2a4abadf",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 754530,
+            "height": 1820,
+            "path": "/images/artworks/detail/chequered-forest-1280.webp",
+            "sha256": "e265514118e1a7c809491191fd6c403bd79ca03e3aa35c812dbce60aa0c40e07",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 1078634,
+            "height": 2275,
+            "path": "/images/artworks/detail/chequered-forest-1600.webp",
+            "sha256": "a28e3bd1819acfb8d3b3ffc09e715ee8f7bb9bb326553bd47da0eaa462d443d0",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 1395254,
+            "height": 2730,
+            "path": "/images/artworks/detail/chequered-forest-1920.webp",
+            "sha256": "424561d86a62de5e09f2c14a28396c1b00550e313bbd67549a643fb84412045d",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 1979288,
+            "height": 3640,
+            "path": "/images/artworks/detail/chequered-forest-2560.webp",
+            "sha256": "ba93477f5d098676f01d6af181a02784c2488db7a5bf2e9020022dace1f7bfcf",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3624
+    },
+    "/images/artworks/the-dive.jpg": {
+      "height": 2217,
+      "placeholder": "data:image/webp;base64,UklGRsAAAABXRUJQVlA4ILQAAAAwBgCdASogABYAPulmq1ApJSOiqAqpIB0JbACdMzL16MA9f+yVQEU5yMd+5orPNJU9vwTd9RogQkawAPaij8pmlrAu83ekXzM4wwOj81bBSdUBK/FFETR0LfXJaR5Sfo+PaT4KopZ01RLzvyHy3CAFMXpCYyRiiaLrUhsR3g6ANVBTOsJyvLyaBd4Gy+tFZqyPg6+GkCehMsRVTVsLhO4d67M3OpOI2e1Mt9mf7OeyiaQAAAA=",
+      "sha256": "1ff7a1465b914afa44902aeb053b96d1e4835e59de82164556ba0281e2024a2a",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 59872,
+            "height": 337,
+            "path": "/images/artworks/detail/the-dive-480.avif",
+            "sha256": "33bd304d03567c91907eefc8d745384215086ea21e85fc202afb22627890a255",
+            "width": 480
+          },
+          "768": {
+            "bytes": 142305,
+            "height": 539,
+            "path": "/images/artworks/detail/the-dive-768.avif",
+            "sha256": "2bb9391acd5ccc4ab88f86bd4b9c01efe4d3377abd0c04a52c9257957dda8d0e",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 224542,
+            "height": 719,
+            "path": "/images/artworks/detail/the-dive-1024.avif",
+            "sha256": "730cebe66878878e757e5815795c5362fde82e27a4a1fd382b276f4c64e27668",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 329292,
+            "height": 898,
+            "path": "/images/artworks/detail/the-dive-1280.avif",
+            "sha256": "f198208731ca4448ca6b2d26cbd58b3e5e8a3bfbd7069bb452fbd6d2040a0a29",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 445797,
+            "height": 1123,
+            "path": "/images/artworks/detail/the-dive-1600.avif",
+            "sha256": "61a64526d9888843da7f0287df97e8cc66cbe34feadbe166844ce50fa8401bfd",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 555479,
+            "height": 1347,
+            "path": "/images/artworks/detail/the-dive-1920.avif",
+            "sha256": "7a39c962f5396973e98c3d364d88887c62504a3f5cf5d1fd745f2dc85c9eda5a",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 753833,
+            "height": 1797,
+            "path": "/images/artworks/detail/the-dive-2560.avif",
+            "sha256": "5b927f00b78ce792f8a8fa984baf166a4b873ea6af70bcc131f0af64e9d5ba53",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 49094,
+            "height": 337,
+            "path": "/images/artworks/detail/the-dive-480.webp",
+            "sha256": "95bc5a2335432d78815b29a496834125f5d734c3abf7524cdc33e951a1ca174f",
+            "width": 480
+          },
+          "768": {
+            "bytes": 127458,
+            "height": 539,
+            "path": "/images/artworks/detail/the-dive-768.webp",
+            "sha256": "74b83c41007e6028edf601bb9dbf7c639430a0cd84ccc6cd55effd0900eb8919",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 215596,
+            "height": 719,
+            "path": "/images/artworks/detail/the-dive-1024.webp",
+            "sha256": "9737fa76920df17a959419c55717a5d2f4f8492e6efca84611b916215df5f56d",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 328688,
+            "height": 898,
+            "path": "/images/artworks/detail/the-dive-1280.webp",
+            "sha256": "0974e940c6e8b7770ebb8a35a5112a6f456f31acebcea19ac1319bc17691b591",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 459226,
+            "height": 1123,
+            "path": "/images/artworks/detail/the-dive-1600.webp",
+            "sha256": "72c3a0401362651d9dc6315191d56ed134aa747ca52d2b6a11ed93107f0bbeee",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 583704,
+            "height": 1347,
+            "path": "/images/artworks/detail/the-dive-1920.webp",
+            "sha256": "3f82882354e942b79d341640446188bbd3e7f5f3e83efa63c3f44a4a15c34c0f",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 888186,
+            "height": 1797,
+            "path": "/images/artworks/detail/the-dive-2560.webp",
+            "sha256": "136ec8d9a374a2c994b5ae6c665a4ba4058c23020b2bc0b885428cd51fcc0b1e",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3159
+    },
+    "/images/artworks/uiko.png": {
+      "height": 4142,
+      "placeholder": "data:image/webp;base64,UklGRtoAAABXRUJQVlA4IM4AAACwBgCdASogACcAPuloq1ApJiOiqqgBIB0JaQAA/iAisqBipuWgsn7P5EkENbYUzd1OvxQGiQTLmn+jVoGvgAD+/HiwYZzX2AqXyJzRlyW3op1MPh61HLgHyK1H1+hpfOszR6owHELFtePUEpmsSwufki8IqwUyA6JOCKJe/mNH9RNvf7vKIoyxEm8n2MQ6ZINNbOpGG7WFcCHENE4bGWC2IfpilAreJzDu8DFgKklc2eqK6qzHmOGmsCyjkRq0OTHhVzp+rpRCN1/arM0AAA==",
+      "sha256": "0841b5c8bab428ecd041b630e3399f77deda73b57cfabf469e365fae245b1d22",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 43117,
+            "height": 578,
+            "path": "/images/artworks/detail/uiko-480.avif",
+            "sha256": "2239f52022f3b51e84a5542fb3c4b5cf074253bd5b2a2d87146c34955e8d5f16",
+            "width": 480
+          },
+          "768": {
+            "bytes": 112257,
+            "height": 925,
+            "path": "/images/artworks/detail/uiko-768.avif",
+            "sha256": "360507afef89133f7721986b9ad16a701dd7a8c90192f9bbe208813d293efc85",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 201906,
+            "height": 1234,
+            "path": "/images/artworks/detail/uiko-1024.avif",
+            "sha256": "94c03ba58353414fe72cd785eb76ae0e681b6186a6e900a489b37e1a4735a185",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 300372,
+            "height": 1542,
+            "path": "/images/artworks/detail/uiko-1280.avif",
+            "sha256": "f9dfa719a4015cf1623cca33a914a7347ae0e9598b6de171ad7a7f660a835010",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 425433,
+            "height": 1928,
+            "path": "/images/artworks/detail/uiko-1600.avif",
+            "sha256": "a51d4dbf0302a2783ee0232e2c475e78432b48c3077c1dc3eb1f99a8e1492585",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 543457,
+            "height": 2313,
+            "path": "/images/artworks/detail/uiko-1920.avif",
+            "sha256": "548554107f2113bb55eabff87d985875d3ebc9e5792fb70158033df2e324ddc2",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 742397,
+            "height": 3084,
+            "path": "/images/artworks/detail/uiko-2560.avif",
+            "sha256": "7601d0e4801782fa0b185cc2689610bf35362b2a690fa4c78fc47109c7d4e0fb",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 44598,
+            "height": 578,
+            "path": "/images/artworks/detail/uiko-480.webp",
+            "sha256": "54da1e42c6480bd1c96a7ab6e354d7f15c73e090736816eaacfde4fc40b7518c",
+            "width": 480
+          },
+          "768": {
+            "bytes": 116552,
+            "height": 925,
+            "path": "/images/artworks/detail/uiko-768.webp",
+            "sha256": "f1de3818d797d87c9ab4d2153315afeb144a886eb95cb71b9985f3652a2f9e83",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 211124,
+            "height": 1234,
+            "path": "/images/artworks/detail/uiko-1024.webp",
+            "sha256": "385c355eee04fab989af86758434e87e5564d20799bade793fe09896beb3f58e",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 324956,
+            "height": 1542,
+            "path": "/images/artworks/detail/uiko-1280.webp",
+            "sha256": "63537102b0b683520005852f09bc1cce65bfc1f28f9ca6749b46e834e4dc7d87",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 487548,
+            "height": 1928,
+            "path": "/images/artworks/detail/uiko-1600.webp",
+            "sha256": "12a3261571f2466bf2c6b4967236a81aa5cc3904771fe639bdbd4ba1ec541246",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 657502,
+            "height": 2313,
+            "path": "/images/artworks/detail/uiko-1920.webp",
+            "sha256": "423b3e42b266237ca0f3c6195aab78fd3374424f256bdaaa85a01ad20378eabe",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 992260,
+            "height": 3084,
+            "path": "/images/artworks/detail/uiko-2560.webp",
+            "sha256": "cc885b817b61804246149476a0cd7e1b830bb965e072cc70c1a6528f8a9e55e5",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3438
+    },
+    "/images/artworks/wei-s-rhino.jpg": {
+      "height": 2298,
+      "placeholder": "data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAAAwBQCdASogABcAPtlapE0oJSOiN/qoAQAbCUATpljobv+qJcVk/1TkfQH+CSASRIBoAAD+dABIb3WO6KKC/k12TSnuivJcoydj9JN/hvS+EyyFNwVIXjsbskIo6Nwa1K33Dx7hbgYmZiyCjSejkQAA",
+      "sha256": "0298ae0e13f130113f746e69af6a8a2f565d17e8e0274df57ee64b4daf11a624",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 24163,
+            "height": 343,
+            "path": "/images/artworks/detail/wei-s-rhino-480.avif",
+            "sha256": "e99af7568ccd622e646eb5d56bf08cc488cf02541aa142d7d65f57a73afacf17",
+            "width": 480
+          },
+          "768": {
+            "bytes": 69450,
+            "height": 549,
+            "path": "/images/artworks/detail/wei-s-rhino-768.avif",
+            "sha256": "98597b00fc5c52c271d57dda57d4485b2672c27f497582a418d55cd5d01452dd",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 120841,
+            "height": 732,
+            "path": "/images/artworks/detail/wei-s-rhino-1024.avif",
+            "sha256": "c55c3397cbcb3f814b925cd8ad62b50339351cf03971e4bc696b4a6fad028fa4",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 184967,
+            "height": 914,
+            "path": "/images/artworks/detail/wei-s-rhino-1280.avif",
+            "sha256": "0447b22464588142f13e0ed38ed93a899182a091130c9028600bc48992af290a",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 258235,
+            "height": 1143,
+            "path": "/images/artworks/detail/wei-s-rhino-1600.avif",
+            "sha256": "a75e4dbc4ffedf3024b2572ad69a0ff61e4fb9aad0bf22ed8456240b4325a900",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 327002,
+            "height": 1372,
+            "path": "/images/artworks/detail/wei-s-rhino-1920.avif",
+            "sha256": "01cd95c57adec071dbb53dba1fe053435d1d14f14338759ac14b7f584285d32c",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 459797,
+            "height": 1829,
+            "path": "/images/artworks/detail/wei-s-rhino-2560.avif",
+            "sha256": "640c93d07945ab6a156d9597e7886e80283fcd475d4e42c35917f221ca02e0a5",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 27608,
+            "height": 343,
+            "path": "/images/artworks/detail/wei-s-rhino-480.webp",
+            "sha256": "5a6111bfabbd5dc672eb457051bb12b92638989dd139ed5c10b3aba06946abe2",
+            "width": 480
+          },
+          "768": {
+            "bytes": 75492,
+            "height": 549,
+            "path": "/images/artworks/detail/wei-s-rhino-768.webp",
+            "sha256": "9e191592df9616d1c908532d6558cdc674dcc9624dc47b2ea0cf43b47a27b700",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 132520,
+            "height": 732,
+            "path": "/images/artworks/detail/wei-s-rhino-1024.webp",
+            "sha256": "5eb81d007fd769531a5014b93696010a2935e9cd4a75dc7195468e48c33b2a65",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 206204,
+            "height": 914,
+            "path": "/images/artworks/detail/wei-s-rhino-1280.webp",
+            "sha256": "66d8d63a016be9cff085fbb37520fbc780cdf2f2c0d743bd13cfea1831193500",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 279042,
+            "height": 1143,
+            "path": "/images/artworks/detail/wei-s-rhino-1600.webp",
+            "sha256": "4118a662e282195d10cf6b6a194f229e8fa0304fd94b0bce70188d4d585d82d3",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 365038,
+            "height": 1372,
+            "path": "/images/artworks/detail/wei-s-rhino-1920.webp",
+            "sha256": "41918e1d2908e00cddec1a0981c4e1f09bab690072d0675af842a6658d9b5888",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 556594,
+            "height": 1829,
+            "path": "/images/artworks/detail/wei-s-rhino-2560.webp",
+            "sha256": "0dde82493db1abd840744808a01d9a9d0cd75afe2f878d8527321aa216b07c49",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3217
+    },
+    "/images/artworks/yozo.jpg": {
+      "height": 2189,
+      "placeholder": "data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAAAwBQCdASogABcAPulsrVIpJaQiqAgBIB0JYgAAGPceRw9IbOvCSYIrXqaCLPgY9KJYAAD8Sz95qggB0wW7JYdZ5psf76eX/e4t+/S5zcm4py0X5/Es6w8mocL6vB1/lsqMh+sNOXtmMLAKoTADgroPjqnGfqFoGjS2xGw50OlAQcVsalxBBr+bfAAAAA==",
+      "sha256": "21203138f5a14ca37dd05aed40280eb42d0090632d100d71489b201438f91474",
+      "variants": {
+        "avif": {
+          "480": {
+            "bytes": 37907,
+            "height": 345,
+            "path": "/images/artworks/detail/yozo-480.avif",
+            "sha256": "a397e0a9626feb529d9679530dff4516a00290766a8025cd1d5c439f41089b7a",
+            "width": 480
+          },
+          "768": {
+            "bytes": 92862,
+            "height": 552,
+            "path": "/images/artworks/detail/yozo-768.avif",
+            "sha256": "a593ad0b48ac5edaf65599f88c66719b9abf022f032290d71ef28c657c95ec7c",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 157652,
+            "height": 737,
+            "path": "/images/artworks/detail/yozo-1024.avif",
+            "sha256": "51efe7484b127c3b20828f42da6eeafffdb336b44d94e5696e0268a3c752dfe3",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 221695,
+            "height": 921,
+            "path": "/images/artworks/detail/yozo-1280.avif",
+            "sha256": "091615e81811533193526c007811d6b281f7f51d805a8e014ca07e26532069f9",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 298376,
+            "height": 1151,
+            "path": "/images/artworks/detail/yozo-1600.avif",
+            "sha256": "76c86b03662820ba0f970adff1d330ac90160bab355c5cbbc141d5c16583279f",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 372354,
+            "height": 1381,
+            "path": "/images/artworks/detail/yozo-1920.avif",
+            "sha256": "78287c05e1d373cf4e40cf9eee27d60f4ab9424636e0496c5e3a4a9ed6041305",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 509465,
+            "height": 1842,
+            "path": "/images/artworks/detail/yozo-2560.avif",
+            "sha256": "299c121a4effee442f829d1575cf367c0296b267b7c9a9b3379fb52e3d7a3338",
+            "width": 2560
+          }
+        },
+        "webp": {
+          "480": {
+            "bytes": 35724,
+            "height": 345,
+            "path": "/images/artworks/detail/yozo-480.webp",
+            "sha256": "682242a6ee94a265d4b05fc1f32dabaaca9659eed5caefab27ec4c2676380b7a",
+            "width": 480
+          },
+          "768": {
+            "bytes": 90068,
+            "height": 552,
+            "path": "/images/artworks/detail/yozo-768.webp",
+            "sha256": "647440410e799378ad4184321788ff312bbc3e01fa1a67434761ee5184ec0459",
+            "width": 768
+          },
+          "1024": {
+            "bytes": 161920,
+            "height": 737,
+            "path": "/images/artworks/detail/yozo-1024.webp",
+            "sha256": "1574b41bd8845e43c5f34f28c54b0424f832a7607b3cd28baf7323312c79a800",
+            "width": 1024
+          },
+          "1280": {
+            "bytes": 236082,
+            "height": 921,
+            "path": "/images/artworks/detail/yozo-1280.webp",
+            "sha256": "971159c3b4ed19c92d82c300d62bfa4139e577f5f38834343fc8ce8f6094074a",
+            "width": 1280
+          },
+          "1600": {
+            "bytes": 325948,
+            "height": 1151,
+            "path": "/images/artworks/detail/yozo-1600.webp",
+            "sha256": "7d975fa4a7260965112ce3dce9e3f4d2a00ed6db8c2c2c3ccc17b5762394e73e",
+            "width": 1600
+          },
+          "1920": {
+            "bytes": 422268,
+            "height": 1381,
+            "path": "/images/artworks/detail/yozo-1920.webp",
+            "sha256": "6bb002c5bb253f642750c6f203906b5be0438d5601d2a8c3109f826797bfb7a0",
+            "width": 1920
+          },
+          "2560": {
+            "bytes": 620240,
+            "height": 1842,
+            "path": "/images/artworks/detail/yozo-2560.webp",
+            "sha256": "e557290ab6619e1384852c796950162d110ef8de78529fd53b53d3b8110bfbc5",
+            "width": 2560
+          }
+        }
+      },
+      "width": 3043
+    }
+  }
+}

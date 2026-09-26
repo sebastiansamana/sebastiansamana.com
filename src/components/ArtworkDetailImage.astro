@@ -1,0 +1,148 @@
+---
+import { getArtworkDetailImageSet } from '../lib/artworkDetailImages';
+
+interface Props {
+  alt: string;
+  height: number;
+  src: string;
+  width: number;
+}
+
+const { alt, height, src, width } = Astro.props;
+const imageSet = getArtworkDetailImageSet(src);
+const aspectRatio = width / height;
+const placeholderStyle = imageSet.placeholder
+  ? `--artwork-image-placeholder: url(${imageSet.placeholder});`
+  : '';
+---
+
+<div
+  class="artwork-detail-image"
+  data-artwork-progressive
+  aria-busy="true"
+  style={`${placeholderStyle} --artwork-image-aspect: ${width} / ${height}; --artwork-image-ratio: ${aspectRatio};`}
+>
+  <picture>
+    {imageSet.avifSrcset && <source type="image/avif" srcset={imageSet.avifSrcset} sizes={imageSet.sizes} />}
+    {imageSet.webpSrcset && <source type="image/webp" srcset={imageSet.webpSrcset} sizes={imageSet.sizes} />}
+    <img
+      data-artwork-detail-full
+      src={imageSet.src}
+      srcset={imageSet.webpSrcset}
+      sizes={imageSet.sizes}
+      alt={alt}
+      width={width}
+      height={height}
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+    />
+  </picture>
+</div>
+
+<script>
+  const setupProgressiveArtworkImages = () => {
+    document.querySelectorAll<HTMLElement>('[data-artwork-progressive]').forEach((frame) => {
+      if (frame.dataset.artworkProgressiveBooted === 'true') return;
+
+      const image = frame.querySelector<HTMLImageElement>('[data-artwork-detail-full]');
+      if (!image) return;
+
+      frame.dataset.artworkProgressiveBooted = 'true';
+
+      const reveal = async () => {
+        if (image.decode && image.naturalWidth > 0) {
+          await image.decode().catch(() => {});
+        }
+
+        frame.dataset.artworkImageReady = 'true';
+        frame.removeAttribute('aria-busy');
+      };
+      const showError = () => {
+        frame.dataset.artworkImageError = 'true';
+        frame.removeAttribute('aria-busy');
+      };
+
+      if (image.complete) {
+        if (image.naturalWidth > 0) void reveal();
+        else showError();
+        return;
+      }
+
+      image.addEventListener('load', () => void reveal(), { once: true });
+      image.addEventListener('error', showError, { once: true });
+    });
+  };
+
+  setupProgressiveArtworkImages();
+  document.addEventListener('astro:page-load', setupProgressiveArtworkImages);
+</script>
+
+<style>
+  .artwork-detail-image {
+    align-self: start;
+    aspect-ratio: var(--artwork-image-aspect);
+    display: grid;
+    justify-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    position: relative;
+    width: min(
+      100%,
+      calc(var(--artwork-detail-image-max-height) * var(--artwork-image-ratio))
+    );
+  }
+
+  .artwork-detail-image::before,
+  .artwork-detail-image picture {
+    grid-area: 1 / 1;
+  }
+
+  .artwork-detail-image::before {
+    background-image: var(--artwork-image-placeholder);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    content: '';
+    filter: blur(14px);
+    inset: -5%;
+    opacity: 1;
+    position: absolute;
+    transform: scale(1.05);
+    transition: opacity 320ms ease;
+  }
+
+  .artwork-detail-image picture {
+    display: block;
+    height: 100%;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+  }
+
+  .artwork-detail-image img {
+    display: block;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 320ms ease;
+    width: 100%;
+  }
+
+  .artwork-detail-image[data-artwork-image-ready='true']::before {
+    opacity: 0;
+  }
+
+  .artwork-detail-image[data-artwork-image-ready='true'] img,
+  .artwork-detail-image[data-artwork-image-error='true'] img {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .artwork-detail-image::before,
+    .artwork-detail-image img {
+      transition: none;
+    }
+  }
+</style>

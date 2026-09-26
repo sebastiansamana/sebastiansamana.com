@@ -101,7 +101,10 @@ const isSpanishRoute = normalizedPath === '/esp' || normalizedPath.startsWith('/
 const isHomeRoute = normalizedPath === '/' || normalizedPath === '/esp';
 const isArchitectLandingRoute = normalizedPath === '/architect' || normalizedPath === '/esp/arquitecto';
 const isPainterArchiveRoute =
-  normalizedPath === '/painter/everything' || normalizedPath === '/esp/pintor/todo';
+  normalizedPath === '/painter/everything' ||
+  normalizedPath.startsWith('/painter/everything/') ||
+  normalizedPath === '/esp/pintor/todo' ||
+  normalizedPath.startsWith('/esp/pintor/todo/');
 const isLightweightShellRoute = isPainterArchiveRoute || isArchitectLandingRoute;
 const architectModelHref = `${basePath}/models/Processed_Rock_Model_web.glb`;
 const shouldPreloadLightFont = !isHomeRoute && !isArchitectLandingRoute;
@@ -974,6 +977,9 @@ const globalPreloaderPaths = [
           return Promise.all(Array.from(element.querySelectorAll('img')).map(waitForImage));
         };
 
+        const waitForRevealFonts = (element) =>
+          element.dataset.varelismRouteRevealFonts === 'false' ? Promise.resolve() : waitForFonts();
+
         const setupRouteReveals = () => {
           const main = document.querySelector('main');
           const hasPageSpecificReveal = main?.querySelector(revealSelector);
@@ -1015,7 +1021,7 @@ const globalPreloaderPaths = [
             };
 
             const revealAfterStableLayout = async () => {
-              await waitForFonts();
+              await waitForRevealFonts(element);
               await waitForRevealImages(element);
               await waitForAnimationFrame();
               await waitForAnimationFrame();
@@ -1026,7 +1032,11 @@ const globalPreloaderPaths = [
           });
         };
 
-        setupRouteReveals();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupRouteReveals, { once: true });
+        } else {
+          setupRouteReveals();
+        }
 
         if (window.__varelismRouteRevealReady) return;
 
