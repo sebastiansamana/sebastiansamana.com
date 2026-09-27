@@ -525,7 +525,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-card {
-    margin-bottom: var(--artwork-gap);
+    margin-bottom: calc(var(--artwork-gap) + var(--artwork-gap));
   }
 
   .artwork-card a {
@@ -571,7 +571,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
 
   .artwork-card__meta {
     color: var(--artwork-footer-text-color);
-    font-size: 0.68rem;
+    font-size: var(--varelism-archive-meta-font-size);
     font-weight: 200;
     margin-top: 0.1rem;
   }
@@ -655,7 +655,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-index__meta {
-    font-size: 0.68rem;
+    font-size: var(--varelism-archive-meta-font-size);
   }
 
   .artwork-empty {
@@ -742,11 +742,6 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
 
     .artwork-archive__header {
       gap: 0.65rem;
-    }
-
-    .artwork-card__meta,
-    .artwork-index__meta {
-      font-size: 0.6rem;
     }
   }
 </style>

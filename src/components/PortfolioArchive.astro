@@ -444,7 +444,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
   .portfolio-card__meta {
     color: var(--portfolio-footer-text-color);
-    font-size: var(--varelism-body-font-size);
+    font-size: var(--varelism-archive-meta-font-size);
     font-weight: 200;
     margin-top: 0.1rem;
   }
@@ -537,7 +537,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   }
 
   .portfolio-index__meta {
-    font-size: 0.68rem;
+    font-size: var(--varelism-archive-meta-font-size);
   }
 
   .portfolio-empty {
@@ -624,10 +624,6 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
     .portfolio-archive__header {
       gap: 0.65rem;
-    }
-
-    .portfolio-index__meta {
-      font-size: 0.6rem;
     }
   }
 </style>

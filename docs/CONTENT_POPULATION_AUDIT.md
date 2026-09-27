@@ -106,7 +106,7 @@ A public Writer or Painter item therefore always generates both language routes 
 
 ### Shared typography scale
 
-The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation above 560px, Writer and Painter metadata values, Painter descriptions, archive titles, Portfolio grid metadata, and secondary red interface controls use this shared scale in both languages. At 560px and below, the primary navigation returns to its original compact `0.72rem` size. Detail metadata labels, Painter grid years, and right-hand archive index metadata retain the compact size: `0.68rem`, reducing to `0.6rem` at 560px and below. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
+The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation above 560px, Writer and Painter metadata values, Painter descriptions, archive titles, and secondary red interface controls use this shared scale in both languages. At 560px and below, the primary navigation returns to its original compact `0.72rem` size. Grid metadata and right-hand archive index metadata use an intermediate `0.82rem` size, reducing to `0.72rem` at 560px and below. Detail metadata labels remain smaller at `0.68rem`, reducing to `0.6rem` at 560px and below. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
 
 ### Visibility and security boundary
 
@@ -245,7 +245,7 @@ Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then
 
 Responsive behavior:
 
-- Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, and stacks each row vertically at 720px. Archive titles use the shared body/content scale; right-hand metadata uses the compact `0.68rem`/`0.6rem` scale.
+- Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, and stacks each row vertically at 720px. Archive titles use the shared body/content scale; right-hand metadata uses the intermediate `0.82rem`/`0.72rem` scale.
 - Detail maximum width is 58rem. Body copy, metadata values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; metadata labels retain their compact `0.68rem`/`0.6rem` sizing. The title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
 - Live audit: at 1440px the record row rendered as two equal grid columns; at 390px it rendered as a vertical flex row.
 
@@ -405,7 +405,8 @@ Grid implementation:
 - At 560px and below: exactly two calculated columns.
 - There is no one-column breakpoint.
 - Live audit confirmed 4 columns at 1440px, 3 at 1024px, and 2 at 390px.
-- Grid-card title-to-year spacing is `0.1rem`, matching the detail label-to-value spacing. The year uses the same compact `0.68rem`/`0.6rem` scale as detail metadata labels.
+- Grid-card title-to-year spacing is `0.1rem`, matching the detail label-to-value spacing. The year uses the intermediate `0.82rem`/`0.72rem` archive-metadata scale.
+- Each artwork card's bottom margin is twice the horizontal Masonry gutter, creating a clearer break after its title/year without changing column count, width, or horizontal spacing.
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
@@ -419,7 +420,7 @@ Hover/focus behavior:
 - keyboard: focus-visible does the same and adds an outline;
 - coarse pointer: press/touch temporarily applies the same state.
 
-Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows stack vertically at 720px, and the right-hand metadata uses the compact `0.68rem`/`0.6rem` scale.
+Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows stack vertically at 720px, and the right-hand metadata uses the intermediate `0.82rem`/`0.72rem` scale.
 
 ### Detail-derived behavior
 
@@ -533,7 +534,7 @@ The archive defaults to grid and resets there on load. Grid/index switch behavio
 - index rows stack below 720px;
 - `<ol>` markers are hidden, so no visible numbering.
 
-Grid-card metadata, grid/index titles, and the red grid/index switch use the shared body/content scale in both languages. Right-hand index metadata uses the compact `0.68rem`/`0.6rem` scale. Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
+Grid/index titles and the red grid/index switch use the shared body/content scale in both languages. Grid-card and right-hand index metadata use the intermediate `0.82rem`/`0.72rem` scale. Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
 
 The normal and red covers are two independent raster assets layered together. Both use the normal cover's stored dimensions, so their aspect ratios must match. The archive never generates either thumbnail from the PDF.
 
