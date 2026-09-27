@@ -106,7 +106,7 @@ A public Writer or Painter item therefore always generates both language routes 
 
 ### Shared typography scale
 
-The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation, Writer and Painter metadata labels/values, Painter descriptions, Writer/Painter/Portfolio archive titles and metadata, and secondary red interface controls use this shared scale in both languages. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
+The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation, Writer and Painter metadata values, Painter descriptions, archive titles and index metadata, Portfolio grid metadata, and secondary red interface controls use this shared scale in both languages. Detail metadata labels and Painter grid years retain the compact size: `0.68rem`, reducing to `0.6rem` at 560px and below. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
 
 ### Visibility and security boundary
 
@@ -246,7 +246,7 @@ Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then
 Responsive behavior:
 
 - Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, and stacks each row vertically at 720px. Archive titles and metadata use the shared body/content scale.
-- Detail maximum width is 58rem. Body copy, metadata labels/values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages. The title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
+- Detail maximum width is 58rem. Body copy, metadata values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; metadata labels retain their compact `0.68rem`/`0.6rem` sizing. The title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
 - Live audit: at 1440px the record row rendered as two equal grid columns; at 390px it rendered as a vertical flex row.
 
 ### Detail-derived behavior
@@ -405,7 +405,7 @@ Grid implementation:
 - At 560px and below: exactly two calculated columns.
 - There is no one-column breakpoint.
 - Live audit confirmed 4 columns at 1440px, 3 at 1024px, and 2 at 390px.
-- Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
+- Grid-card title-to-year spacing is `0.1rem`, matching the detail label-to-value spacing. The year uses the same compact `0.68rem`/`0.6rem` scale as detail metadata labels.
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
@@ -426,7 +426,7 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 - Image markup appears only when `image`, `imageWidth`, and `imageHeight` are all present/truthy.
 - The browser selects a generated detail candidate from the shared source set; normal rendering must not request the multi-megabyte original.
 - The inline blurred preview is present during a cold/slow load and fades only after the selected candidate decodes.
-- Desktop detail is image plus a 13-18rem metadata column and becomes one column at 760px. Metadata labels/values, descriptions, and red action links use the shared body/content scale. The title-to-metadata gap repeats the Return/Volver-to-content gap.
+- Desktop detail is image plus a 13-18rem metadata column and becomes one column at 760px. Metadata values, descriptions, and red action links use the shared body/content scale; metadata labels retain their compact `0.68rem`/`0.6rem` sizing. The title-to-metadata gap repeats the Return/Volver-to-content gap.
 - `description` is one plain paragraph below the figure. No Markdown body or gallery exists.
 - Enquiry mailto is derived for `sebastian.samana@icloud.com` and includes title plus visible date/medium/dimensions, not location/description.
 - Detail SEO is `<title> | Samana` and description-or-title fallback.

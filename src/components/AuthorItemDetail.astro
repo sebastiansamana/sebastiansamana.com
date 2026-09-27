@@ -195,7 +195,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 
   .author-item-header dt {
     color: #919191;
-    font-size: var(--varelism-body-font-size);
+    font-size: 0.68rem;
     font-weight: 200;
     line-height: 1;
   }
@@ -285,4 +285,9 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
   }
 
+  @media (max-width: 560px) {
+    .author-item-header dt {
+      font-size: 0.6rem;
+    }
+  }
 </style>

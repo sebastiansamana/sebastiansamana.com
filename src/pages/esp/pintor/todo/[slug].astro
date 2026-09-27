@@ -184,7 +184,7 @@ const hasDescription = Boolean(artwork.data.description);
 
   .artwork-figure dt {
     color: #919191;
-    font-size: var(--varelism-body-font-size);
+    font-size: 0.68rem;
     font-weight: 200;
     line-height: 1;
   }
@@ -258,4 +258,9 @@ const hasDescription = Boolean(artwork.data.description);
     }
   }
 
+  @media (max-width: 560px) {
+    .artwork-figure dt {
+      font-size: 0.6rem;
+    }
+  }
 </style>
