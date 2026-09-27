@@ -242,7 +242,7 @@ Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then
 Responsive behavior:
 
 - Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, stacks each row vertically at 720px, and uses the two-column equivalent/smaller text at 560px.
-- Detail maximum width is 58rem; its typography/top padding changes at 760px and 560px.
+- Detail maximum width is 58rem. Body copy matches the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; title/top padding changes at 760px, and metadata/link sizing changes at 560px.
 - Live audit: at 1440px the record row rendered as two equal grid columns; at 390px it rendered as a vertical flex row.
 
 ### Detail-derived behavior

@@ -210,7 +210,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   }
 
   .author-item-body {
-    font-size: 1rem;
+    font-size: 1.08rem;
     font-weight: 200;
     line-height: 1.72;
     margin-top: clamp(1.6rem, 4vw, 2.8rem);
@@ -274,8 +274,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
       padding-top: 6.5rem;
     }
 
-    .author-item-header h1,
-    .author-item-body {
+    .author-item-header h1 {
       font-size: clamp(0.95rem, 3.8vw, 1.25rem);
     }
 
@@ -284,6 +283,12 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
         'Helvetica Neue', Arial, sans-serif;
       font-weight: 200;
       opacity: 1;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .author-item-body {
+      font-size: 0.98rem;
     }
   }
 
