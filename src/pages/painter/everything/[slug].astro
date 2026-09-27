@@ -82,7 +82,7 @@ const hasDescription = Boolean(artwork.data.description);
   }
 
   .artwork-detail {
-    --artwork-back-font-size: clamp(0.82rem, 1vw, 0.98rem);
+    --artwork-back-font-size: var(--varelism-body-font-size);
     --artwork-back-gap: clamp(2rem, 5vw, 4rem);
     --artwork-detail-viewport-height: 100vh;
     --artwork-detail-image-max-height: calc(
@@ -144,7 +144,7 @@ const hasDescription = Boolean(artwork.data.description);
   .artwork-figure dl {
     display: grid;
     gap: 0.65rem;
-    margin: 1.6rem 0 0;
+    margin: var(--artwork-back-gap) 0 0;
   }
 
   .artwork-figure div {
@@ -236,14 +236,4 @@ const hasDescription = Boolean(artwork.data.description);
     }
   }
 
-  @media (max-width: 560px) {
-    .artwork-detail {
-      --artwork-back-font-size: 0.72rem;
-    }
-
-    .artwork-back {
-      font-size: var(--artwork-back-font-size);
-    }
-
-  }
 </style>

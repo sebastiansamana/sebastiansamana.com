@@ -67,7 +67,7 @@ const { label, heading, archiveHref, archiveLabel } = Astro.props;
     color: #691b17;
     display: block;
     font-family: var(--font-sans);
-    font-size: clamp(0.82rem, 1vw, 0.98rem);
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     letter-spacing: 0;
     line-height: 1;
@@ -100,10 +100,6 @@ const { label, heading, archiveHref, archiveLabel } = Astro.props;
   @media (max-width: 560px) {
     .work-in-progress-page {
       max-width: calc(100vw - 1.7rem);
-    }
-
-    .work-in-progress-page__link {
-      font-size: 0.72rem;
     }
   }
 </style>

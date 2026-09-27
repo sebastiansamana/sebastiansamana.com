@@ -131,7 +131,6 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   }
 
   .author-item-detail {
-    --author-item-back-font-size: clamp(0.82rem, 1vw, 0.98rem);
     --author-item-back-gap: clamp(2rem, 5vw, 4rem);
 
     color: #000000;
@@ -145,7 +144,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   .author-item-back {
     color: #691b17;
     display: inline-block;
-    font-size: var(--author-item-back-font-size);
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
     margin-bottom: var(--author-item-back-gap);
@@ -176,7 +175,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   .author-item-header dl {
     display: grid;
     gap: 0.65rem;
-    margin: 1.6rem 0 0;
+    margin: var(--author-item-back-gap) 0 0;
   }
 
   .author-item-header div {
@@ -237,7 +236,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   .author-item-enquiry,
   .author-item-top {
     color: #691b17;
-    font-size: var(--author-item-back-font-size);
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
     transition: color 180ms ease;
@@ -286,10 +285,4 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
   }
 
-  @media (max-width: 560px) {
-    .author-item-detail {
-      --author-item-back-font-size: 0.72rem;
-    }
-
-  }
 </style>

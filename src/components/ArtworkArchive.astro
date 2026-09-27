@@ -451,7 +451,6 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
     --artwork-column-width: clamp(11rem, 23vw, 18rem);
     --artwork-footer-text-color: #919191;
     --artwork-meta-hover-color: rgba(105, 27, 23, 0.5);
-    --artwork-title-font-size: clamp(0.82rem, 1vw, 0.98rem);
     --artwork-content-width: calc(
       var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-column-width) +
         var(--artwork-column-width) + var(--artwork-gap) + var(--artwork-gap) + var(--artwork-gap)
@@ -495,7 +494,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
     color: #691b17;
     cursor: pointer;
     font: inherit;
-    font-size: var(--artwork-title-font-size);
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
     padding: 0;
@@ -732,12 +731,10 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
       --artwork-content-width: calc(
         var(--artwork-column-width) + var(--artwork-column-width) + var(--artwork-gap)
       );
-      --artwork-title-font-size: 0.72rem;
     }
 
     .artwork-archive__header {
       gap: 0.65rem;
     }
-
   }
 </style>

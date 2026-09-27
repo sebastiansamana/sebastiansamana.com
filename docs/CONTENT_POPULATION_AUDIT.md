@@ -106,7 +106,7 @@ A public Writer or Painter item therefore always generates both language routes 
 
 ### Shared typography scale
 
-The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation, Writer and Painter metadata labels/values, Painter descriptions, and Writer/Painter/Portfolio archive titles and metadata all use this shared scale in both languages. Mobile major headings have a `0.98rem` minimum. Compact controls and secondary interface text, including archive view switches, Return/Volver and enquiry links, PDF status, and the footer, intentionally remain smaller.
+The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation, Writer and Painter metadata labels/values, Painter descriptions, Writer/Painter/Portfolio archive titles and metadata, and secondary red interface controls use this shared scale in both languages. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
 
 ### Visibility and security boundary
 
@@ -246,7 +246,7 @@ Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then
 Responsive behavior:
 
 - Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, and stacks each row vertically at 720px. Archive titles and metadata use the shared body/content scale.
-- Detail maximum width is 58rem. Body copy and metadata labels/values match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; title/top padding changes at 760px, while compact action links can reduce again at 560px.
+- Detail maximum width is 58rem. Body copy, metadata labels/values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages. The title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
 - Live audit: at 1440px the record row rendered as two equal grid columns; at 390px it rendered as a vertical flex row.
 
 ### Detail-derived behavior
@@ -425,7 +425,7 @@ Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows
 - Image markup appears only when `image`, `imageWidth`, and `imageHeight` are all present/truthy.
 - The browser selects a generated detail candidate from the shared source set; normal rendering must not request the multi-megabyte original.
 - The inline blurred preview is present during a cold/slow load and fades only after the selected candidate decodes.
-- Desktop detail is image plus a 13-18rem metadata column and becomes one column at 760px. Metadata labels/values and descriptions use the shared body/content scale; compact action links can reduce again at 560px.
+- Desktop detail is image plus a 13-18rem metadata column and becomes one column at 760px. Metadata labels/values, descriptions, and red action links use the shared body/content scale. The title-to-metadata gap repeats the Return/Volver-to-content gap.
 - `description` is one plain paragraph below the figure. No Markdown body or gallery exists.
 - Enquiry mailto is derived for `sebastian.samana@icloud.com` and includes title plus visible date/medium/dimensions, not location/description.
 - Detail SEO is `<title> | Samana` and description-or-title fallback.
@@ -532,7 +532,7 @@ The archive defaults to grid and resets there on load. Grid/index switch behavio
 - index rows stack below 720px;
 - `<ol>` markers are hidden, so no visible numbering.
 
-Grid-card and index titles and metadata use the shared body/content scale in both languages. The grid/index switch remains a smaller interface control.
+Grid-card and index titles, metadata, and the red grid/index switch use the shared body/content scale in both languages.
 
 The normal and red covers are two independent raster assets layered together. Both use the normal cover's stored dimensions, so their aspect ratios must match. The archive never generates either thumbnail from the PDF.
 

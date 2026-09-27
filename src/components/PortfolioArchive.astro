@@ -329,7 +329,6 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     --portfolio-column-width: clamp(11rem, 23vw, 18rem);
     --portfolio-footer-text-color: #919191;
     --portfolio-meta-hover-color: rgba(105, 27, 23, 0.5);
-    --portfolio-title-font-size: clamp(0.82rem, 1vw, 0.98rem);
     --portfolio-content-width: calc(
       var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-column-width) +
         var(--portfolio-column-width) + var(--portfolio-gap) + var(--portfolio-gap) + var(--portfolio-gap)
@@ -372,7 +371,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     color: #691b17;
     cursor: pointer;
     font: inherit;
-    font-size: var(--portfolio-title-font-size);
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
     padding: 0;
@@ -614,12 +613,10 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
       --portfolio-content-width: calc(
         var(--portfolio-column-width) + var(--portfolio-column-width) + var(--portfolio-gap)
       );
-      --portfolio-title-font-size: 0.72rem;
     }
 
     .portfolio-archive__header {
       gap: 0.65rem;
     }
-
   }
 </style>
