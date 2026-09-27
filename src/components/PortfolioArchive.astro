@@ -438,14 +438,14 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   }
 
   .portfolio-card__title {
-    font-size: 0.88rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 300;
     margin-top: 0.65rem;
   }
 
   .portfolio-card__meta {
     color: var(--portfolio-footer-text-color);
-    font-size: 0.72rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     margin-top: 0.25rem;
   }
@@ -522,7 +522,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   }
 
   .portfolio-index__title {
-    font-size: 0.98rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 300;
   }
 
@@ -534,7 +534,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   .portfolio-index__meta,
   .portfolio-empty {
     color: var(--portfolio-footer-text-color);
-    font-size: 0.82rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
   }
 
@@ -621,11 +621,5 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
       gap: 0.65rem;
     }
 
-    .portfolio-card__title,
-    .portfolio-card__meta,
-    .portfolio-index__title,
-    .portfolio-index__meta {
-      font-size: var(--portfolio-title-font-size);
-    }
   }
 </style>

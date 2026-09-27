@@ -565,14 +565,14 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-card__title {
-    font-size: 0.88rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 300;
     margin-top: 0.65rem;
   }
 
   .artwork-card__meta {
     color: var(--artwork-footer-text-color);
-    font-size: 0.72rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     margin-top: 0.25rem;
   }
@@ -640,7 +640,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-index__title {
-    font-size: 0.98rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 300;
   }
 
@@ -652,7 +652,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   .artwork-index__meta,
   .artwork-empty {
     color: var(--artwork-footer-text-color);
-    font-size: 0.82rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
   }
 
@@ -739,11 +739,5 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
       gap: 0.65rem;
     }
 
-    .artwork-card__title,
-    .artwork-card__meta,
-    .artwork-index__title,
-    .artwork-index__meta {
-      font-size: var(--artwork-title-font-size);
-    }
   }
 </style>

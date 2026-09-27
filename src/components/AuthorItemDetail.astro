@@ -196,21 +196,21 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 
   .author-item-header dt {
     color: #919191;
-    font-size: 0.68rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
   }
 
   .author-item-header dd {
     color: #919191;
-    font-size: 0.88rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1.25;
     margin: 0;
   }
 
   .author-item-body {
-    font-size: 1.08rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1.72;
     margin-top: clamp(1.6rem, 4vw, 2.8rem);
@@ -275,7 +275,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
 
     .author-item-header h1 {
-      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+      font-size: clamp(0.98rem, 3.8vw, 1.25rem);
     }
 
     .author-item-header h1 {
@@ -286,23 +286,10 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
   }
 
-  @media (max-width: 720px) {
-    .author-item-body {
-      font-size: 0.98rem;
-    }
-  }
-
   @media (max-width: 560px) {
     .author-item-detail {
       --author-item-back-font-size: 0.72rem;
     }
 
-    .author-item-header dt {
-      font-size: 0.6rem;
-    }
-
-    .author-item-header dd {
-      font-size: var(--author-item-back-font-size);
-    }
   }
 </style>

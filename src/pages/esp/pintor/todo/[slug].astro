@@ -184,14 +184,14 @@ const hasDescription = Boolean(artwork.data.description);
 
   .artwork-figure dt {
     color: #919191;
-    font-size: 0.68rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1;
   }
 
   .artwork-figure dd {
     color: #919191;
-    font-size: 0.88rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1.25;
     margin: 0;
@@ -219,7 +219,7 @@ const hasDescription = Boolean(artwork.data.description);
   }
 
   .artwork-description {
-    font-size: 1rem;
+    font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1.55;
     margin: clamp(1.8rem, 5vw, 3.5rem) 0 0;
@@ -248,7 +248,7 @@ const hasDescription = Boolean(artwork.data.description);
 
     .artwork-figure h1 {
       font-family: var(--font-sans);
-      font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+      font-size: clamp(0.98rem, 3.8vw, 1.25rem);
       font-weight: 200;
       opacity: 1;
     }
@@ -267,12 +267,5 @@ const hasDescription = Boolean(artwork.data.description);
       font-size: var(--artwork-back-font-size);
     }
 
-    .artwork-figure dt {
-      font-size: 0.6rem;
-    }
-
-    .artwork-figure dd {
-      font-size: var(--artwork-back-font-size);
-    }
   }
 </style>
