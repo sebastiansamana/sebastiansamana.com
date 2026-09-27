@@ -504,12 +504,8 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
     width: var(--portfolio-aligned-width);
   }
 
-  .portfolio-index li {
+  .portfolio-index li + li {
     border-top: 1px solid rgba(0, 0, 0, 0.12);
-  }
-
-  .portfolio-index li:last-child {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .portfolio-index a {

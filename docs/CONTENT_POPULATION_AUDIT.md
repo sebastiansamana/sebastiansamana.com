@@ -239,7 +239,7 @@ Archive metadata is:
 - English: `year / textType / wordCount`
 - Spanish: `year / spanishTextType / spanishWordCount`
 
-Blank values disappear without extra separators. The archive uses an `<ol>` but `list-style: none`, so no number is visible.
+Blank values disappear without extra separators. Rules appear only between adjacent index entries, with no rule above the first or below the last. The archive uses an `<ol>` but `list-style: none`, so no number is visible.
 
 Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then `year`. The day is not shown on detail. Detail metadata order is Date/Fecha, Category/Categoría, Words/Palabras.
 
@@ -406,7 +406,7 @@ Grid implementation:
 - There is no one-column breakpoint.
 - Live audit confirmed 4 columns at 1440px, 3 at 1024px, and 2 at 390px.
 - Grid-card title-to-year spacing is `0.1rem`, matching the detail label-to-value spacing. The year uses the intermediate `0.82rem`/`0.72rem` archive-metadata scale.
-- Each artwork card's bottom margin is twice the horizontal Masonry gutter, creating a clearer break after its title/year without changing column count, width, or horizontal spacing.
+- Each artwork card's bottom margin is one and a half times the horizontal Masonry gutter, creating a clearer break after its title/year without changing column count, width, or horizontal spacing.
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
@@ -420,7 +420,7 @@ Hover/focus behavior:
 - keyboard: focus-visible does the same and adds an outline;
 - coarse pointer: press/touch temporarily applies the same state.
 
-Index metadata is available `date / medium / dimensions`. Blanks disappear. Rows stack vertically at 720px, and the right-hand metadata uses the intermediate `0.82rem`/`0.72rem` scale.
+Index metadata is available `date / medium / dimensions`. Blanks disappear. Rules appear only between adjacent entries, with no rule above the first or below the last. Rows stack vertically at 720px, and the right-hand metadata uses the intermediate `0.82rem`/`0.72rem` scale.
 
 ### Detail-derived behavior
 
@@ -532,7 +532,8 @@ The archive defaults to grid and resets there on load. Grid/index switch behavio
 - three calculated columns at 720px and below;
 - two calculated columns at 560px and below;
 - index rows stack below 720px;
-- `<ol>` markers are hidden, so no visible numbering.
+- `<ol>` markers are hidden, so no visible numbering;
+- rules appear only between adjacent index entries, with no rule above the first or below the last.
 
 Grid/index titles and the red grid/index switch use the shared body/content scale in both languages. Grid-card and right-hand index metadata use the intermediate `0.82rem`/`0.72rem` scale. Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
 

@@ -84,12 +84,8 @@ const { emptyLabel, label, rows } = Astro.props;
     width: var(--artwork-aligned-width);
   }
 
-  .artwork-index li {
+  .artwork-index li + li {
     border-top: 1px solid rgba(0, 0, 0, 0.12);
-  }
-
-  .artwork-index li:last-child {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .artwork-index a {

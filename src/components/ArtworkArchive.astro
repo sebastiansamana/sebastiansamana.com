@@ -448,6 +448,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
 
   .artwork-archive {
     --artwork-gap: clamp(0.8rem, 1.8vw, 1.35rem);
+    --artwork-card-gap: clamp(1.2rem, 2.7vw, 2.025rem);
     --artwork-column-width: clamp(11rem, 23vw, 18rem);
     --artwork-footer-text-color: #919191;
     --artwork-meta-hover-color: rgba(105, 27, 23, 0.5);
@@ -525,7 +526,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-card {
-    margin-bottom: calc(var(--artwork-gap) + var(--artwork-gap));
+    margin-bottom: var(--artwork-card-gap);
   }
 
   .artwork-card a {
@@ -622,12 +623,8 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
     width: var(--artwork-aligned-width);
   }
 
-  .artwork-index li {
+  .artwork-index li + li {
     border-top: 1px solid rgba(0, 0, 0, 0.12);
-  }
-
-  .artwork-index li:last-child {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .artwork-index a {
