@@ -533,8 +533,15 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
   .portfolio-index__meta,
   .portfolio-empty {
     color: var(--portfolio-footer-text-color);
-    font-size: var(--varelism-body-font-size);
     font-weight: 200;
+  }
+
+  .portfolio-index__meta {
+    font-size: 0.68rem;
+  }
+
+  .portfolio-empty {
+    font-size: var(--varelism-body-font-size);
   }
 
   .portfolio-index a:focus-visible .portfolio-index__title,
@@ -617,6 +624,10 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
 
     .portfolio-archive__header {
       gap: 0.65rem;
+    }
+
+    .portfolio-index__meta {
+      font-size: 0.6rem;
     }
   }
 </style>

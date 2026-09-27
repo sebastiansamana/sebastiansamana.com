@@ -651,8 +651,15 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   .artwork-index__meta,
   .artwork-empty {
     color: var(--artwork-footer-text-color);
-    font-size: var(--varelism-body-font-size);
     font-weight: 200;
+  }
+
+  .artwork-index__meta {
+    font-size: 0.68rem;
+  }
+
+  .artwork-empty {
+    font-size: var(--varelism-body-font-size);
   }
 
   .artwork-index a:focus-visible .artwork-index__title,
@@ -737,7 +744,8 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
       gap: 0.65rem;
     }
 
-    .artwork-card__meta {
+    .artwork-card__meta,
+    .artwork-index__meta {
       font-size: 0.6rem;
     }
   }
