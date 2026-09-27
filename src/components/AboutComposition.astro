@@ -31,11 +31,7 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
   <div class="about-text">
     {
       paragraphs.map((paragraph) => (
-        <p
-          class:list={{
-            'about-samana': paragraph === 'Samana.' || paragraph === 'Samaná.',
-          }}
-        >
+        <p>
           {
             splitTranslationTerms(paragraph).map((part) =>
               isTranslationTerm(part) ? <em>{part}</em> : part
@@ -183,10 +179,6 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
 
   .about-text p:last-child {
     margin-bottom: 0;
-  }
-
-  .about-samana {
-    color: #691b17;
   }
 
   @media (max-width: 720px) {
