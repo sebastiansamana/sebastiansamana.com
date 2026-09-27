@@ -408,6 +408,10 @@ main {
     gap: clamp(0.65rem, 3.7vw, 1rem);
   }
 
+  .site-nav a {
+    font-size: 0.72rem;
+  }
+
   .cart-link {
     height: 1rem;
     width: 1rem;

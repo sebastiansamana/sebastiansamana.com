@@ -106,7 +106,7 @@ A public Writer or Painter item therefore always generates both language routes 
 
 ### Shared typography scale
 
-The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation, Writer and Painter metadata values, Painter descriptions, archive titles, Portfolio grid metadata, and secondary red interface controls use this shared scale in both languages. Detail metadata labels, Painter grid years, and right-hand archive index metadata retain the compact size: `0.68rem`, reducing to `0.6rem` at 560px and below. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
+The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and below. About and Writer body copy, the primary navigation above 560px, Writer and Painter metadata values, Painter descriptions, archive titles, Portfolio grid metadata, and secondary red interface controls use this shared scale in both languages. At 560px and below, the primary navigation returns to its original compact `0.72rem` size. Detail metadata labels, Painter grid years, and right-hand archive index metadata retain the compact size: `0.68rem`, reducing to `0.6rem` at 560px and below. The red-control group includes archive view switches, Return/Volver, PDF-opening, enquiry, back-to-top, and holder-page archive links. Mobile major headings have a `0.98rem` minimum. Technical PDF status text and the footer intentionally remain smaller.
 
 ### Visibility and security boundary
 
