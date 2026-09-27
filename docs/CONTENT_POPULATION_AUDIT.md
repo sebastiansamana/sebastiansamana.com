@@ -405,6 +405,7 @@ Grid implementation:
 - At 560px and below: exactly two calculated columns.
 - There is no one-column breakpoint.
 - Live audit confirmed 4 columns at 1440px, 3 at 1024px, and 2 at 390px.
+- Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
 
 There is no orientation branch. The stored pixel dimensions establish intrinsic aspect ratio; CSS uses full column width and automatic height. Portrait works create taller cards, landscape works shorter cards, and Masonry fills the shortest available column. Physical orientation may be derived from decoded pixels, but physical dimensions may not.
 
@@ -532,7 +533,7 @@ The archive defaults to grid and resets there on load. Grid/index switch behavio
 - index rows stack below 720px;
 - `<ol>` markers are hidden, so no visible numbering.
 
-Grid-card and index titles, metadata, and the red grid/index switch use the shared body/content scale in both languages.
+Grid-card and index titles, metadata, and the red grid/index switch use the shared body/content scale in both languages. Grid-card title-to-metadata spacing is `0.1rem`, matching the detail label-to-value spacing.
 
 The normal and red covers are two independent raster assets layered together. Both use the normal cover's stored dimensions, so their aspect ratios must match. The archive never generates either thumbnail from the PDF.
 
