@@ -5,6 +5,7 @@
 - Route naming updated: 13 July 2026 (`Writer` / `Escritor` and `Painter` / `Pintor`; internal `authorItems` and `artist` identifiers retained).
 - Painter archive responsive-asset pipeline updated: 29 August 2026.
 - Painter detail responsive-image and progressive-preview pipeline updated: 26 September 2026.
+- Portfolio archive direct-to-PDF navigation updated: 27 September 2026.
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -525,6 +526,8 @@ There are no fields for Spanish title/subtitle/PDF, status, draft/private, publi
 
 No sorting function exists. Both grid and index call `portfolios.map`, so literal array order is the public order in both languages. Inserting a new object may place the new item as requested, but the relative order of all existing objects must remain unchanged.
 
+Both grid cards and index rows link directly to the localized auxiliary `/pdf/?viewer=v4` route and open it in a new tab, matching the detail page's desktop “Open PDF” action without requiring the intermediate detail-page click. The auxiliary route redirects mobile, tablet, iPadOS desktop-user-agent, and touch-first devices to the unchanged raw PDF. The localized detail routes remain generated for direct and previously saved URLs, but the archives no longer link to them.
+
 The archive defaults to grid and resets there on load. Grid/index switch behavior, hidden active button, hover colors, focus styles, and breakpoints parallel the Painter archive:
 
 - four-column intended aligned width by default;
@@ -592,11 +595,11 @@ Lifecycle:
 
 1. Array order puts the object in both archives.
 2. `id` creates both localized detail and both auxiliary PDF routes.
-3. Archive renders cover/red cover, title, and `39 pages/paginas`.
-4. Both details currently pass the same `pdfUrl`, page count, ratios, and preview to PDF.js.
-5. English/Spanish UI labels, return link, enquiry wording, and page ARIA labels differ; title and PDF do not.
-6. Page placeholders follow the configured ratios and PDF.js verifies all 39 pages before ready state.
-7. Native mobile/tablet “Open PDF” serves the unchanged original; desktop keeps the branded iframe wrapper.
+3. Archive renders cover/red cover, title, and `39 pages/paginas`; both grid and index links open the localized `/pdf/?viewer=v4` route in a new tab.
+4. Both legacy/direct details currently pass the same `pdfUrl`, page count, ratios, and preview to PDF.js.
+5. English/Spanish detail UI labels, return link, enquiry wording, and page ARIA labels differ; title and PDF do not.
+6. Detail-page placeholders follow the configured ratios and PDF.js verifies all 39 pages before ready state.
+7. Direct archive clicks and detail-page “Open PDF” actions use the branded iframe wrapper on fine-pointer desktop browsers; the wrapper serves the unchanged original in the browser's native viewer on mobile/tablet/touch-first devices.
 8. The build copied the PDF byte-identically.
 9. Live audit at 1440px and 390px loaded 39 pages, showed no console errors, and paired the same slug across languages.
 
@@ -661,7 +664,7 @@ Do not ask for a manual page count that can be measured, status values the model
 6. Copy approved raster assets to `public/images/portfolios/`. Do not derive/red-tint without authorization.
 7. Add one `Portfolio` object, preserving all existing relative array order. Derive `pageCount` and one width/height ratio per source PDF page.
 8. Do not add the unfinished Spanish PDF. Under the current model, confirm the Spanish route's English-PDF behavior.
-9. Verify both archives in grid/index and both details/auxiliary PDF routes.
+9. Verify both archives in grid/index, confirm their cards and index rows open the localized auxiliary PDF route directly, and verify both legacy detail routes.
 10. Verify page count match, every page order, standard/tall ratios, first preview swap, lazy render/eviction, fallback, native Open PDF, enquiry, back-to-top, and language switch.
 11. Check 1440, 1024, about 700, and 390px. Inspect first, representative different-size, middle, and last pages.
 12. Run the common completion gate and compare `public`/`dist` PDF hashes.
@@ -699,6 +702,7 @@ For each public Painter image:
 For each portfolio ID:
 
 - both archive HTML files contain it once;
+- both archives link their grid card and index row directly to the localized `/pdf/?viewer=v4` route in a new tab;
 - both localized detail files and both `/pdf/` files exist;
 - raw PDF and image assets exist in `dist`;
 - `pageCount` equals actual PDF pages;

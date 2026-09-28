@@ -23,7 +23,8 @@ const {
   pageLabel = 'pages',
 } = Astro.props;
 const normalizedDetailBasePath = detailBasePath.endsWith('/') ? detailBasePath : `${detailBasePath}/`;
-const getPortfolioHref = (portfolio: Portfolio) => `${normalizedDetailBasePath}${portfolio.id}/`;
+const getPortfolioPdfHref = (portfolio: Portfolio) =>
+  `${normalizedDetailBasePath}${portfolio.id}/pdf/?viewer=v4`;
 const getPortfolioMeta = (portfolio: Portfolio) =>
   [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} ${pageLabel}` : undefined].filter(Boolean).join(' / ');
 ---
@@ -47,7 +48,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
           {
             portfolios.map((portfolio) => (
               <article class="portfolio-card">
-                <a href={getPortfolioHref(portfolio)}>
+                <a href={getPortfolioPdfHref(portfolio)} target="_blank" rel="noopener">
                   {
                     portfolio.coverImage && portfolio.coverImageWidth && portfolio.coverImageHeight && (
                       <span class="portfolio-card__image-stack" data-card-hover-hit>
@@ -89,7 +90,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
           {
             portfolios.map((portfolio) => (
               <li>
-                <a href={getPortfolioHref(portfolio)}>
+                <a href={getPortfolioPdfHref(portfolio)} target="_blank" rel="noopener">
                   <span class="portfolio-index__title">{portfolio.title}</span>
                   {getPortfolioMeta(portfolio) && <span class="portfolio-index__meta">{getPortfolioMeta(portfolio)}</span>}
                 </a>
