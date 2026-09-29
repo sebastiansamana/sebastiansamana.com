@@ -394,6 +394,12 @@ main {
   margin: 0;
 }
 
+@media (orientation: portrait) and (min-width: 761px) and (max-width: 1180px) {
+  .site-nav a {
+    font-size: clamp(0.95rem, 1.55vw, 1rem);
+  }
+}
+
 @media (max-width: 560px) {
   :root {
     --varelism-archive-meta-font-size: 0.72rem;
