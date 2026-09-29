@@ -181,6 +181,17 @@ const globalPreloaderPaths = [
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     {
+      isHomeRoute && (
+        <link
+          rel="preload"
+          as="image"
+          href="/images/Logo_Animation_Preloader.webp"
+          type="image/webp"
+          fetchpriority="high"
+        />
+      )
+    }
+    {
       shouldPreloadLightFont && (
         <link
           rel="preload"
@@ -196,6 +207,7 @@ const globalPreloaderPaths = [
       as="font"
       href={ultralightFontHref}
       type="font/woff2"
+      fetchpriority={isHomeRoute ? 'low' : undefined}
       crossorigin
     />
     {
@@ -215,6 +227,7 @@ const globalPreloaderPaths = [
       as="font"
       href={thinFontHref}
       type="font/woff2"
+      fetchpriority={isHomeRoute ? 'low' : undefined}
       crossorigin
     />
     <meta name="generator" content={Astro.generator} />
@@ -1058,6 +1071,7 @@ const globalPreloaderPaths = [
           <span class="image-swap">
             <img
               class="image-swap__base"
+              data-home-preloader-critical={isHomeRoute ? '' : undefined}
               src={logoBaseSrc}
               srcset={logoBaseSrcset}
               sizes={isLightweightShellRoute ? '(max-width: 560px) 85px, 150px' : undefined}
@@ -1074,7 +1088,7 @@ const globalPreloaderPaths = [
               alt=""
               width="1095"
               height="398"
-              fetchpriority={isArchitectLandingRoute ? 'low' : undefined}
+              fetchpriority={isArchitectLandingRoute || isHomeRoute ? 'low' : undefined}
               aria-hidden="true"
             />
           </span>
@@ -1087,6 +1101,7 @@ const globalPreloaderPaths = [
             <span class="image-swap">
               <img
                 class="image-swap__base"
+                data-home-preloader-critical={isHomeRoute ? '' : undefined}
                 src={basketBaseSrc}
                 srcset={basketBaseSrcset}
                 sizes={isLightweightShellRoute ? '23px' : undefined}
@@ -1104,7 +1119,7 @@ const globalPreloaderPaths = [
                 alt=""
                 width="370"
                 height="368"
-                fetchpriority={isLightweightShellRoute ? 'low' : undefined}
+                fetchpriority={isLightweightShellRoute || isHomeRoute ? 'low' : undefined}
                 aria-hidden="true"
               />
             </span>

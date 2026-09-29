@@ -6,6 +6,7 @@ interface Props {
   overlayFadeMs?: number;
   playOnce?: boolean;
   readyEvents?: string;
+  safetyTimeoutMs?: number;
   sessionKey?: string;
   timingScale?: number;
   whiteHoldMs?: number;
@@ -20,6 +21,7 @@ const {
   overlayFadeMs,
   playOnce = true,
   readyEvents = '',
+  safetyTimeoutMs = 10000,
   sessionKey = 'varelism-home-preloader-seen',
   timingScale = 1,
   whiteHoldMs,
@@ -35,6 +37,7 @@ const {
   data-overlay-fade-ms={overlayFadeMs}
   data-play-once={playOnce ? 'true' : 'false'}
   data-ready-events={readyEvents}
+  data-safety-timeout-ms={safetyTimeoutMs}
   data-session-key={sessionKey}
   data-timing-scale={timingScale}
   data-fallback-src={fallbackSrc}
@@ -47,6 +50,7 @@ const {
     width="960"
     height="666"
     decoding="async"
+    fetchpriority="high"
     loading="eager"
     aria-hidden="true"
   />
@@ -347,14 +351,6 @@ const {
       return freshVideo;
     };
 
-    const waitForWindowLoad = () => {
-      if (document.readyState === 'complete') return Promise.resolve();
-
-      return new Promise((resolve) => {
-        window.addEventListener('load', resolve, { once: true });
-      });
-    };
-
     const waitForFonts = () => {
       if (!document.fonts?.ready) return Promise.resolve();
 
@@ -364,8 +360,10 @@ const {
     const waitForImage = (image) => {
       if (!(image instanceof HTMLImageElement) || !image.src) return Promise.resolve();
 
-      if (image.complete && image.naturalWidth > 0) {
-        return image.decode ? image.decode().catch(() => {}) : Promise.resolve();
+      if (image.complete) {
+        return image.naturalWidth > 0 && image.decode
+          ? image.decode().catch(() => {})
+          : Promise.resolve();
       }
 
       return new Promise((resolve) => {
@@ -384,9 +382,10 @@ const {
       });
     };
 
-    const waitForPageImages = (overlay) => {
-      const images = Array.from(document.images).filter(
+    const waitForCriticalPageImages = (overlay) => {
+      const images = Array.from(document.querySelectorAll('[data-home-preloader-critical]')).filter(
         (image) =>
+          image instanceof HTMLImageElement &&
           !overlay.contains(image) &&
           !image.closest('[data-home-preloader]') &&
           !image.closest('[data-home-preloader-handoff]')
@@ -401,7 +400,7 @@ const {
       });
 
     const waitForStablePageFrame = async (overlay) => {
-      await Promise.all([waitForWindowLoad(), waitForFonts(), waitForPageImages(overlay)]);
+      await Promise.all([waitForFonts(), waitForCriticalPageImages(overlay)]);
       await waitForAnimationFrame();
       await waitForAnimationFrame();
     };
@@ -483,6 +482,7 @@ const {
       const requestedImageFadeMs = getDuration('imageFadeMs', 240 * timingScale);
       const requestedWhiteHoldMs = getDuration('whiteHoldMs', 0);
       const requestedOverlayFadeMs = getDuration('overlayFadeMs', 450 * timingScale);
+      const safetyTimeoutMs = getDuration('safetyTimeoutMs', 10000);
       const isActivePath = activePaths.some((path) => isSamePath(path, window.location.pathname));
       const forcePreloader = isForcedByPendingNavigation(activePaths);
       const handoffState = getPendingHandoffState(activePaths);
@@ -877,7 +877,20 @@ const {
         };
       }
 
-      Promise.all([waitForStablePageFrame(overlay), waitForRouteReadyEvent(routeReadyEvent)]).then(() => {
+      const pageReady = Promise.all([
+        waitForStablePageFrame(overlay),
+        waitForRouteReadyEvent(routeReadyEvent),
+      ]);
+      const safetyDeadline = new Promise((resolve) => {
+        setTimer(() => {
+          // Preserve any active branded cycle. If media never schedules a complete cycle,
+          // fail open instead of leaving the homepage hidden indefinitely.
+          if (!mediaCycleTimer && !hasMetMediaMoment) markMediaMomentReached();
+          resolve();
+        }, safetyTimeoutMs);
+      });
+
+      Promise.race([pageReady, safetyDeadline]).then(() => {
         if (hasRemoved) return;
         isPageReady = true;
         if (hasStartedMediaCycle && preloaderVideo?.ended && !hasMetMediaMoment) {
