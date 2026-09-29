@@ -167,6 +167,10 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
       const isMobileViewport = () => window.matchMedia('(max-width: 760px)').matches;
       const isSmallLandscapeViewport = () =>
         window.matchMedia('(orientation: landscape) and (max-width: 1180px)').matches;
+      const isTabletPortraitViewport = () =>
+        window.matchMedia(
+          '(orientation: portrait) and (min-width: 761px) and (max-width: 1180px)',
+        ).matches;
       const syncArchitectViewportHeight = ({ force = false } = {}) => {
         if (!(shell instanceof HTMLElement)) return;
 
@@ -175,7 +179,9 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
 
         if (
           !force &&
-          (isMobileViewport() || isSmallLandscapeViewport()) &&
+          (isMobileViewport() ||
+            isSmallLandscapeViewport() ||
+            isTabletPortraitViewport()) &&
           nextWidth === stableViewportWidth &&
           nextOrientation === stableViewportOrientation
         ) {
@@ -231,6 +237,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
       let enableRockControls = () => {};
       let startIntroOrbitRamp = () => {};
       let cancelIntroOrbitRamp = () => {};
+      let refreshSpatialLinks = () => {};
       let isRockInteractionLocked = !shouldReplayWithoutPreloader;
       let isPointCoveredByModel = () => true;
       let isRockHitTestReady = false;
@@ -1128,7 +1135,8 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
           const verticalFov = THREE.MathUtils.degToRad(camera.fov);
           const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect);
           const limitingFov = Math.min(verticalFov, horizontalFov);
-          const cameraFill = aspect < 0.72 ? 0.62 : aspect < 1 ? 0.52 : 0.44;
+          let cameraFill = aspect < 0.72 ? 0.62 : aspect < 1 ? 0.52 : 0.44;
+          if (isTabletPortraitViewport()) cameraFill = 0.68;
           const distance = (displayRadius / Math.sin(limitingFov / 2)) * cameraFill;
           const direction = hasAppliedInitialCameraBookmark
             ? camera.position.clone().sub(target).normalize()
@@ -1160,7 +1168,10 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
           window.cancelAnimationFrame(resizeFrameId);
           resizeFrameId = window.requestAnimationFrame(() => {
             resizeFrameId = 0;
-            if (!hasDisposed) fitCamera();
+            if (hasDisposed) return;
+
+            fitCamera();
+            if (isModelReady) refreshSpatialLinks();
           });
         };
 
@@ -1397,6 +1408,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
             link.style.setProperty('--architect-link-y', `${centerY}px`);
           });
         };
+        refreshSpatialLinks = positionSpatialLinksBelowModel;
         const waitForArchitectSceneReady = async () => {
           await waitForMaterialTextures(collectMaterialTextures(model));
           if (hasDisposed) return;
