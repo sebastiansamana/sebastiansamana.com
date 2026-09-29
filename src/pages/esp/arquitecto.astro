@@ -1744,6 +1744,24 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
     opacity: 1;
   }
 
+  @keyframes architect-tablet-link-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (orientation: portrait) and (min-width: 761px) and (max-width: 1180px) {
+    .architect-stage.is-reveal-sequence.is-projects-visible .architect-spatial-link--projects,
+    .architect-stage.is-reveal-sequence.is-portfolios-visible .architect-spatial-link--portfolios {
+      animation: architect-tablet-link-fade-in var(--architect-link-fade-ms, 450ms) ease both;
+      will-change: opacity;
+    }
+  }
+
   @media (min-width: 561px) and (max-width: 900px) {
     .architect-spatial-link--projects {
       --architect-link-x: 34%;
