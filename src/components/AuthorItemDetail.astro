@@ -59,7 +59,7 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     }
   </header>
 
-  <section class="author-item-body">
+  <section class="author-item-body" data-content-guard="text">
     {
       locale === 'es'
         ? spanishParagraphs.map((paragraph) => (
@@ -209,10 +209,13 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
   }
 
   .author-item-body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     font-size: var(--varelism-body-font-size);
     font-weight: 200;
     line-height: 1.72;
     margin-top: clamp(1.6rem, 4vw, 2.8rem);
+    user-select: none;
   }
 
   .author-item-body :global(p),

@@ -61,16 +61,17 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
 
               return (
                 <article class="artwork-card">
-                  <a href={getArtworkHref(artwork)}>
+                  <a href={getArtworkHref(artwork)} draggable="false">
                     {
                       baseImage && artwork.data.imageWidth && artwork.data.imageHeight && (
-                        <span class="artwork-card__image-stack" data-card-hover-hit>
+                        <span class="artwork-card__image-stack" data-card-hover-hit data-content-guard="image">
                           <img
                             class="artwork-card__image artwork-card__image--base"
                             src={baseImage.src}
                             srcset={baseImage.srcset}
                             sizes={baseImage.sizes}
                             alt={artwork.data.imageAlt ?? artwork.data.title}
+                            draggable="false"
                             width={artwork.data.imageWidth}
                             height={artwork.data.imageHeight}
                             loading={isInitialArtworkCandidate ? 'eager' : 'lazy'}
@@ -85,6 +86,7 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
                                 srcset={hoverImage.srcset}
                                 sizes={hoverImage.sizes}
                                 alt=""
+                                draggable="false"
                                 width={artwork.data.imageWidth}
                                 height={artwork.data.imageHeight}
                                 loading={isInitialArtworkCandidate ? 'eager' : 'lazy'}
@@ -537,10 +539,14 @@ const initialArtworkCandidateCount = Math.min(5, artworks.length);
   }
 
   .artwork-card__image-stack {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     display: grid;
+    user-select: none;
   }
 
   .artwork-card img {
+    -webkit-user-drag: none;
     display: block;
     grid-area: 1 / 1;
     height: auto;

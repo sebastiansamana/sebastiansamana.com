@@ -19,6 +19,7 @@ const placeholderStyle = imageSet.placeholder
 <div
   class="artwork-detail-image"
   data-artwork-progressive
+  data-content-guard="image"
   aria-busy="true"
   style={`${placeholderStyle} --artwork-image-aspect: ${width} / ${height}; --artwork-image-ratio: ${aspectRatio};`}
 >
@@ -31,6 +32,7 @@ const placeholderStyle = imageSet.placeholder
       srcset={imageSet.webpSrcset}
       sizes={imageSet.sizes}
       alt={alt}
+      draggable="false"
       width={width}
       height={height}
       loading="eager"
@@ -80,6 +82,8 @@ const placeholderStyle = imageSet.placeholder
 
 <style>
   .artwork-detail-image {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     align-self: start;
     aspect-ratio: var(--artwork-image-aspect);
     display: grid;
@@ -87,6 +91,7 @@ const placeholderStyle = imageSet.placeholder
     max-width: 100%;
     overflow: hidden;
     position: relative;
+    user-select: none;
     width: min(
       100%,
       calc(var(--artwork-detail-image-max-height) * var(--artwork-image-ratio))
@@ -121,6 +126,7 @@ const placeholderStyle = imageSet.placeholder
   }
 
   .artwork-detail-image img {
+    -webkit-user-drag: none;
     display: block;
     height: 100%;
     max-width: 100%;

@@ -107,6 +107,14 @@ textarea {
   font: inherit;
 }
 
+img,
+canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 html.home-preloader-booting:not(.home-preloader-navigation-active),
 html.home-preloader-booting:not(.home-preloader-navigation-active) body {
   background: #ffffff;

@@ -5,7 +5,7 @@
 - Route naming updated: 13 July 2026 (`Writer` / `Escritor` and `Painter` / `Pintor`; internal `authorItems` and `artist` identifiers retained).
 - Painter archive responsive-asset pipeline updated: 29 August 2026.
 - Painter detail responsive-image and progressive-preview pipeline updated: 26 September 2026.
-- Portfolio archive direct-to-PDF navigation updated: 27 September 2026.
+- Portfolio controlled-viewer navigation and content-copy deterrents updated: 30 September 2026.
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -121,6 +121,12 @@ The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and
 
 Important: `public/` is copied independently of record status. A draft artwork whose image is under `public/images/artworks/` has no archive/detail route, but its raw image URL is still deployable. A PDF under `public/pdfs/` is likewise public even before it is referenced by the portfolio registry. Truly confidential assets must remain outside `public/`, `dist/`, and any public repository.
 
+### Casual-copy deterrents
+
+`src/scripts/content-guard.js` is initialized by the shared layout and standalone PDF document page. Delegated `contextmenu` and `dragstart` listeners suppress the standard saving/dragging actions on images, canvases, and `[data-content-guard]` regions, including media-link dragging. Published Writer bodies use `data-content-guard="text"`, disable selection/callouts, and cancel copy operations whose selected ranges intersect the writing. Editable fields and unrelated text retain their normal behavior; clicks, pointer/touch scrolling, pinch zoom, and keyboard navigation are not intercepted. Artwork archive/detail images explicitly disable dragging and retain their existing progressive image/hover behavior.
+
+Portfolio links open localized `/pdf/` routes with the existing continuous PDF.js viewer. There is no native PDF iframe, device redirect, direct raw-PDF anchor, or download control in the website viewer. Failures offer a localized retry button; JavaScript-disabled browsers see the preview and an enable-JavaScript message. These are deliberate casual-copy deterrents, not access control: public source assets remain fetchable.
+
 ### Metadata, SEO, and structured data
 
 `BaseLayout.astro` accepts `title`, `description`, and a global `indexable` control. Indexable routes emit:
@@ -144,7 +150,7 @@ Canonical and Open Graph URLs are derived globally from `Astro.site`; there are 
 
 ### Existing automated coverage
 
-There are three committed browser regressions:
+The committed browser regressions include:
 
 - `npm run test:home-mobile` rebuilds, starts a preview, uses Chrome/Edge at 390 x
   844 with DPR 3, throttles CPU/network, and confirms cold taps on all three
@@ -169,6 +175,8 @@ There are three committed browser regressions:
   responsive asset, and cumulative layout shift remains at or below 0.01.
 
 The homepage test is valuable as a global regression but does not validate the three archives.
+
+`npm run test:content-guard` rebuilds and checks the bilingual controlled PDF routes, first-page canvas rendering, guarded right-click/drag/copy behavior, normal metadata and editable-field interactions, keyboard/tap navigation, mobile scrolling, and retry recovery without exposing the raw PDF.
 
 There is still no dedicated Writer-archive, Painter-archive, or Architect-portfolio content-validation test,
 no standalone content validation script, and no configured `astro check` script. The manual
@@ -494,10 +502,10 @@ This section is intentionally detailed because portfolio data, inline canvas ren
 - Cover, red-hover, and first-page preview images: `public/images/portfolios/`
 - Archive component: `src/components/PortfolioArchive.astro`
 - Inline viewer: `src/components/PdfScrollViewer.astro`
-- Legacy native iframe page: `src/components/PdfDocumentPage.astro`
+- Standalone controlled PDF page: `src/components/PdfDocumentPage.astro`
 - Archive routes: `src/pages/architect/portfolios.astro` and `src/pages/esp/arquitecto/portafolios.astro`
 - Detail routes: each locale's `portfolios/[slug].astro`
-- Legacy auxiliary PDF routes: each locale's `portfolios/[slug]/pdf.astro`
+- Standalone controlled PDF routes: each locale's `portfolios/[slug]/pdf.astro`
 
 Portfolio is not an Astro content collection. Every object in the exported `portfolios` array creates English and Spanish archive cards/index rows and all four detail/PDF routes.
 
@@ -508,7 +516,7 @@ Portfolio is not an Astro content collection. Every object in the exported `port
 | `id` | required | shared | stable slug and route pair |
 | `title` | required | currently shared | archive/detail/PDF title; no `spanishTitle` exists |
 | `subtitle` | optional | currently shared | archive metadata, detail description, enquiry |
-| `pdfUrl` | required | currently shared | inline PDF.js viewer, direct native links, legacy auxiliary iframe route |
+| `pdfUrl` | required | currently shared | PDF.js source URL for inline and standalone controlled viewers; no direct asset link |
 | `pdfPreviewImage` | optional | shared | eager first-page raster while page 1 canvas prepares |
 | `pdfPreviewImageWidth` / `pdfPreviewImageHeight` | optional | derived | intrinsic preview dimensions |
 | `coverImage` | optional | shared | grid thumbnail |
@@ -526,7 +534,7 @@ There are no fields for Spanish title/subtitle/PDF, status, draft/private, publi
 
 No sorting function exists. Both grid and index call `portfolios.map`, so literal array order is the public order in both languages. Inserting a new object may place the new item as requested, but the relative order of all existing objects must remain unchanged.
 
-Both grid cards and index rows link directly to the shared raw `pdfUrl` and open it in a new tab, matching the detail page's “Open PDF” action without requiring the intermediate detail-page click. This gives desktop, mobile, and tablet browsers their direct native PDF viewer and toolbar. The localized detail routes remain generated for direct and previously saved URLs, but the archives no longer link to them. The localized auxiliary `/pdf/` routes are retained only for previously saved URLs; touch-first devices reaching one are redirected to the raw PDF, while a legacy desktop visit still receives the iframe wrapper.
+Both grid cards and index rows open the localized controlled `/pdf/` route in a new tab, matching the detail page's “Open PDF” action without requiring an intermediate detail-page click. `PortfolioArchive.astro` defaults `documentRouteBase` to `/architect/portfolios`; the Spanish archive passes `/esp/arquitecto/portafolios`. The same continuous PDF.js viewer runs on desktop, mobile, and tablet. Detail routes remain generated for direct and previously saved URLs. All viewer entry points retain the unchanged source PDF and omit native download UI.
 
 The archive defaults to grid and resets there on load. Grid/index switch behavior, hidden active button, hover colors, focus styles, and breakpoints parallel the Painter archive:
 
@@ -556,7 +564,7 @@ Key behavior:
 - Each placeholder uses the matching configured width/height aspect ratio, then first configured ratio, then 1.414.
 - Only page 1 can show `pdfPreviewImage`.
 - PDF.js is loaded from `pdfjs-dist/webpack.mjs` with 262,144-byte range chunks and `wasmUrl: '/pdfjs/wasm/'`.
-- Runtime rejects the inline viewer when actual `numPages` differs from configured placeholders; the fallback still links to the original PDF.
+- Runtime rejects the viewer when actual `numPages` differs from configured placeholders; the fallback offers localized retry, never a raw PDF link.
 - IntersectionObserver uses `rootMargin: '120% 0px'`, queues nearest pages first, and evicts canvases 900ms after they leave the near-page region.
 - Maximum simultaneous renders: 2 above 760px, 1 at 760px and below.
 - Native DPR is capped at 3.
@@ -564,10 +572,11 @@ Key behavior:
 - Output DPR is `max(1, min(native DPR, sqrt(pixel budget / CSS page area)))`.
 - Viewer width/DPR changes trigger rerender when width changes by at least 8px or DPR by at least 0.05, debounced 160ms.
 - Canvas is opaque white and swaps in only after a render completes.
+- After visual rendering is ready, an idle-priority queue extracts screen-reader text one page at a time. Hidden guarded transcripts survive canvas eviction, while active visual jobs always take priority; disposal cancels pending transcript work.
 - At 760px the detail reduces main padding/link text; otherwise pages remain full viewer width.
 - The content width is `min(100%, 92rem)`.
 
-The inline viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. The detail header links directly to the original `pdfUrl` on desktop, mobile, tablet, iPadOS desktop-user-agent, and touch-first devices, so “Open PDF” uses the browser's native PDF viewer and toolbar everywhere. The retained auxiliary route redirects mobile/tablet devices to the raw `pdfUrl`; a previously saved desktop wrapper URL still uses the iframe. Both paths preserve the PDF's vector text/linework and original embedded imagery.
+The viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. The detail header and archive links use the localized controlled `/pdf/` route on every device. `PdfDocumentPage.astro` reuses `PdfScrollViewer.astro` with the configured count, page ratios, and preview, plus a localized Return link. There is no native iframe or touch-device redirect. Keep lazy rendering, canvas eviction, pixel budgets, and the source PDF intact when modifying these deterrents.
 
 Never turn PDF pages into website JPEGs as the source, never replace `pdfUrl` with a raster export, and never overwrite the source merely to reduce transfer size.
 
@@ -594,16 +603,16 @@ The `studio-2-2` registry object is at `src/data/portfolios.ts:26-41`.
 Lifecycle:
 
 1. Array order puts the object in both archives.
-2. `id` creates both localized detail and both auxiliary PDF routes.
-3. Archive renders cover/red cover, title, and `39 pages/paginas`; both grid and index links open the raw `pdfUrl` in a new tab.
+2. `id` creates both localized detail and both controlled PDF routes.
+3. Archive renders cover/red cover, title, and `39 pages/paginas`; both grid and index links open the localized controlled `/pdf/` route in a new tab.
 4. Both legacy/direct details currently pass the same `pdfUrl`, page count, ratios, and preview to PDF.js.
 5. English/Spanish detail UI labels, return link, enquiry wording, and page ARIA labels differ; title and PDF do not.
 6. Detail-page placeholders follow the configured ratios and PDF.js verifies all 39 pages before ready state.
-7. Direct archive clicks and detail-page “Open PDF” actions open the unchanged raw PDF in the browser's native viewer on every device; the localized wrapper routes remain only for previously saved URLs.
+7. Archive clicks and detail-page “Open PDF” actions open the controlled PDF.js document route on every device, with no visible raw-PDF/download action.
 8. The build copied the PDF byte-identically.
 9. Live audit at 1440px and 390px loaded 39 pages, showed no console errors, and paired the same slug across languages.
 
-The Spanish auxiliary `/pdf/` wrapper sets `lang="es"` and localized fallback text, but `PdfDocumentPage.astro` still emits the shared English generic meta-description pattern `<title> architecture portfolio.`. Preserve that current metadata behavior during routine population.
+The Spanish controlled `/pdf/` page sets `lang="es"` and localized return, loading, fallback, retry, and page labels, but `PdfDocumentPage.astro` still emits the shared English generic meta-description pattern `<title> architecture portfolio.`. Preserve that current metadata behavior during routine population.
 
 The old English slug `/architect/portfolios/of-consumption-and-participation-in-the-movable-module/` redirects to `/architect/portfolios/studio-2-2/` in `astro.config.mjs`. Do not remove or repurpose it.
 
@@ -665,7 +674,7 @@ Do not ask for a manual page count that can be measured, status values the model
 7. Add one `Portfolio` object, preserving all existing relative array order. Derive `pageCount` and one width/height ratio per source PDF page.
 8. Do not add the unfinished Spanish PDF. Under the current model, confirm the Spanish route's English-PDF behavior.
 9. Verify both archives in grid/index, confirm their cards and index rows open the localized auxiliary PDF route directly, and verify both legacy detail routes.
-10. Verify page count match, every page order, standard/tall ratios, first preview swap, lazy render/eviction, fallback, native Open PDF, enquiry, back-to-top, and language switch.
+10. Verify page count match, every page order, standard/tall ratios, first preview swap, lazy render/eviction, retry fallback, controlled Open PDF, enquiry, back-to-top, and language switch.
 11. Check 1440, 1024, about 700, and 390px. Inspect first, representative different-size, middle, and last pages.
 12. Run the common completion gate and compare `public`/`dist` PDF hashes.
 
@@ -702,7 +711,7 @@ For each public Painter image:
 For each portfolio ID:
 
 - both archive HTML files contain it once;
-- both archives link their grid card and index row directly to the raw `pdfUrl` in a new tab;
+- both archives link their grid card and index row to the localized controlled `/pdf/` route in a new tab;
 - both localized detail files and both `/pdf/` files exist;
 - raw PDF and image assets exist in `dist`;
 - `pageCount` equals actual PDF pages;
@@ -731,7 +740,7 @@ Across applicable routes verify:
 - keyboard focus and fine/coarse pointer state;
 - enquiry subject/body;
 - back-to-top and reduced-motion behavior;
-- raw native PDF and inline PDF fallback.
+- controlled PDF viewer on all devices, guarded right-click/drag/copy, and retry fallback without a raw-PDF link.
 
 ### Existing regression
 

@@ -39,7 +39,7 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
       <a class="portfolio-detail__link portfolio-detail__return" href="/architect/portfolios/">Return</a>
       <a
         class="portfolio-detail__link portfolio-detail__document"
-        href={portfolio.pdfUrl}
+        href={`/architect/portfolios/${portfolio.id}/pdf/`}
         target="_blank"
         rel="noopener"
         aria-label={`Open ${portfolio.title} PDF in a new tab`}

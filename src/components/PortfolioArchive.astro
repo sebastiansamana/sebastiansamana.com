@@ -3,6 +3,7 @@ import type { Portfolio } from '../data/portfolios';
 
 interface Props {
   portfolios: Portfolio[];
+  documentRouteBase?: string;
   ariaLabel?: string;
   archiveViewLabel?: string;
   emptyLabel?: string;
@@ -13,6 +14,7 @@ interface Props {
 
 const {
   portfolios,
+  documentRouteBase = '/architect/portfolios',
   ariaLabel = 'Portfolios',
   archiveViewLabel = 'Archive view',
   emptyLabel = 'No portfolios yet.',
@@ -22,6 +24,7 @@ const {
 } = Astro.props;
 const getPortfolioMeta = (portfolio: Portfolio) =>
   [portfolio.subtitle, portfolio.pageCount ? `${portfolio.pageCount} ${pageLabel}` : undefined].filter(Boolean).join(' / ');
+const getDocumentHref = (portfolio: Portfolio) => `${documentRouteBase}/${portfolio.id}/pdf/`;
 ---
 
 <section class="portfolio-archive" data-portfolio-archive data-archive-view="grid" aria-label={ariaLabel}>
@@ -43,10 +46,10 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
           {
             portfolios.map((portfolio) => (
               <article class="portfolio-card">
-                <a href={portfolio.pdfUrl} target="_blank" rel="noopener">
+                <a href={getDocumentHref(portfolio)} target="_blank" rel="noopener" draggable="false">
                   {
                     portfolio.coverImage && portfolio.coverImageWidth && portfolio.coverImageHeight && (
-                      <span class="portfolio-card__image-stack" data-card-hover-hit>
+                      <span class="portfolio-card__image-stack" data-card-hover-hit data-content-guard="image">
                         <img
                           class="portfolio-card__image portfolio-card__image--base"
                           src={portfolio.coverImage}
@@ -55,6 +58,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                           height={portfolio.coverImageHeight}
                           loading="lazy"
                           decoding="async"
+                          draggable="false"
                         />
                         {
                           portfolio.coverHoverImage && (
@@ -67,6 +71,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
                               loading="eager"
                               decoding="async"
                               aria-hidden="true"
+                              draggable="false"
                             />
                           )
                         }
@@ -85,7 +90,7 @@ const getPortfolioMeta = (portfolio: Portfolio) =>
           {
             portfolios.map((portfolio) => (
               <li>
-                <a href={portfolio.pdfUrl} target="_blank" rel="noopener">
+                <a href={getDocumentHref(portfolio)} target="_blank" rel="noopener">
                   <span class="portfolio-index__title">{portfolio.title}</span>
                   {getPortfolioMeta(portfolio) && <span class="portfolio-index__meta">{getPortfolioMeta(portfolio)}</span>}
                 </a>

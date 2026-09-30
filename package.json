@@ -13,6 +13,7 @@
     "prebuild": "npm run check:artwork-thumbnails && npm run check:artwork-details",
     "test:favicon": "node tests/favicon-assets.mjs",
     "test:artwork-details": "npm run build && node tests/artwork-detail-images.mjs",
+    "test:content-guard": "npm run build && node tests/content-guard.mjs",
     "new-artwork": "node scripts/new-artwork.mjs",
     "test:home-mobile": "npm run build && node tests/home-cold-mobile-tap.mjs",
     "test:holder-reveal": "npm run build && node tests/holder-route-reveal.mjs",

@@ -1058,6 +1058,10 @@ const globalPreloaderPaths = [
       })();
     </script>
     <title>{title}</title>
+    <script>
+      import { setupContentGuard } from '../scripts/content-guard.js';
+      setupContentGuard();
+    </script>
   </head>
   <body>
     <div class="site-shell">

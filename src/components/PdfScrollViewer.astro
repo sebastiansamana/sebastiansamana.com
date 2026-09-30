@@ -11,7 +11,8 @@ interface Props {
   pageLabel?: string;
   loadingLabel?: string;
   fallbackLabel?: string;
-  openPdfLabel?: string;
+  retryLabel?: string;
+  javascriptLabel?: string;
   pageErrorLabel?: string;
 }
 
@@ -27,7 +28,8 @@ const {
   pageLabel = 'Page',
   loadingLabel = 'Preparing high-resolution portfolio',
   fallbackLabel = 'The portfolio viewer could not be loaded.',
-  openPdfLabel = 'Open the original PDF',
+  retryLabel = 'Try again',
+  javascriptLabel = 'Enable JavaScript to view the portfolio.',
   pageErrorLabel = 'This page could not be displayed.',
 } = Astro.props;
 
@@ -52,6 +54,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
 <section
   class="pdf-scroll-viewer"
   data-pdf-scroll-viewer
+  data-content-guard="pdf"
   data-pdf-url={pdfUrl}
   data-pdf-title={title}
   data-pdf-page-error-label={pageErrorLabel}
@@ -84,9 +87,16 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
               decoding="async"
               fetchpriority="high"
               aria-hidden="true"
+              draggable="false"
             />
           ) : null}
           <canvas class="pdf-scroll-viewer__canvas" aria-hidden="true"></canvas>
+          <div
+            class="pdf-scroll-viewer__page-text"
+            data-pdf-page-text
+            data-content-guard="text"
+            aria-busy="true"
+          ></div>
           <figcaption class="pdf-scroll-viewer__page-status" data-pdf-page-status>
             {formatPageNumber(number)} / {formatPageNumber(safePageCount)}
           </figcaption>
@@ -96,12 +106,12 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
   </div>
 
   <p class="pdf-scroll-viewer__fallback" data-pdf-fallback role="alert" hidden>
-    {fallbackLabel} <a href={pdfUrl} target="_blank" rel="noopener">{openPdfLabel}</a>
+    {fallbackLabel} <button type="button" data-pdf-retry>{retryLabel}</button>
   </p>
 
   <noscript>
     <p class="pdf-scroll-viewer__fallback pdf-scroll-viewer__fallback--noscript">
-      {fallbackLabel} <a href={pdfUrl} target="_blank" rel="noopener">{openPdfLabel}</a>
+      {javascriptLabel}
     </p>
   </noscript>
 </section>
@@ -126,11 +136,14 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     const pageElements = Array.from(viewer.querySelectorAll<HTMLElement>(pageSelector));
     const documentStatus = viewer.querySelector<HTMLElement>('[data-pdf-document-status]');
     const fallback = viewer.querySelector<HTMLElement>('[data-pdf-fallback]');
+    const retryButton = viewer.querySelector<HTMLButtonElement>('[data-pdf-retry]');
 
     if (!pdfUrl || pageElements.length === 0) return;
 
     viewer.dataset.pdfViewerBooted = 'true';
     viewer.classList.add('is-booted');
+    const retryDocument = () => window.location.reload();
+    retryButton?.addEventListener('click', retryDocument);
 
     let activeRenders = 0;
     let disposed = false;
@@ -147,8 +160,67 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     const queuedPages = new Set<number>();
     const renderingPages = new Set<number>();
     const renderTasks = new Map<number, any>();
+    const pendingTextPages = pageElements.map(getPageNumber);
+    let firstVisualReady = false;
+    let textExtractionActive = false;
+    let textScheduleHandle: number | null = null;
+    let textScheduledWithIdleCallback = false;
 
     const pageElementFor = (pageNumber: number) => pageElements[pageNumber - 1];
+
+    // Text stays available to assistive technology even after its canvas is evicted.
+    // Only start a new extraction between visual jobs, after a canvas has painted.
+    const schedulePageText = () => {
+      if (
+        disposed || !pdfDocument || !firstVisualReady || textExtractionActive ||
+        textScheduleHandle !== null || pendingTextPages.length === 0 ||
+        activeRenders > 0 || queuedPages.size > 0
+      ) return;
+
+      const extractNextPageText = async () => {
+        textScheduleHandle = null;
+        if (disposed || !pdfDocument || activeRenders > 0 || queuedPages.size > 0) return;
+
+        const pageNumber = pendingTextPages.shift();
+        if (pageNumber === undefined) return;
+        const transcript = pageElementFor(pageNumber)?.querySelector<HTMLElement>('[data-pdf-page-text]');
+        textExtractionActive = true;
+        let page: any = null;
+
+        try {
+          page = await pdfDocument.getPage(pageNumber);
+          if (disposed) return;
+          if (activeRenders > 0 || queuedPages.size > 0) {
+            pendingTextPages.unshift(pageNumber);
+            return;
+          }
+
+          const content = await page.getTextContent();
+          if (disposed || !transcript) return;
+          transcript.textContent = content.items
+            .filter((item: any) => typeof item.str === 'string')
+            .map((item: any) => `${item.str}${item.hasEOL ? '\n' : ' '}`)
+            .join('')
+            .trim();
+          transcript.dataset.pdfTextReady = 'true';
+          transcript.removeAttribute('aria-busy');
+        } catch {
+          if (!disposed && transcript) {
+            transcript.dataset.pdfTextError = 'true';
+            transcript.removeAttribute('aria-busy');
+          }
+        } finally {
+          if (!renderingPages.has(pageNumber)) page?.cleanup?.();
+          textExtractionActive = false;
+          schedulePageText();
+        }
+      };
+
+      textScheduledWithIdleCallback = typeof window.requestIdleCallback === 'function';
+      textScheduleHandle = textScheduledWithIdleCallback
+        ? window.requestIdleCallback(() => void extractNextPageText(), { timeout: 1000 })
+        : window.setTimeout(() => void extractNextPageText(), 100);
+    };
 
     const resetPageStatus = (pageElement: HTMLElement, pageNumber: number) => {
       const status = pageElement.querySelector<HTMLElement>('[data-pdf-page-status]');
@@ -251,6 +323,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
         pageElement.dataset.renderKey = renderKey;
         pageElement.classList.add('is-rendered');
         pageElement.classList.remove('is-rendering');
+        firstVisualReady = true;
       } catch (error: any) {
         if (disposed || error?.name === 'RenderingCancelledException') return;
 
@@ -297,6 +370,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
           activeRenders -= 1;
           renderingPages.delete(pageNumber);
           pumpRenderQueue();
+          schedulePageText();
         });
       }
     };
@@ -438,6 +512,12 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
       resizeObserver.disconnect();
       window.removeEventListener('resize', queueVisiblePagesAfterResize);
       window.clearTimeout(resizeTimer);
+      if (textScheduleHandle !== null) {
+        if (textScheduledWithIdleCallback) window.cancelIdleCallback(textScheduleHandle);
+        else window.clearTimeout(textScheduleHandle);
+        textScheduleHandle = null;
+      }
+      pendingTextPages.length = 0;
       evictionTimers.forEach((timer) => window.clearTimeout(timer));
       evictionTimers.clear();
       renderTasks.forEach((task) => task?.cancel?.());
@@ -449,6 +529,7 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
       destroyLoadingTask();
 
       document.removeEventListener('astro:before-swap', dispose);
+      retryButton?.removeEventListener('click', retryDocument);
     };
 
     document.addEventListener('astro:before-swap', dispose, { once: true });
@@ -472,6 +553,9 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     color: #000000;
     position: relative;
     width: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .pdf-scroll-viewer__progress {
@@ -573,7 +657,8 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     opacity: 1;
   }
 
-  .pdf-scroll-viewer__document-status {
+  .pdf-scroll-viewer__document-status,
+  .pdf-scroll-viewer__page-text {
     border: 0;
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
@@ -584,6 +669,10 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     position: absolute;
     white-space: nowrap;
     width: 1px;
+  }
+
+  .pdf-scroll-viewer__page-text {
+    white-space: pre-wrap;
   }
 
   .pdf-scroll-viewer__fallback {
@@ -601,18 +690,23 @@ const formatPageNumber = (pageNumber: number) => String(pageNumber).padStart(2, 
     display: none;
   }
 
-  .pdf-scroll-viewer__fallback a {
+  .pdf-scroll-viewer__fallback button {
+    background: transparent;
+    border: 0;
     color: #691b17;
+    cursor: pointer;
+    font: inherit;
     margin-left: 0.2em;
+    padding: 0;
     transition: color 180ms ease;
   }
 
-  .pdf-scroll-viewer__fallback a:focus-visible,
-  .pdf-scroll-viewer__fallback a:hover {
+  .pdf-scroll-viewer__fallback button:focus-visible,
+  .pdf-scroll-viewer__fallback button:hover {
     color: #000000;
   }
 
-  .pdf-scroll-viewer__fallback a:focus-visible {
+  .pdf-scroll-viewer__fallback button:focus-visible {
     outline: 1px solid #691b17;
     outline-offset: 0.35rem;
   }
