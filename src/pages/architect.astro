@@ -368,6 +368,9 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
         let activePointer = null;
         let hoveredLink = null;
         let suppressedClickLink = null;
+        const passiveDesktopHoverQuery = window.matchMedia(
+          '(min-width: 1181px) and (hover: hover) and (pointer: fine)',
+        );
 
         const getEventPoint = (event) => {
           if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
@@ -383,6 +386,13 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
           const point = getEventPoint(event);
           return Boolean(point && !isPointCoveredByModel(point.x, point.y));
         };
+
+        const isPassiveDesktopHover = (event) =>
+          event.pointerType === 'mouse' &&
+          event.buttons === 0 &&
+          activePointer === null &&
+          !isRockInteractionLocked &&
+          passiveDesktopHoverQuery.matches;
 
         const setHoveredLink = (link) => {
           if (hoveredLink === link) return;
@@ -413,7 +423,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
         };
 
         const onPointerMove = (event) => {
-          const isVisible = isVisibleLinkHit(event);
+          const isVisible = isPassiveDesktopHover(event) || isVisibleLinkHit(event);
 
           if (isVisible) {
             setHoveredLink(event.currentTarget);
@@ -465,7 +475,7 @@ const modelUrl = `${basePath}/models/Processed_Rock_Model_web.glb`;
         };
 
         const onPointerEnter = (event) => {
-          if (isVisibleLinkHit(event)) {
+          if (isPassiveDesktopHover(event) || isVisibleLinkHit(event)) {
             setHoveredLink(event.currentTarget);
           }
         };
