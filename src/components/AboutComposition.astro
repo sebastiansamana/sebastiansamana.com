@@ -28,7 +28,7 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
     </picture>
   </figure>
 
-  <div class="about-text">
+  <div class="about-text" data-content-guard="text">
     {
       paragraphs.map((paragraph) => (
         <p>
@@ -150,6 +150,8 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
   }
 
   .about-text {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
       'Helvetica Neue', Arial, sans-serif;
     font-size: var(--varelism-body-font-size);
@@ -165,6 +167,7 @@ const isTranslationTerm = (text: string) => translationTerms.includes(text);
     opacity: 0;
     text-align: left;
     transition: opacity 450ms ease;
+    user-select: none;
     width: 100%;
   }
 
