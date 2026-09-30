@@ -1,15 +1,7 @@
 ---
-import PdfScrollViewer from './PdfScrollViewer.astro';
-
 interface Props {
   title: string;
   pdfUrl: string;
-  pageCount: number;
-  pageAspectRatios?: number[];
-  previewImage?: string;
-  previewImageWidth?: number;
-  previewImageHeight?: number;
-  returnHref: string;
   lang?: 'en' | 'es';
   indexable?: boolean;
 }
@@ -17,17 +9,12 @@ interface Props {
 const {
   title,
   pdfUrl,
-  pageCount,
-  pageAspectRatios,
-  previewImage,
-  previewImageWidth,
-  previewImageHeight,
-  returnHref,
   lang = 'en',
   indexable = true,
 } = Astro.props;
 const spanish = lang === 'es';
 const documentTitle = `${title} PDF | Samana`;
+const viewerUrl = `${pdfUrl}#page=1&view=Fit&zoom=page-fit&toolbar=0&navpanes=0`;
 const normalizedPath = Astro.url.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '') || '/';
 const canonicalPath = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
 const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href;
@@ -48,31 +35,11 @@ const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>{documentTitle}</title>
-    <script>
-      import { setupContentGuard } from '../scripts/content-guard.js';
-      setupContentGuard();
-    </script>
   </head>
   <body>
-    <main class="pdf-document">
-      <a class="pdf-document__return" href={returnHref}>{spanish ? 'Volver' : 'Return'}</a>
-      <PdfScrollViewer
-        pdfUrl={pdfUrl}
-        title={title}
-        ariaLabel={`${title} PDF`}
-        pageCount={pageCount}
-        pageAspectRatios={pageAspectRatios}
-        previewImage={previewImage}
-        previewImageWidth={previewImageWidth}
-        previewImageHeight={previewImageHeight}
-        pageLabel={spanish ? 'Página' : 'Page'}
-        loadingLabel={spanish ? 'Preparando el portafolio en alta resolución' : 'Preparing high-resolution portfolio'}
-        fallbackLabel={spanish ? 'No se pudo cargar el visor del portafolio.' : 'The portfolio viewer could not be loaded.'}
-        retryLabel={spanish ? 'Reintentar' : 'Try again'}
-        javascriptLabel={spanish ? 'Activa JavaScript para ver el portafolio.' : 'Enable JavaScript to view the portfolio.'}
-        pageErrorLabel={spanish ? 'No se pudo mostrar esta página.' : 'This page could not be displayed.'}
-      />
-    </main>
+    <iframe src={viewerUrl} title={`${title} PDF`} allowfullscreen>
+      <p>{spanish ? 'Este navegador no pudo mostrar el PDF.' : 'This browser could not display the PDF.'}</p>
+    </iframe>
   </body>
 </html>
 
@@ -81,54 +48,16 @@ const canonicalUrl = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href
   body {
     background: #ffffff;
     margin: 0;
-    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
     width: 100%;
   }
 
-  html {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
-  }
-
-  .pdf-document {
-    box-sizing: border-box;
-    margin: 0 auto;
-    max-width: 92rem;
-    padding: clamp(0.75rem, 2vw, 1.5rem);
-  }
-
-  .pdf-document__return {
-    color: #691b17;
-    display: inline-block;
-    font-size: 1.08rem;
-    font-weight: 300;
-    line-height: 1.2;
-    margin-bottom: 1rem;
-    text-decoration: none;
-    transition: color 180ms ease;
-  }
-
-  .pdf-document__return:hover,
-  .pdf-document__return:focus-visible {
-    color: #000000;
-  }
-
-  .pdf-document__return:focus-visible {
-    outline: 1px solid #691b17;
-    outline-offset: 0.35rem;
-  }
-
-  .pdf-scroll-viewer__canvas,
-  .pdf-scroll-viewer__preview {
-    -webkit-touch-callout: none;
-    -webkit-user-drag: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  @media (max-width: 720px) {
-    .pdf-document__return {
-      font-size: 0.98rem;
-    }
+  iframe {
+    background: #ffffff;
+    border: 0;
+    display: block;
+    height: 100%;
+    width: 100%;
   }
 </style>

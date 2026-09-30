@@ -25,21 +25,23 @@ const verifyBuiltHtml = async () => {
   for (const { archive, detail, pdf } of portfolioRoutes) {
     const [archiveHtml, detailHtml, pdfHtml] = await Promise.all([builtHtml(archive), builtHtml(detail), builtHtml(pdf)]);
     for (const [route, html] of [[archive, archiveHtml], [detail, detailHtml]]) {
-      assert.match(html, new RegExp(`href="${pdf}"`), `${route}: controlled viewer link is missing`);
+      assert.match(html, new RegExp(`href="${pdf}"`), `${route}: standalone viewer link is missing`);
       assert.doesNotMatch(html, /<a\b[^>]*href="[^"]*\.pdf(?:[?#][^"]*)?"/i, `${route}: exposes a direct PDF link`);
     }
-    assert.match(pdfHtml, /data-content-guard="pdf"/, `${pdf}: viewer guard is missing`);
-    assert.equal((pdfHtml.match(/\bdata-pdf-page(?:\s|>)/g) || []).length, 39, `${pdf}: page placeholders changed`);
-    assert.doesNotMatch(pdfHtml, /<(?:iframe|embed|object)\b/i, `${pdf}: uses a native document viewer`);
+    const iframeSource = pdfHtml.match(/<iframe\b[^>]*src="([^"]+)"/i)?.[1]?.replace(/&(?:amp|#38|#x26);/g, '&');
+    assert.equal(iframeSource, '/pdfs/studio-2-2.pdf#page=1&view=Fit&zoom=page-fit&toolbar=0&navpanes=0', `${pdf}: native viewer or toolbar preferences are missing`);
+    assert.doesNotMatch(pdfHtml, /data-pdf-scroll-viewer|data-pdf-page|<canvas\b/i, `${pdf}: still renders the website PDF.js viewer`);
+    assert.doesNotMatch(pdfHtml, /pdf-document__return|<header\b|<nav\b/i, `${pdf}: still adds website chrome`);
     assert.doesNotMatch(pdfHtml, /<a\b[^>]*(?:\bdownload\b|href="[^"]*\.pdf(?:[?#][^"]*)?")/i, `${pdf}: offers PDF download UI`);
     assert.doesNotMatch(pdfHtml, /data-native-pdf-url/, `${pdf}: still redirects to the native PDF`);
+    assert.equal((detailHtml.match(/\bdata-pdf-page(?:\s|>)/g) || []).length, 39, `${detail}: legacy inline page placeholders changed`);
   }
   for (const route of writingRoutes) {
     assert.match(await builtHtml(route), /class="author-item-body"[^>]*data-content-guard="text"/, `${route}: body guard is missing`);
   }
 };
 
-// PDF.js must be tested against a server that supports byte ranges, like production hosting.
+// Both native PDF rendering and the legacy PDF.js detail need production-like byte ranges.
 const startStaticServer = () => new Promise((resolve, reject) => {
   const distRoot = path.resolve(root, 'dist');
   const server = createServer((request, response) => {
@@ -141,9 +143,9 @@ class CdpClient {
       this.pending.clear();
     });
   }
-  send(method, params = {}) {
+  send(method, params = {}, sessionId) {
     const id = ++this.id;
-    this.socket.send(JSON.stringify({ id, method, params }));
+    this.socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
@@ -279,7 +281,84 @@ const verifyArtwork = async (client, origin) => {
     await waitForPredicate(client, `document.querySelector('[data-artwork-progressive]')?.dataset.artworkImageReady === 'true'`);
   }
 };
-const verifyPdf = async (client, origin, route) => {
+const nativeUiChecks = [];
+const inspectNativeChromeUi = async (client, route) => {
+  const extensionUrl = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/';
+  let target;
+  for (const deadline = Date.now() + 5000; Date.now() < deadline;) {
+    const { targetInfos } = await client.send('Target.getTargets');
+    target = targetInfos.find(({ type, url }) => type === 'iframe' && url.startsWith(extensionUrl));
+    if (target) break;
+    await delay(100);
+  }
+  if (!target) {
+    nativeUiChecks.push({ route, skipped: 'Browser did not expose a Chrome PDF extension target to DevTools' });
+    return;
+  }
+  const { sessionId } = await client.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
+  try {
+    let state;
+    for (const deadline = Date.now() + 10000; Date.now() < deadline;) {
+      const result = await client.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+        const viewer = document.getElementById('viewer');
+        const toolbar = viewer?.shadowRoot?.getElementById('toolbar');
+        const plugin = viewer?.shadowRoot?.getElementById('plugin');
+        const rect = plugin?.getBoundingClientRect();
+        return toolbar ? { hidden: toolbar.hidden, display: getComputedStyle(toolbar).display,
+          plugin: rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null,
+          viewportWidth: innerWidth, viewportHeight: innerHeight } : null;
+      })()` }, sessionId);
+      if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+      state = result.result.value;
+      if (state) break;
+      await delay(100);
+    }
+    assert.ok(state, `${route}: native Chrome PDF UI is exposed but its toolbar did not initialize`);
+    assert.equal(state.hidden, true, `${route}: native Chrome toolbar is visible`);
+    assert.equal(state.display, 'none', `${route}: native Chrome toolbar is painted despite its hidden flag`);
+    nativeUiChecks.push({ route, ...state });
+  } finally {
+    await client.send('Target.detachFromTarget', { sessionId });
+  }
+};
+const verifyNativePdf = async (client, origin, route) => {
+  await navigate(client, origin, route);
+  await waitForPredicate(client, `document.querySelector('iframe[src*=".pdf#"]') instanceof HTMLIFrameElement`);
+  const state = await runtimeValue(client, `(() => {
+    const frame = document.querySelector('iframe');
+    const rect = frame.getBoundingClientRect();
+    const source = new URL(frame.src);
+    return { source: source.pathname, preferences: Object.fromEntries(new URLSearchParams(source.hash.slice(1))),
+      title: frame.title, x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      viewportWidth: innerWidth, viewportHeight: innerHeight, pointerEvents: getComputedStyle(frame).pointerEvents,
+      frames: document.querySelectorAll('iframe, embed, object').length,
+      customViewer: document.querySelectorAll('[data-pdf-scroll-viewer], [data-pdf-page], canvas').length,
+      websiteChrome: document.querySelectorAll('header, nav, .pdf-document__return, a, button').length,
+      documentWidth: document.documentElement.scrollWidth, documentHeight: document.documentElement.scrollHeight };
+  })()`);
+  assert.equal(state.source, '/pdfs/studio-2-2.pdf', `${route}: native viewer source changed`);
+  assert.deepEqual(state.preferences, { page: '1', view: 'Fit', zoom: 'page-fit', toolbar: '0', navpanes: '0' }, `${route}: native viewer preferences changed`);
+  assert.ok(state.title.trim().length > 0, `${route}: native frame lacks an accessible document title`);
+  assert.equal(state.frames, 1, `${route}: standalone native frame is missing`);
+  assert.equal(state.customViewer, 0, `${route}: custom PDF rendering remains`);
+  assert.equal(state.websiteChrome, 0, `${route}: website controls remain around the native viewer`);
+  assert.notEqual(state.pointerEvents, 'none', `${route}: native viewer interaction is disabled`);
+  for (const [actual, expected, label] of [
+    [state.x, 0, 'left edge'], [state.y, 0, 'top edge'],
+    [state.width, state.viewportWidth, 'width'], [state.height, state.viewportHeight, 'height'],
+  ]) assert.ok(Math.abs(actual - expected) <= 1, `${route}: frame ${label} is not full viewport (${actual} vs ${expected})`);
+  assert.ok(state.documentWidth <= state.viewportWidth + 1, `${route}: outer page overflows horizontally`);
+  assert.ok(state.documentHeight <= state.viewportHeight + 1, `${route}: outer page adds a second scrollbar`);
+
+  const response = await fetch(`${origin}${state.source}`, { headers: { Range: 'bytes=0-1023' } });
+  assert.equal(response.status, 206, `${route}: source PDF does not support byte-range loading`);
+  assert.match(response.headers.get('content-type') || '', /^application\/pdf\b/, `${route}: source is not served as a PDF`);
+  assert.match(Buffer.from(await response.arrayBuffer()).toString('latin1'), /^%PDF-/, `${route}: native source is unreadable`);
+  // Browser PDF UI is outside the site's DOM. DevTools can inspect Chrome's native
+  // toolbar where exposed, but this does not imply cross-browser control by the site.
+  await inspectNativeChromeUi(client, route);
+};
+const verifyLegacyPdf = async (client, origin, route) => {
   await navigate(client, origin, route);
   await waitForPredicate(client, `document.querySelector('[data-pdf-page][data-page-number="1"].is-rendered canvas')?.width > 0`, 30000);
   const state = await runtimeValue(client, `(() => {
@@ -318,7 +397,7 @@ const verifyPdf = async (client, origin, route) => {
 const verifyMobileScroll = async (client, origin, route) => {
   await client.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
   await client.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
-  await verifyPdf(client, origin, route);
+  await verifyLegacyPdf(client, origin, route);
   await runtimeValue(client, 'window.scrollTo(0, 0)');
   await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 195, y: 620 }] });
   for (let y = 570; y >= 170; y -= 50) {
@@ -346,6 +425,19 @@ const verifyPdfRecovery = async (client, origin, route) => {
   await runtimeValue(client, `document.querySelector('[data-pdf-retry]').click()`);
   await waitForPredicate(client, `document.querySelector('[data-pdf-page][data-page-number="1"].is-rendered canvas')?.width > 0`, 30000);
 };
+const captureScreenshot = async (client, suffix = '') => {
+  if (!process.env.CONTENT_GUARD_SCREENSHOT) return;
+  const configuredPath = path.resolve(root, process.env.CONTENT_GUARD_SCREENSHOT);
+  const extension = path.extname(configuredPath);
+  const screenshotPath = suffix ? `${configuredPath.slice(0, configuredPath.length - extension.length)}${suffix}${extension || '.png'}` : configuredPath;
+  const relativeToRoot = path.relative(root, screenshotPath);
+  assert.ok(!relativeToRoot.startsWith('..') && !path.isAbsolute(relativeToRoot), 'Screenshot path must stay inside the workspace');
+  await mkdir(path.dirname(screenshotPath), { recursive: true });
+  // Native PDF paint is browser-owned and can finish after the outer page load.
+  await delay(5000);
+  const screenshot = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
+};
 
 let browserProcess, profileDir, client, server, primaryError;
 try {
@@ -368,20 +460,21 @@ try {
   for (const routes of portfolioRoutes) await verifyPortfolioLinks(client, origin, routes);
   for (const route of writingRoutes) await verifyWriting(client, origin, route);
   await verifyArtwork(client, origin);
-  for (const { pdf } of portfolioRoutes) {
-    await verifyPdf(client, origin, pdf);
-    if (process.env.CONTENT_GUARD_SCREENSHOT && pdf === portfolioRoutes[0].pdf) {
-      const screenshotPath = path.resolve(root, process.env.CONTENT_GUARD_SCREENSHOT);
-      const relativeToRoot = path.relative(root, screenshotPath);
-      assert.ok(!relativeToRoot.startsWith('..') && !path.isAbsolute(relativeToRoot), 'Screenshot path must stay inside the workspace');
-      await mkdir(path.dirname(screenshotPath), { recursive: true });
-      const screenshot = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-      await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
-    }
+  for (const { pdf, detail } of portfolioRoutes) {
+    await verifyNativePdf(client, origin, pdf);
+    if (pdf === portfolioRoutes[0].pdf) await captureScreenshot(client);
+    await verifyLegacyPdf(client, origin, detail);
   }
-  await verifyMobileScroll(client, origin, portfolioRoutes[0].pdf);
-  await verifyPdfRecovery(client, origin, portfolioRoutes[0].pdf);
-  console.log('Content guard regression passed: bilingual PDF links/viewers with 39 accessible transcripts and writing, scoped context/copy/drag guards, artwork mouse/Enter navigation and preview, phone PDF scrolling, and Retry recovery.');
+  await client.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
+  await client.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  for (const { pdf } of portfolioRoutes) {
+    await verifyNativePdf(client, origin, pdf);
+    if (pdf === portfolioRoutes[0].pdf) await captureScreenshot(client, '-mobile');
+  }
+  await verifyMobileScroll(client, origin, portfolioRoutes[0].detail);
+  await verifyPdfRecovery(client, origin, portfolioRoutes[0].detail);
+  console.log('Content guard regression passed: bilingual grid/index links and full-viewport native PDF frames with toolbar-hiding hints, writing and artwork guards/navigation, and legacy inline PDF transcripts, phone scrolling, and Retry recovery. Native UI checks below apply to the tested browser; other browsers may handle PDF preferences differently.');
+  console.log(`Native Chrome toolbar checks: ${JSON.stringify(nativeUiChecks)}`);
 } catch (error) {
   primaryError = error;
 } finally {
