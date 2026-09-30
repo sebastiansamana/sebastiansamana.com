@@ -494,10 +494,10 @@ This section is intentionally detailed because portfolio data, inline canvas ren
 - Cover, red-hover, and first-page preview images: `public/images/portfolios/`
 - Archive component: `src/components/PortfolioArchive.astro`
 - Inline viewer: `src/components/PdfScrollViewer.astro`
-- Native iframe page: `src/components/PdfDocumentPage.astro`
+- Legacy native iframe page: `src/components/PdfDocumentPage.astro`
 - Archive routes: `src/pages/architect/portfolios.astro` and `src/pages/esp/arquitecto/portafolios.astro`
 - Detail routes: each locale's `portfolios/[slug].astro`
-- Auxiliary PDF routes: each locale's `portfolios/[slug]/pdf.astro`
+- Legacy auxiliary PDF routes: each locale's `portfolios/[slug]/pdf.astro`
 
 Portfolio is not an Astro content collection. Every object in the exported `portfolios` array creates English and Spanish archive cards/index rows and all four detail/PDF routes.
 
@@ -508,7 +508,7 @@ Portfolio is not an Astro content collection. Every object in the exported `port
 | `id` | required | shared | stable slug and route pair |
 | `title` | required | currently shared | archive/detail/PDF title; no `spanishTitle` exists |
 | `subtitle` | optional | currently shared | archive metadata, detail description, enquiry |
-| `pdfUrl` | required | currently shared | inline PDF.js viewer, native link, auxiliary iframe route |
+| `pdfUrl` | required | currently shared | inline PDF.js viewer, direct native links, legacy auxiliary iframe route |
 | `pdfPreviewImage` | optional | shared | eager first-page raster while page 1 canvas prepares |
 | `pdfPreviewImageWidth` / `pdfPreviewImageHeight` | optional | derived | intrinsic preview dimensions |
 | `coverImage` | optional | shared | grid thumbnail |
@@ -526,7 +526,7 @@ There are no fields for Spanish title/subtitle/PDF, status, draft/private, publi
 
 No sorting function exists. Both grid and index call `portfolios.map`, so literal array order is the public order in both languages. Inserting a new object may place the new item as requested, but the relative order of all existing objects must remain unchanged.
 
-Both grid cards and index rows link directly to the localized auxiliary `/pdf/?viewer=v4` route and open it in a new tab, matching the detail page's desktop “Open PDF” action without requiring the intermediate detail-page click. The auxiliary route redirects mobile, tablet, iPadOS desktop-user-agent, and touch-first devices to the unchanged raw PDF. The localized detail routes remain generated for direct and previously saved URLs, but the archives no longer link to them.
+Both grid cards and index rows link directly to the shared raw `pdfUrl` and open it in a new tab, matching the detail page's “Open PDF” action without requiring the intermediate detail-page click. This gives desktop, mobile, and tablet browsers their direct native PDF viewer and toolbar. The localized detail routes remain generated for direct and previously saved URLs, but the archives no longer link to them. The localized auxiliary `/pdf/` routes are retained only for previously saved URLs; touch-first devices reaching one are redirected to the raw PDF, while a legacy desktop visit still receives the iframe wrapper.
 
 The archive defaults to grid and resets there on load. Grid/index switch behavior, hidden active button, hover colors, focus styles, and breakpoints parallel the Painter archive:
 
@@ -567,7 +567,7 @@ Key behavior:
 - At 760px the detail reduces main padding/link text; otherwise pages remain full viewer width.
 - The content width is `min(100%, 92rem)`.
 
-The inline viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. The detail header keeps the original `pdfUrl` as its progressive-enhancement destination. On mobile, tablet, iPadOS desktop-user-agent, and touch-first devices, “Open PDF” therefore opens the original file in the browser's native PDF viewer. Fine-pointer desktop browsers enhance the link to the branded auxiliary `/pdf/` route, which iframes the original PDF. The auxiliary route also redirects mobile/tablet devices to the raw `pdfUrl`, so direct or stale wrapper links cannot trap Safari inside an iframe. Both paths preserve the PDF's vector text/linework and original embedded imagery.
+The inline viewer rasterizes only the on-screen presentation at a device-aware resolution. It does not rewrite the source PDF. The detail header links directly to the original `pdfUrl` on desktop, mobile, tablet, iPadOS desktop-user-agent, and touch-first devices, so “Open PDF” uses the browser's native PDF viewer and toolbar everywhere. The retained auxiliary route redirects mobile/tablet devices to the raw `pdfUrl`; a previously saved desktop wrapper URL still uses the iframe. Both paths preserve the PDF's vector text/linework and original embedded imagery.
 
 Never turn PDF pages into website JPEGs as the source, never replace `pdfUrl` with a raster export, and never overwrite the source merely to reduce transfer size.
 
@@ -595,11 +595,11 @@ Lifecycle:
 
 1. Array order puts the object in both archives.
 2. `id` creates both localized detail and both auxiliary PDF routes.
-3. Archive renders cover/red cover, title, and `39 pages/paginas`; both grid and index links open the localized `/pdf/?viewer=v4` route in a new tab.
+3. Archive renders cover/red cover, title, and `39 pages/paginas`; both grid and index links open the raw `pdfUrl` in a new tab.
 4. Both legacy/direct details currently pass the same `pdfUrl`, page count, ratios, and preview to PDF.js.
 5. English/Spanish detail UI labels, return link, enquiry wording, and page ARIA labels differ; title and PDF do not.
 6. Detail-page placeholders follow the configured ratios and PDF.js verifies all 39 pages before ready state.
-7. Direct archive clicks and detail-page “Open PDF” actions use the branded iframe wrapper on fine-pointer desktop browsers; the wrapper serves the unchanged original in the browser's native viewer on mobile/tablet/touch-first devices.
+7. Direct archive clicks and detail-page “Open PDF” actions open the unchanged raw PDF in the browser's native viewer on every device; the localized wrapper routes remain only for previously saved URLs.
 8. The build copied the PDF byte-identically.
 9. Live audit at 1440px and 390px loaded 39 pages, showed no console errors, and paired the same slug across languages.
 
@@ -702,7 +702,7 @@ For each public Painter image:
 For each portfolio ID:
 
 - both archive HTML files contain it once;
-- both archives link their grid card and index row directly to the localized `/pdf/?viewer=v4` route in a new tab;
+- both archives link their grid card and index row directly to the raw `pdfUrl` in a new tab;
 - both localized detail files and both `/pdf/` files exist;
 - raw PDF and image assets exist in `dist`;
 - `pageCount` equals actual PDF pages;

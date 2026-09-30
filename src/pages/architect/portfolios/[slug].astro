@@ -31,7 +31,6 @@ const enquiryBody = [
 const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
   `Enquiry about ${portfolio.title}`,
 )}&body=${encodeURIComponent(enquiryBody)}`;
-const pdfViewerHref = `/architect/portfolios/${portfolio.id}/pdf/?viewer=v4`;
 ---
 
 <BaseLayout title={`${portfolio.title} | Samana`} description={description || portfolio.title}>
@@ -41,8 +40,6 @@ const pdfViewerHref = `/architect/portfolios/${portfolio.id}/pdf/?viewer=v4`;
       <a
         class="portfolio-detail__link portfolio-detail__document"
         href={portfolio.pdfUrl}
-        data-native-pdf-href={portfolio.pdfUrl}
-        data-desktop-pdf-href={pdfViewerHref}
         target="_blank"
         rel="noopener"
         aria-label={`Open ${portfolio.title} PDF in a new tab`}
@@ -72,20 +69,7 @@ const pdfViewerHref = `/architect/portfolios/${portfolio.id}/pdf/?viewer=v4`;
 </BaseLayout>
 
 <script>
-  import { shouldOpenPdfNatively } from '../../../scripts/pdf-device.js';
-
   (() => {
-    const setupPdfLinks = () => {
-      const useNativeViewer = shouldOpenPdfNatively();
-
-      document.querySelectorAll('[data-native-pdf-href][data-desktop-pdf-href]').forEach((link) => {
-        if (!(link instanceof HTMLAnchorElement)) return;
-
-        const href = useNativeViewer ? link.dataset.nativePdfHref : link.dataset.desktopPdfHref;
-        if (href) link.href = href;
-      });
-    };
-
     const setupBackToTop = () => {
       document.querySelectorAll('[data-portfolio-back-to-top]').forEach((button) => {
         if (!(button instanceof HTMLButtonElement) || button.dataset.portfolioBackToTopReady === 'true') return;
@@ -102,9 +86,7 @@ const pdfViewerHref = `/architect/portfolios/${portfolio.id}/pdf/?viewer=v4`;
       });
     };
 
-    setupPdfLinks();
     setupBackToTop();
-    document.addEventListener('astro:page-load', setupPdfLinks);
     document.addEventListener('astro:page-load', setupBackToTop);
   })();
 </script>
