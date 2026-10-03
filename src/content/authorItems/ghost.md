@@ -10,8 +10,8 @@ sortDay: 5
 orderInDay: 215
 textType: "Notes"
 spanishTextType: "Notas"
-wordCount: "436 words"
-spanishWordCount: "467 palabras"
+wordCount: "554 words"
+spanishWordCount: "596 palabras"
 spanishBody: |-
   Cierras los ojos y te hundes en la calidez. Al principio, imaginas algo delgado entre los dedos, quizá un lápiz. Pronto pierde su rigidez. Tus brazos se cierran en torno a algo blando apoyado sobre el pecho y, mientras acercas la manta y la acomodas con ternura contra tu cuerpo, terminas sosteniendo una forma. El sueño aún no se ha apoderado de ti. Permanece cerca, aguardando en calma.
 

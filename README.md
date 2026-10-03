@@ -4,6 +4,8 @@ A minimal, editorial architecture portfolio built with Astro for static deployme
 
 ## Run locally
 
+Use Node.js 24 (the deployment version). The package requires Node.js 22.13 or newer.
+
 ```bash
 npm install
 npm run dev

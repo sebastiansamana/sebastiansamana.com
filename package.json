@@ -2,6 +2,9 @@
   "name": "sebastian-samana-root",
   "type": "module",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -21,13 +24,14 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/react": "^5.0.4",
-    "@astrojs/sitemap": "^3.7.3",
-    "astro": "^5.17.1",
+    "@astrojs/markdown-remark": "^7.3.1",
+    "@astrojs/react": "^7.0.0",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.5",
     "d3": "^7.9.0",
     "imagesloaded": "^5.0.0",
     "masonry-layout": "^4.2.2",
-    "pdfjs-dist": "^6.1.200",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "three": "^0.184.0",
@@ -37,6 +41,6 @@
   "devDependencies": {
     "@types/imagesloaded": "^4.1.7",
     "@types/masonry-layout": "^4.2.8",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   }
 }

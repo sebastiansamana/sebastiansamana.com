@@ -5,7 +5,7 @@ import { getCollection, render } from 'astro:content';
 export async function getStaticPaths() {
   const projects = await getCollection('projects');
   return projects.map((project) => ({
-    params: { slug: project.slug },
+    params: { slug: project.id },
     props: { project },
   }));
 }
@@ -78,7 +78,7 @@ const projectTranslations = {
 
 const { project } = Astro.props;
 const { Content } = await render(project);
-const translation = projectTranslations[project.slug as keyof typeof projectTranslations];
+const translation = projectTranslations[project.id as keyof typeof projectTranslations];
 const detail = {
   category: translation?.category ?? project.data.category,
   excerpt: translation?.excerpt ?? project.data.excerpt,

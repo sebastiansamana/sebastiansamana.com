@@ -30,7 +30,7 @@ const blankableInteger = z.preprocess(
 );
 
 const projects = defineCollection({
-  type: 'content',
+  loader: glob({ base: './src/content/projects', pattern: '**/*.md' }),
   schema: z.object({
     title: z.string(),
     subtitle: z.string(),
@@ -68,7 +68,7 @@ const artworks = defineCollection({
 });
 
 const authorItems = defineCollection({
-  type: 'content',
+  loader: glob({ base: './src/content/authorItems', pattern: '**/*.md' }),
   schema: z.object({
     title: z.string().min(1),
     spanishTitle: z.string().min(1),

@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
+import { unified } from '@astrojs/markdown-remark';
 
 const sitemapRedirectPrefixes = ['/author', '/esp/autor', '/artist', '/esp/artista'];
 const sitemapExcludedPaths = new Set([
@@ -10,6 +11,7 @@ const sitemapExcludedPaths = new Set([
   '/booklist',
   '/books',
   '/memories',
+  '/cv',
   '/math-visualisation-lab',
   '/architect/portfolios/of-consumption-and-participation-in-the-movable-module',
 ]);
@@ -28,6 +30,10 @@ const normalizeSitemapPath = (pathname) => {
 export default defineConfig({
   site: 'https://sebastiansamana.com',
   base: process.env.BASE_PATH || '/',
+  compressHTML: true,
+  markdown: {
+    processor: unified(),
+  },
   build: {
     inlineStylesheets: 'always',
   },

@@ -2,43 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="CV | Samana" description="Curriculum vitae.">
+<BaseLayout title="CV | Samana" description="Curriculum vitae." indexable={false}>
   <section class="section fade-up">
     <p class="eyebrow">CV</p>
-    <h1 class="page-title">Selected timeline and positions.</h1>
+    <h1 class="page-title">Curriculum vitae.</h1>
     <a class="btn-link" href="/contact/">Request full CV</a>
   </section>
-
-  <section class="section cv-wrap">
-    <article class="cv-item fade-up stagger" style="--delay:.08s">
-      <p class="eyebrow">2016</p>
-      <h2>Independent practice established in Manchester.</h2>
-    </article>
-    <article class="cv-item fade-up stagger" style="--delay:.14s">
-      <p class="eyebrow">2020-2023</p>
-      <h2>Built residential and cultural commissions across the UK and Europe.</h2>
-    </article>
-    <article class="cv-item fade-up stagger" style="--delay:.2s">
-      <p class="eyebrow">2024-2026</p>
-      <h2>Publications, invited talks, and cross-disciplinary exhibitions.</h2>
-    </article>
-  </section>
 </BaseLayout>
-
-<style>
-  .cv-wrap {
-    border-top: 1px solid var(--line);
-    max-width: 900px;
-  }
-
-  .cv-item {
-    border-bottom: 1px solid var(--line);
-    padding: 1rem 0 1.25rem;
-  }
-
-  h2 {
-    font-size: clamp(1.25rem, 1.8vw, 1.65rem);
-    font-weight: 400;
-    margin: 0;
-  }
-</style>

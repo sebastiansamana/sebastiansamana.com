@@ -6,6 +6,8 @@
 - Painter archive responsive-asset pipeline updated: 29 August 2026.
 - Painter detail responsive-image and progressive-preview pipeline updated: 26 September 2026.
 - Portfolio native-viewer navigation and content-copy deterrents updated: 30 September 2026.
+- Legacy CV cleanup and Writer word-count maintenance updated: 3 October 2026.
+- Dependency toolchain maintenance updated: 3 October 2026 (Astro 7 and Node 24 CI).
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -83,7 +85,7 @@ Do not use the legacy root routes `/books/`, `/booklist/`, or `/memories/` as po
 
 ### Build and content lifecycle
 
-The site is Astro 5.18 static output (`astro.config.mjs:6-13`). A fresh `npm run build` validates content, builds client bundles, generates every public static route, and copies `public/` into `dist/`. `dist/` and `.astro/` are ignored and must not be committed.
+The site uses Astro 7 static output. All Markdown collections use explicit glob loaders; Writer and legacy project routes use filename-derived entry `id` values in place of the removed `slug` property, preserving the existing public URLs and schema fields. `astro.config.mjs` explicitly retains the unified Markdown processor and HTML compression so Writer rendering and page whitespace remain compatible. The shared layout imports `ClientRouter` under the existing `ViewTransitions` local name. A fresh `npm run build` validates content, builds client bundles, generates every public static route, and copies `public/` into `dist/`. `dist/` and `.astro/` are ignored and must not be committed.
 
 | System | Source | Visibility step | Ordering step | Outputs |
 |---|---|---|---|---|
@@ -139,14 +141,18 @@ Portfolio grid/index links and detail-page Open PDF actions open localized `/pdf
 
 Canonical and Open Graph URLs are derived globally from `Astro.site`; there are no per-record SEO overrides. `@astrojs/sitemap` generates the canonical sitemap, and `public/robots.txt` advertises it. The site still has no `hreflang`, Twitter tags, or JSON-LD/structured data. Do not solicit or add unsupported per-record SEO/canonical fields during population.
 
+The legacy `/cv/` route contains only a CV contact request. Its unverified starter timeline has been removed; the route emits `noindex` and is excluded from the sitemap until verified CV content is supplied.
+
 ### Assets and deployment
 
 - Literal content asset URLs are rooted at `/images/...` and `/pdfs/...`.
-- PDF.js WebAssembly support is served from `public/pdfjs/wasm/` and must remain in place.
+- PDF.js WebAssembly support is served from `public/pdfjs/wasm/` and must remain in place. When upgrading PDF.js, synchronize its package-supplied WASM/fallback files and licenses with the installed distribution; source PDFs and supplied artwork assets remain unchanged.
 - This custom GitHub Actions Pages workflow does not require a repository `CNAME` file; the custom domain is controlled in GitHub Pages Settings during cutover.
-- GitHub Actions uses Node 20, `npm ci`, and `npm run build` with `BASE_PATH` (`.github/workflows/deploy.yml:18-45`).
+- GitHub Actions uses Node 24, `npm ci`, and `npm run build` with `BASE_PATH` (`.github/workflows/deploy.yml:18-45`). Local Node must satisfy the package's minimum version of 22.13.
 - A push to `main` triggers deployment. Local population work must stop before push unless the user expressly authorizes it.
 - The production PDF copy is byte-identical to the file placed in `public/pdfs/`; the audited PDF had matching source/build SHA-256 values.
+
+Dependency maintenance on 3 October 2026 updated Astro to 7.3.5, PDF.js to 6.4.299, and Sharp to 0.35.5, with matching integrations and PDF.js support assets. The audit has no critical findings. Two remaining package flags (Astro and its `http-cache-semantics` dependency) represent one [unpatched upstream caching advisory](https://github.com/advisories/GHSA-ch52-4w7c-c8xp). Astro uses that dependency for build-time remote-image caching; this static deployment does not serve cross-user authenticated responses through it. Recheck for an upstream patch during future dependency maintenance; do not suppress the finding or apply npm's incompatible Astro downgrade recommendation.
 
 ### Existing automated coverage
 
@@ -203,7 +209,7 @@ Optional strings and integers use the blank preprocessors at `src/content.config
 
 | Field/source | Required? | Language | Behavior |
 |---|---|---|---|
-| filename `<slug>.md` | operationally required | shared | creates `item.slug` and both detail URLs; no frontmatter slug |
+| filename `<slug>.md` / collection `id` | operationally required | shared | creates `item.id` and both detail URLs; no frontmatter slug |
 | Astro entry ID | derived | shared | internal source-derived value; application does not use a frontmatter ID |
 | `title` | schema-required | English | EN archive/detail title and final tie-break sort |
 | `spanishTitle` | schema-required | Spanish | ES archive/detail title; no English fallback |
@@ -267,19 +273,19 @@ Responsive behavior:
 
 ### Existing-item trace
 
-`src/content/authorItems/i-see-gohsts.md` is the source of truth:
+`src/content/authorItems/ghost.md` is the source of truth:
 
 1. The `authorItems` collection validates it.
 2. Exact `status: public` passes the public filter.
 3. Its shared sort tuple puts it in the archive.
-4. English archive renders `I See Gohsts` and `2026 / Notes / 436 words`.
-5. Spanish archive renders `Veo Fantasmas` and `2026 / Notas / 467 palabras`.
-6. Both dynamic routes generate with slug `i-see-gohsts`.
+4. English archive renders `Ghost` and `2026 / Notes / 554 words`.
+5. Spanish archive renders `Fantasma` and `2026 / Notas / 596 palabras`.
+6. Both dynamic routes generate with slug `ghost`.
 7. English detail renders Markdown; Spanish detail renders `spanishBody`.
 8. The language switch preserves the slug.
 9. Fresh build output contains all four archive/detail files. It displays `June 2026` and `junio 2026` because sort month/year precede raw `date`.
 
-The existing spelling `Gohsts` is authoritative content. Do not silently correct it.
+The stored word-count strings were recounted on 3 October 2026 after the August body revision. Counting whitespace-delimited rendered text, excluding HTML tags and Markdown hard-break markers, gives 554 English words and 596 Spanish words; hyphenated or punctuation-joined tokens count as one. This convention also reproduces First Love's stored counts. Counts remain manually maintained metadata and must be refreshed when either approved body changes.
 
 ### First Writer intake message
 
@@ -777,6 +783,15 @@ Do not call population complete if:
 - The raw PDF returned `206 Partial Content` for a byte-range request and `Content-Type: application/pdf`.
 - `public/pdfs/studio-2-2.pdf` and its `dist` copy had the identical SHA-256 recorded above.
 - Only this runbook and the `AGENTS.md` pointer were changed; application code, existing content, assets, and order were untouched.
+
+### Maintenance verification on 3 October 2026
+
+- `npm run build` and `npm run test:favicon` passed with the updated toolchain; only the established large-chunk warning remains.
+- The four existing browser regressions passed against the single fresh build: cold mobile homepage taps, holder/contact reveals and persistent shell, bilingual progressive artwork details, and content guards/native plus retained inline PDF viewers.
+- All 90 generated route HTML paths match the pre-change build. The sitemap loses only `/cv/` (47 to 46 URLs), and CV emits `noindex` while keeping its contact request.
+- Ghost's four bilingual archive/detail outputs contain the corrected counts; both rendered bodies and the source prose are unchanged. Archive order, paired language links, and the Writer layout were checked at desktop, tablet, narrow, and phone widths.
+- All 238 supplied tracked assets outside PDF.js support are byte-identical to the pre-change sources and the fresh build output, including the original portfolio PDF. All 13 PDF.js WASM/support files match the updated package distribution.
+- All six public artworks retain both language details; all six draft records remain absent from archives and their twelve detail paths.
 
 ## 8. Quick future intake summary
 
