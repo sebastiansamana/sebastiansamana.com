@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { spawn, execFileSync } from 'node:child_process';
+import { inputHash, cacheKey, verifiedResult, cachedResult } from './reliability.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const runtime = path.join(root, 'runtime');
@@ -16,6 +17,10 @@ const weatherHash = '65787a077176d2cc1ae9a281e8b1d0bf618bb6b58e83dfc7ca6989516e0
 const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, 'https://sebastiansamana.com', 'https://www.sebastiansamana.com']);
 const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
 const jobs = new Map();
+const verifiedCache = new Map();
+// A shorter limit is available only on a separate diagnostic port for cleanup tests.
+const diagnosticLimit=Number(process.env.HEAT_DETECTIVE_DIAGNOSTIC_TIMEOUT_SECONDS);
+const timeoutSeconds = port!==8767 && Number.isInteger(diagnosticLimit) && diagnosticLimit>=1 && diagnosticLimit<=120 ? diagnosticLimit : 120;
 let activeJob = null;
 let ownBaseline = null;
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -24,6 +29,9 @@ const readJSON = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFE
 const writeJSON = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2));
 const engineConfigPath = path.join(runtime,'engine-config.json');
 const currentEngineHash = () => fs.existsSync(engineConfigPath) ? sha(fs.readFileSync(engineConfigPath)) : null;
+const fingerprints = () => ({modelSha256:modelHash,definitionSha256:ghHash,weatherSha256:weatherHash,engineConfigSha256:currentEngineHash()});
+const baselineRequest={modelSha256:modelHash,definitionSha256:ghHash,parameters:{g:.6,U:2.8,dayACH:4,nightACH:1,screenOpacity:0},transforms:[]};
+const validatedBaseline=()=>ownBaseline && verifiedResult(ownBaseline.result,baselineRequest,fingerprints()) ? ownBaseline : null;
 function normalizeResult(result) {
   const values=result?.hourly?.operativeC;
   if (Array.isArray(values) && values.length===168 && values.every(Number.isFinite)) {
@@ -36,7 +44,7 @@ function normalizeResult(result) {
 fs.mkdirSync(path.join(runtime, 'jobs'), { recursive: true });
 try {
   const cached=readJSON(path.join(runtime,'baseline.json'));
-  if (cached.result?.provenance?.modelSha256 === modelHash && cached.result?.provenance?.definitionSha256 === ghHash && cached.result?.provenance?.weatherSha256 === weatherHash && cached.result?.provenance?.engineConfigSha256 === currentEngineHash()) {
+  if (verifiedResult(cached.result,baselineRequest,fingerprints())) {
     cached.result=normalizeResult(cached.result); ownBaseline=cached;
     writeJSON(path.join(runtime,'baseline.json'),cached);
   }
@@ -50,6 +58,19 @@ try {
   const engineConfig=readJSON(engineConfigPath);
   for (const file of [engineConfig.pythonExe,path.join(engineConfig.openstudioPath,'openstudio.exe'),path.join(engineConfig.energyplusPath,'energyplus.exe')]) if (!fs.existsSync(file)) throw new Error('Private simulation engine is missing; restore its prepared runtime.');
 } catch (e) { configurationError = e.message; }
+
+function rememberResult(request, result, sourceJobId) {
+  if (verifiedResult(result, request, fingerprints())) verifiedCache.set(cacheKey(request,fingerprints()),{result:normalizeResult(result),sourceJobId});
+}
+// Reuse only completed physical executions whose exact input and engine hashes match.
+for (const entry of fs.readdirSync(path.join(runtime,'jobs'),{withFileTypes:true})) {
+  if (!entry.isDirectory() || !/^[a-f0-9]{12}$/.test(entry.name)) continue;
+  try {
+    const directory=path.join(runtime,'jobs',entry.name), stored=readJSON(path.join(directory,'result.json'));
+    const request=validate(readJSON(path.join(directory,'request.json')));
+    if (stored.status==='completed' && !fs.existsSync(path.join(directory,'cancel.flag'))) rememberResult(request,stored.result,entry.name);
+  } catch {}
+}
 
 function send(res, status, data) {
   res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff' });
@@ -83,7 +104,10 @@ function launch(request) {
   const jobDirName = jobId.replaceAll('-','').slice(0,12);
   const directory = path.join(runtime, 'jobs', jobDirName);
   fs.mkdirSync(directory);
-  request.inputSha256 = sha(JSON.stringify({ modelSha256:request.modelSha256, definitionSha256:ghHash, parameters:request.parameters, transforms:request.transforms }));
+  request.inputSha256 = inputHash(request);
+  const submittedMs=Date.now();
+  request.submittedAt=new Date(submittedMs).toISOString();
+  request.deadlineAt=new Date(submittedMs+timeoutSeconds*1000).toISOString();
   // Read process IDs only. Never attach to any existing Rhino process.
   try {
     const raw = execFileSync('powershell.exe', ['-NoProfile','-Command', '@(Get-Process Rhino -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id) | ConvertTo-Json -Compress'], { windowsHide:true, encoding:'utf8' }).trim();
@@ -92,26 +116,59 @@ function launch(request) {
   } catch { throw new Error('Could not capture protected Rhino process list.'); }
   writeJSON(path.join(directory, 'request.json'), request);
   fs.writeFileSync(path.join(directory, 'run.py'), `import sys\nsys.path.insert(0, ${JSON.stringify(root)})\nimport bridge_engine\nbridge_engine.run(${JSON.stringify(directory)})\n`);
-  const job = { jobId, status:'running', revision:request.revision, stage:'Starting isolated Rhino', request, directory };
+  const job = { jobId, status:'running', revision:request.revision, stage:'Starting isolated Rhino', request, directory, submittedMs, timeoutSeconds, cacheHit:false, cleanupPending:false };
   jobs.set(jobId, job);
   activeJob = jobId;
   const log = fs.openSync(path.join(directory,'launcher.log'),'w');
   const child = spawn('powershell.exe', ['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'run_job.ps1'),'-JobDirName',jobDirName], { windowsHide:true, stdio:['ignore',log,log] });
-  child.on('error', error => { job.status='failed'; job.message=error.message; if (activeJob===jobId) activeJob=null; });
+  let cleanupBusy=false;
+  const cleanup = () => {
+    if (cleanupBusy || !job.cleanupPending || !fs.existsSync(path.join(directory,'ownership.json'))) return;
+    cleanupBusy=true;
+    const worker=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'stop_job.ps1'),'-JobDirName',jobDirName],{windowsHide:true,stdio:['ignore',log,log]});
+    worker.on('error',()=>{cleanupBusy=false;});
+    worker.on('close',code=>{cleanupBusy=false;if(code!==0)job.cleanupMessage='Owned worker cleanup pending; no existing user Rhino will be stopped.';});
+  };
+  const watchdog=setTimeout(()=>{
+    if(job.status!=='running')return;
+    job.status='failed';job.stage='Time limit reached';job.errorCode='TIME_LIMIT';job.finishedMs=Date.now();job.cleanupPending=true;
+    job.message=`The fresh run exceeded ${timeoutSeconds} seconds. No new result is available. Use a clearly labelled verified example for the presentation. The isolated worker is being closed safely.`;
+    fs.writeFileSync(path.join(directory,'cancel.flag'),new Date().toISOString());
+    writeJSON(path.join(directory,'watchdog.json'),{status:job.status,errorCode:job.errorCode,message:job.message,elapsedSeconds:(job.finishedMs-submittedMs)/1000,deadlineAt:request.deadlineAt});
+    cleanup();
+  },Math.max(1,timeoutSeconds*1000-(Date.now()-submittedMs)));
+  const cleanupTimer=setInterval(cleanup,1000);
+  child.on('error', error => { job.status='failed';job.stage='Failed';job.errorCode='LAUNCH_FAILURE';job.finishedMs=Date.now();job.message=error.message; if (activeJob===jobId) activeJob=null; });
   child.on('close', code => {
+    clearTimeout(watchdog);clearInterval(cleanupTimer);job.cleanupPending=false;
+    if(job.errorCode==='TIME_LIMIT') {
+      job.stage='Stopped at time limit';
+      if(activeJob===jobId)activeJob=null;
+      fs.closeSync(log);return;
+    }
     try {
       const result = readJSON(path.join(directory,'result.json'));
       if (result.status==='completed') result.result=normalizeResult(result.result);
       Object.assign(job, result);
+      if(result.status==='completed')rememberResult(request,result.result,jobId);
       if (result.status === 'completed' && request.transforms.length === 0 && request.parameters.g === 0.6 && request.parameters.U === 2.8 && request.parameters.dayACH === 4 && request.parameters.nightACH === 1) {
         ownBaseline = { jobId, result:result.result };
         writeJSON(path.join(runtime,'baseline.json'),ownBaseline);
       }
-    } catch { job.status='failed'; job.message=`Rhino job ended without a result (exit ${code}). See local launcher.log.`; }
+    } catch { job.status='failed';job.errorCode='NO_RESULT'; job.message=`Rhino job ended without a result (launcher exit ${code}). See local launcher.log.`; }
+    job.finishedMs=Date.now();job.stage=job.status==='completed'?'Completed fresh calculation':'Calculation failed';
+    writeJSON(path.join(directory,'timing.json'),{submittedAt:request.submittedAt,finishedAt:new Date(job.finishedMs).toISOString(),elapsedSeconds:(job.finishedMs-submittedMs)/1000,launcherExitCode:code,status:job.status,timeoutSeconds});
     if (activeJob===jobId) activeJob=null;
     fs.closeSync(log);
   });
   return job;
+}
+
+function cachedJob(request) {
+  const match=verifiedCache.get(cacheKey(request,fingerprints()));
+  if(!match || !verifiedResult(match.result,request,fingerprints()))return null;
+  const job={jobId:crypto.randomUUID(),status:'completed',stage:'Previously verified result reused',revision:request.revision,cacheHit:true,elapsedSeconds:0,timeoutSeconds,cleanupPending:false,result:cachedResult(match.result,request.revision,match.sourceJobId)};
+  jobs.set(job.jobId,job);return job;
 }
 
 const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.bin':'application/octet-stream', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.woff2':'font/woff2' };
@@ -131,26 +188,28 @@ const server = http.createServer(async (req, res) => {
   try { pathname = decodeURIComponent(new URL(req.url,`http://127.0.0.1:${port}`).pathname); } catch { return send(res,400,{error:'Invalid URL.'}); }
   if (pathname === '/api/health' && req.method === 'GET') {
     let probe = {}, engineConfig={}; try { probe=readJSON(path.join(runtime,'probe.json')); } catch {} try { engineConfig=readJSON(engineConfigPath); } catch {}
-    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!ownBaseline,message:configurationError || 'Local isolated simulation bridge ready. Resume starts a real run; results appear only after completion.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:ownBaseline,capabilities:{translations:true,screenOpacity:false,thermalDomain:'fixed reference atrium'}});
+    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!validatedBaseline(),message:configurationError || 'Matching verified results return immediately; fresh runs have a 120-second limit.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:validatedBaseline(),timeoutSeconds,verifiedResultCount:verifiedCache.size,capabilities:{translations:true,screenOpacity:false,verifiedCache:true,thermalDomain:'fixed reference atrium'}});
   }
   if (pathname === '/api/analyse' && req.method === 'POST') {
     if (req.headers['x-heat-detective-token'] !== token) return send(res,403,{error:'Connect the local bridge first; session token missing or incorrect.'});
     if (configurationError) return send(res,503,{error:configurationError});
-    if (activeJob) return send(res,409,{error:'A simulation is already running. Keep editing paused or wait for this run to finish.',jobId:activeJob});
     if (!(req.headers['content-type'] || '').startsWith('application/json')) return send(res,415,{error:'Expected application/json.'});
     try {
       let size=0; const chunks=[];
       for await (const chunk of req) { size+=chunk.length; if (size>4*1024*1024) throw new Error('Request is too large.'); chunks.push(chunk); }
       const request = validate(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      if(fileSha('source.gh')!==ghHash || fileSha('source.3dm')!==modelHash || fileSha('weather/present.epw')!==weatherHash) return send(res,503,{error:'Source bytes changed since bridge startup; cached and fresh analyses are refused.'});
+      const cached=cachedJob(request);
+      if(cached)return send(res,202,{jobId:cached.jobId,status:cached.status,revision:cached.revision,cacheHit:true});
       if (activeJob) return send(res,409,{error:'A simulation is already running.',jobId:activeJob});
-      const job=launch(request); return send(res,202,{jobId:job.jobId,status:job.status,revision:job.revision});
+      const job=launch(request); return send(res,202,{jobId:job.jobId,status:job.status,revision:job.revision,cacheHit:false,timeoutSeconds});
     } catch(e) { return send(res,400,{error:e.message}); }
   }
   if (pathname.startsWith('/api/jobs/') && req.method === 'GET') {
     const job=jobs.get(pathname.slice('/api/jobs/'.length));
     if (!job) return send(res,404,{error:'Job not found in this bridge session.'});
     let progress={}; if (job.status === 'running') { try { progress=readJSON(path.join(job.directory,'progress.json')); } catch {} }
-    return send(res,200,{jobId:job.jobId,status:job.status,stage:progress.stage || job.stage,revision:job.revision,result:job.result,message:job.message,baseline:ownBaseline});
+    return send(res,200,{jobId:job.jobId,status:job.status,stage:progress.stage || job.stage,revision:job.revision,result:job.result,message:job.message,errorCode:job.errorCode,cacheHit:job.cacheHit,cleanupPending:job.cleanupPending,cleanupMessage:job.cleanupMessage,elapsedSeconds:job.elapsedSeconds??Math.round(((job.finishedMs||Date.now())-job.submittedMs)/100)/10,timeoutSeconds,baseline:validatedBaseline()});
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res,405,{error:'Method not allowed.'});
   let relative = pathname.replace(/^\/heat-detective\/?/,'/');

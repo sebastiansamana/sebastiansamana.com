@@ -7,7 +7,8 @@ http://127.0.0.1:8767/heat-detective/
 PowerShell alternative: START_LOCAL.ps1. Add -NoBrowser for a readiness check
 without opening another browser tab. The launcher never starts a simulation.
 
-The web page must explicitly connect to the bridge. GET /api/health returns
+The local page connects automatically after the prepared model is uploaded;
+the public page uses its explicit Connect control. GET /api/health returns
 authToken. POST /api/analyse requires that value as X-Heat-Detective-Token.
 Only the loopback host and explicit sebastiansamana.com origins are accepted;
 the service listens on 127.0.0.1, never on the network's external interface.
@@ -20,7 +21,7 @@ are local copies under runtime/. Their known hashes are checked by the server.
 No installation-wide settings or packages are changed by the bridge.
 
 HOW A LIVE RUN WORKS
-Each request starts a new Rhino.Application.8 automation process. It does not
+Each uncached request starts a new Rhino.Application.8 automation process. It does not
 attach to the user's current Rhino. Process IDs that existed at job submission
 are recorded and explicitly refused. The source copy is opened in that new
 process. Object GUIDs restore the original analysis layer categories; only
@@ -53,7 +54,7 @@ Only geometry actually read by the GH definition affects its shading result.
 The prepared private runtime now matches the competition package pins and
 EnergyPlus 25.2.0. Its executed baseline reproduced score 320.6 K.h and EVAL ID
 EC2F526D. Every live result still reports the actual EVAL ID and engine version.
-Only compare runs with identical EVAL IDs. The supplied EC2F526D reference is
+Only compare runs with identical EVAL IDs and engine fingerprints. The supplied EC2F526D reference is
 separate from a newly calculated local baseline. GET /api/health and job results
 include the session's latest unchanged baseline after one completes.
 
@@ -64,8 +65,41 @@ limits. The verified baseline persists in runtime/baseline.json and reloads
 only when model, definition, weather and private engine-config hashes match.
 Result provenance includes source model, definition, weather and normalized
 input SHA256 fingerprints, Rhino process ID, actual EVAL ID, engine version,
-timestamps and changed object count. A failure is returned as a failure;
-the bridge never substitutes the supplied lookup data for a failed live run.
+timestamps and changed object count. A failure is returned as a failure.
+
+PRESENTATION RELIABILITY
+Production fresh runs have a 120-second total deadline from submission,
+including Rhino startup. Timeout is status failed with errorCode TIME_LIMIT;
+it never becomes a calculated result. The presenter should use the separately
+labelled recorded example instead of waiting for a long startup.
+
+Only completed local physical executions can be cached. Every cache request
+rechecks the source model/GH/weather bytes and requires identical normalized
+parameters, object GUID translations, model/GH/weather/engine-config hashes.
+The response explicitly uses mode and executionSource verified-cache, keeps
+the original calculation timestamps, and identifies its source job. Revision
+may change for the UI, but originalRevision remains in provenance.cache.
+Previously verified cases can be returned even while worker cleanup is pending.
+Failed, timed-out, incomplete and supplied-reference results are never cached.
+
+The deadline creates cancel.flag and closes only the recorded new worker with
+matching process-start identity. Every existing Rhino PID is protected. If COM
+startup has not yet returned an owned PID, the UI still stops waiting at 120 s;
+the active worker slot stays locked until the launcher safely releases its COM
+instance. The bridge never guesses an unknown process identity. No new solve
+starts in that slot while cleanup is pending.
+
+Local diagnostics now include ownership.json, simulation-cli.json (CLI exit,
+stdout/stderr), native-process-*.json (native exits), timing.json, and optional
+watchdog.json. Instrumentation does not edit FF source or solver inputs.
+For a controlled cleanup test only, a separate loopback port can use
+HEAT_DETECTIVE_DIAGNOSTIC_TIMEOUT_SECONDS=1..120. Port 8767 always uses 120 s.
+
+The reported failure 92d8fc286701 had no SQL and an empty native error file,
+after unusually slow Rhino startup. Its exact request subsequently completed
+in 55.00 s with valid SQL, score 305.7 K.h and EVAL EC2F526D. Its original IDF also
+completed directly in EnergyPlus, exit 0. Historical failure cause remains
+unproven; no geometry-invalidity or OneDrive-lock cause has been established.
 
 All source and backend additions belong only to the separate Hackathon clone.
 The protected original Samana repository is not opened or changed here.
@@ -80,6 +114,13 @@ Three fresh runs of the supplied definition completed with EVAL ID EC2F526D:
 Each result contains 168 freshly calculated hourly values. The two design
 changes were submitted through the browser demo, not a lookup-table endpoint.
 These are model-specific results, not a universal claim about moving roofs.
+
+Reliability follow-up: an uncached night-ventilation 5 ACH run completed in
+75.469 s, with score 241.2 K.h, peak 39.347190 C, EVAL EC2F526D, and both CLI
+and native EnergyPlus exit 0. A separate diagnostic-port 45 s timeout test
+reported TIME_LIMIT at 45.0 s and closed only its recorded new Rhino worker.
+The production deadline remains 120 s. Exact-input verified cache reuse was
+measured at 402 ms, retaining the original execution timestamps.
 
 Peak metrics use the maximum of the actual hourly output before rounding.
 The original GH card's one-decimal peak is retained as ghReportedPeakOperativeC.

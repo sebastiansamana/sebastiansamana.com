@@ -11,6 +11,7 @@ import traceback
 import datetime
 import re
 import sys
+import time
 import System
 import Rhino
 
@@ -33,19 +34,27 @@ def write_json(path, value):
 
 def run(job_dir):
     started = stamp()
+    started_clock = time.time()
+    stages = []
     status_path = os.path.join(job_dir, 'progress.json')
     result_path = os.path.join(job_dir, 'result.json')
     def progress(stage):
-        write_json(status_path, {'status': 'running', 'stage': stage, 'updatedAt': stamp()})
+        if os.path.isfile(os.path.join(job_dir, 'cancel.flag')):
+            raise RuntimeError('Job cancelled at the bridge time limit')
+        stages.append({'stage':stage, 'at':stamp(), 'elapsedSeconds':round(time.time()-started_clock,3)})
+        write_json(status_path, {'status': 'running', 'stage': stage, 'updatedAt': stamp(), 'stages':stages})
     doc = None
     ghdoc = None
     try:
-        progress('Starting isolated Rhino and Grasshopper')
         with open(os.path.join(job_dir, 'request.json')) as f:
             request = json.load(f)
-        pid = System.Diagnostics.Process.GetCurrentProcess().Id
+        process = System.Diagnostics.Process.GetCurrentProcess()
+        pid = process.Id
         if pid in request['protectedRhinoPids']:
             raise RuntimeError('Refusing an existing user Rhino process')
+        write_json(os.path.join(job_dir, 'ownership.json'),
+                   {'pid':pid, 'processStartTicksUtc':str(process.StartTime.ToUniversalTime().Ticks), 'recordedAt':stamp()})
+        progress('Starting isolated Rhino and Grasshopper')
         definition = os.path.join(RUNTIME, 'source.gh')
         model_file = os.path.join(RUNTIME, 'source.3dm')
         if digest(definition) != request['definitionSha256'] or digest(model_file) != request['modelSha256']:
@@ -197,9 +206,45 @@ def run(job_dir):
             if hasattr(obj, 'Locked') and str(obj.InstanceGuid) not in required:
                 obj.Locked = True
         progress('Running supplied Grasshopper definition and EnergyPlus')
+        # Observe the original FF subprocess call without changing its source,
+        # arguments, model, weather or solver settings. Preserve discarded output.
+        import subprocess
+        original_popen = subprocess.Popen
+        cli_records = []
+        def observed_popen(args, *positional, **kwargs):
+            is_simulation = isinstance(args, (list, tuple)) and 'honeybee_energy' in args and 'simulate' in args
+            if not is_simulation:
+                return original_popen(args, *positional, **kwargs)
+            env = dict(kwargs.get('env') or os.environ)
+            env['PYTHONPATH'] = os.path.join(ROOT, 'diagnostics') + os.pathsep + env.get('PYTHONPATH','')
+            env['HEAT_DETECTIVE_DIAGNOSTIC_DIR'] = job_dir
+            kwargs['env'] = env
+            begin = time.time()
+            child = original_popen(args, *positional, **kwargs)
+            class ObservedProcess(object):
+                def __getattr__(self, name):
+                    return getattr(child, name)
+                def communicate(self, *a, **kw):
+                    out, err = child.communicate(*a, **kw)
+                    def decoded(value):
+                        return value.decode('utf-8','replace') if hasattr(value,'decode') else str(value or '')
+                    record = {'pid':child.pid, 'returncode':child.returncode,
+                              'elapsedSeconds':round(time.time()-begin,3),
+                              'stdout':decoded(out), 'stderr':decoded(err)}
+                    cli_records.append(record)
+                    try:
+                        write_json(os.path.join(job_dir,'simulation-cli.json'),record)
+                    except Exception:
+                        pass
+                    return out, err
+            return ObservedProcess()
+        subprocess.Popen = observed_popen
         ghdoc.Enabled = True
         GH_Document.EnableSolutions = True
-        ghdoc.NewSolution(True, GH_SolutionMode.Silent)
+        try:
+            ghdoc.NewSolution(True, GH_SolutionMode.Silent)
+        finally:
+            subprocess.Popen = original_popen
         GH_Document.EnableSolutions = False
         def output(component, name):
             p = next(p for p in component.Params.Output if p.Name == name)
@@ -222,7 +267,11 @@ def run(job_dir):
         score = output(energy, 'score')
         op = output(energy, 'op_temp')
         if errors or score is None or op is None:
-            raise RuntimeError('Grasshopper analysis did not yield a valid result. ' + '\n'.join(errors))
+            diagnostic = ''
+            if cli_records:
+                cli = cli_records[-1]
+                diagnostic = '\nSimulation CLI exit: %s; elapsed: %s s. Output: %s' % (cli['returncode'],cli['elapsedSeconds'],(cli['stderr']+'\n'+cli['stdout'])[-2500:])
+            raise RuntimeError('Grasshopper analysis did not yield a valid result. ' + '\n'.join(errors) + diagnostic)
         operative = [float(v) for v in op.values]
         occupied = [8 <= dt.hour < 18 for dt in op.datetimes]
         if len(operative) != 168:
@@ -247,7 +296,7 @@ def run(job_dir):
             'No thermal bridge, structural safety, airflow distribution or local comfort calculation.',
             'Compare only fresh runs using identical EVAL IDs; supplied reference EC2F526D may use another engine stack.'
         ]
-        result = {'schemaVersion':'1.0', 'mode':'live', 'calculationState':'completed',
+        result = {'schemaVersion':'1.0', 'mode':'live', 'executionSource':'fresh', 'calculationState':'completed',
                   'modelScope':'organiser-fixed-atrium', 'evalId':eval_id,
                   'revision':request['revision'], 'parameters':params, 'metrics':metrics,
                   'hourly':{'operativeC':operative, 'airC':[float(v) for v in air.values],
@@ -261,6 +310,8 @@ def run(job_dir):
                                 'engineConfigSha256':digest(engine_config_path) if engine_config else None,
                                 'metricDerivations':{'peakOperativeC':'Maximum of the 168 calculated operative-temperature values, before display rounding'},
                                 'rhinoVersion':str(Rhino.RhinoApp.Version), 'isolatedProcessId':pid,
+                                'diagnostics':'CLI stdout/stderr and native exit codes captured without modifying FF source or solver inputs',
+                                'ghElapsedSeconds':round(time.time()-started_clock,3),
                                 'evalId':eval_id, 'referenceComparable':eval_id == 'EC2F526D',
                                 'transformedObjectCount':len(request['transforms']),
                                 'semanticLayersRestored':True, 'definitionFFCodeUnmodified':True},
@@ -268,7 +319,7 @@ def run(job_dir):
         write_json(result_path, {'status':'completed','revision':request['revision'],'result':result})
         progress('Completed real Grasshopper and EnergyPlus run')
     except Exception as error:
-        write_json(result_path, {'status':'failed', 'message':str(error), 'details':traceback.format_exc()})
+        write_json(result_path, {'status':'failed', 'errorCode':'ENGINE_FAILURE', 'message':str(error), 'details':traceback.format_exc(), 'elapsedSeconds':round(time.time()-started_clock,3)})
     finally:
         if ghdoc is not None:
             try:

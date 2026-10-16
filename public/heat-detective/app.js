@@ -1,12 +1,13 @@
-import { BuildingViewer } from './viewer.js';
+import { BuildingViewer } from './viewer.js?v=20261016-reliable1';
 
 const $ = id => document.getElementById(id);
 const number = (v,d=1) => Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-GB',{maximumFractionDigits:d,minimumFractionDigits:d}) : '—';
 const text = (id,value) => { $(id).textContent=value; };
 const show = (id,value=true) => { $(id).hidden=!value; };
 const make = (tag,content,className) => {const el=document.createElement(tag);if(content!==undefined)el.textContent=content;if(className)el.className=className;return el;};
-let manifest,baseline,ideas,viewer,phase='baseline',revision=0,bridge=null,requestSerial=0,loaded=false,loading=false,completedRevision=null;
+let manifest,baseline,ideas,viewer,phase='baseline',revision=0,bridge=null,requestSerial=0,loaded=false,loading=false,completedRevision=null,resultMode=null;
 const history=[];
+const recordedDemo=fetch('./data/verified-demo.json?v=20261016-reliable1',{signal:AbortSignal.timeout(10000)}).then(async r=>{if(!r.ok)throw Error('The recorded example could not be loaded. Reload the page before presenting.');const data=await r.json();const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');if(hash!=='263f52e4f139d23b02f2e1f209def4cd378adf1e23c470f3189baae656d42ac5')throw Error('The recorded evidence failed its integrity check. Reload before presenting.');return data;}).catch(error=>({error:error.message}));
 let previousParameters='';
 const parameterFields = {g:'param-g',U:'param-U',dayACH:'param-day',nightACH:'param-night',screenOpacity:'param-screen'};
 const initialData=Promise.all(['./model/object-manifest.json','./data/baseline.json','./data/ideas.json'].map(async url=>{const r=await fetch(url);if(!r.ok)throw Error('Could not load the prepared case study. Please reload.');return r.json();})).then(data=>{[manifest,baseline,ideas]=data;initialiseData();}).catch(e=>{text('upload-error',e.message);throw e;});
@@ -55,7 +56,7 @@ async function upload(file){
     viewer=new BuildingViewer($('viewer'),manifest,buffer,{onSelect:updateSelection,onMove:(_,delta)=>{['x','y','z'].forEach((a,i)=>$('move-'+a).value=numberRaw(delta[i]));},onCommit:event=>{revision++;addHistory(event.action==='reset'?'Reset geometry':event.action==='undo'?'Undid element move':event.action==='redo'?'Restored element move':'Moved '+(viewer.objects.get(event.id)?.originalCategory.split('::').pop()||'element'));updateChanges();}});
     loaded=true;text('header-project','Geoffrey Manton / Group 1');text('model-status','10,325 Rhino elements · Identity verified');
     $('cut-height').min=Math.floor(viewer.bounds.min.z);$('cut-height').max=Math.ceil(viewer.bounds.max.z);$('cut-height').value=8;text('cut-output','8 m');
-    setPhase('baseline');updateChanges();
+    setPhase('baseline');updateChanges();if(['127.0.0.1','localhost'].includes(location.hostname)&&location.port==='8767')void connect();
   }catch(e){text('upload-error',e.message);show('welcome');show('workspace',false);show('upload-progress',false);$('model-file').disabled=false;}finally{loading=false;}
 }
 const numberRaw=v=>Math.round(v*1000)/1000;
@@ -68,7 +69,7 @@ function setPhase(value){
   document.querySelectorAll('[data-phase]').forEach(el=>{if(el.dataset.phase===value)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   ['baseline','edit','compare'].forEach(p=>show(p+'-panel',p===value));
   const labels={baseline:['01 / BASELINE','Know where you start.','Existing building'],edit:['02 / PAUSE & EDIT','Make room for change.','Ⅱ Analysis paused'],compare:['03 / COMPARE & IDEAS','See what changes.','Review this version']};
-  const l=labels[value];text('panel-eyebrow',l[0]);text('panel-title',l[1]);text('phase-state',l[2]);
+  const l=labels[value];text('panel-eyebrow',l[0]);text('panel-title',l[1]);text('phase-state',l[2]);document.querySelector('.presentation-card').classList.toggle('compact',value==='compare');
   viewer.setEditable(value==='edit');show('selection-tip',value==='edit'&&!viewer.selected);text('viewport-label',revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');
   text('analysis-status',value==='edit'?'Paused · No calculations while editing':value==='baseline'?'Official supplied reference · No new calculation':'Compare results & prepared concepts');
   updateChanges();
@@ -76,7 +77,7 @@ function setPhase(value){
 document.querySelectorAll('[data-phase]').forEach(el=>el.addEventListener('click',()=>setPhase(el.dataset.phase)));
 $('begin-edit').onclick=()=>setPhase('edit');$('back-to-edit').onclick=()=>setPhase('edit');
 function updateSelection(o,delta){show('selection-empty',!o);show('selection-info',!!o);show('selection-tip',phase==='edit'&&!o);if(!o)return;text('selection-name',o.originalCategory?.split('::').pop()||o.objectName||'Model element');text('selection-lock',o.editable?'Changeable':'Locked');$('selection-lock').className='chip'+(o.editable?'':' locked');text('selection-id',o.id);show('move-controls',o.editable);['x','y','z'].forEach((a,i)=>$('move-'+a).value=numberRaw(delta[i]));if(o.editable)$('element-picker').value=o.id;}
-function updateChanges(){if(!viewer)return;const n=viewer.transforms.size;const p=parameters(),defaults=defaultParameters(),changed=Object.keys(p).filter(k=>p[k]!==defaults[k]).length;text('edit-count',n+' moved element'+(n===1?'':'s')+' · '+changed+' input'+(changed===1?'':'s'));show('changed-key',n>0);$('undo').disabled=phase!=='edit'||!viewer.undoStack.length;$('redo').disabled=phase!=='edit'||!viewer.redoStack.length;text('viewport-label',revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');if(completedRevision!==null&&completedRevision!==revision){show('comparison',false);text('result-intro','The last completed calculation belongs to version '+completedRevision+'. Your current version '+revision+' has not been calculated. Resume to analyse it.');text('result-provenance','Previous results remain in the exported design history.');}}
+function updateChanges(){if(!viewer)return;const n=viewer.transforms.size;const p=parameters(),defaults=defaultParameters(),changed=Object.keys(p).filter(k=>p[k]!==defaults[k]).length;text('edit-count',n+' moved element'+(n===1?'':'s')+' · '+changed+' input'+(changed===1?'':'s'));show('changed-key',n>0);$('undo').disabled=phase!=='edit'||!viewer.undoStack.length;$('redo').disabled=phase!=='edit'||!viewer.redoStack.length;text('viewport-label',revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');if(completedRevision!==null&&completedRevision!==revision){show('comparison',false);show('result-source',false);text('result-intro','The last completed calculation belongs to version '+completedRevision+'. Your current version '+revision+' has not been calculated. Resume to analyse it.');text('result-provenance','Previous results remain in the exported design history.');}}
 function addHistory(message){history.push({revision,at:new Date().toISOString(),message});text('history-count',history.length);const item=make('div',undefined,'history-item');item.append(make('strong','v'+revision+' · '+message),make('small',new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));$('history-list').prepend(item);}
 $('history-toggle').onclick=()=>show('history-list',$('history-list').hidden);
 $('category-filter').onchange=populatePicker;$('element-picker').onchange=e=>viewer?.select(e.target.value);
@@ -102,55 +103,80 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('di
 $('help-connect').onclick=()=>{$('help-dialog').close();dialog('connection-dialog');};
 if(location.hostname==='127.0.0.1'&&location.port==='8767')$('bridge-url').value=location.origin;
 async function connect(){
-  text('connection-status','Connecting to Rhino / Grasshopper…');$('connect-bridge').disabled=true;
+  text('connection-status','Connecting to the local calculation bridge…');$('connect-bridge').disabled=true;
   try{const url=new URL($('bridge-url').value);if(!['127.0.0.1','localhost'].includes(url.hostname))throw Error('Use the local bridge on 127.0.0.1 or localhost.');
     const r=await fetch(url.origin+'/api/health',{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('The bridge returned '+r.status);const h=await r.json();if(!h.ready)throw Error(h.message||'The engine is not ready.');
     bridge={url:url.origin,token:h.authToken||$('bridge-token').value,health:h};if(!bridge.token){show('bridge-token-row');throw Error('Enter the token from the local launcher.');}
-    $('connection-dot').classList.add('connected');text('connection-status',h.message||'Connected. Resume will submit one version to the local engine.');text('resume-note','Connected to local Rhino / Grasshopper. Edits are submitted only when you resume.');return true;
+    $('connection-dot').classList.add('connected');text('connection-status',h.message||'Connected. Resume will submit one version to the local engine.');text('resume-note','Connected. Resume opens an isolated Rhino worker. A new run is limited to two minutes; exact verified inputs can reuse a recorded result.');return true;
   }catch(e){bridge=null;$('connection-dot').classList.remove('connected');text('connection-status','Connection unavailable. Start the launcher, then use Open local presentation demo if this browser blocks the connection. '+e.message);return false;}finally{$('connect-bridge').disabled=false;}
 }
 $('connect-bridge').onclick=connect;
 function canonicalMetrics(result){const m=result?.metrics||result||{};return {scoreKh:m.scoreKh??m.score,peakOperativeC:m.peakOperativeC??m.peak,occupiedHoursAbove28:m.occupiedHoursAbove28??m.hotHours};}
+async function designHash(modelSha256,definitionSha256,p,transforms){const normalized={g:p.g,U:p.U,dayACH:p.dayACH,nightACH:p.nightACH,screenOpacity:p.screenOpacity};const moved=transforms.filter(t=>t.translationM.some(v=>v!==0)).map(t=>({id:t.id,translationM:t.translationM})).sort((a,b)=>a.id.localeCompare(b.id));const raw=JSON.stringify({modelSha256,definitionSha256,parameters:normalized,transforms:moved});const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
 function showResult(result,submittedRevision,health){
   const current=submittedRevision===revision;show('calculation-state',false);show('result-state');
   if(!current){text('result-intro','Version '+submittedRevision+' finished, but your model is now version '+revision+'. Resume again to calculate the current edits.');show('comparison',false);return;}
   const m=canonicalMetrics(result);const wrappedReference=result.baseline||health?.baseline;const reference=wrappedReference?.result||wrappedReference;
   const evalId=result.evalId||result.provenance?.evalId;const referenceEval=reference?.evalId||reference?.provenance?.evalId;
   const matching=reference&&evalId&&evalId===referenceEval&&result.provenance?.engineConfigSha256===reference.provenance?.engineConfigSha256;const b=matching?canonicalMetrics(reference):null;completedRevision=submittedRevision;
-  text('result-intro','Fresh Grasshopper calculation for version '+submittedRevision+'. '+(matching?'Compared with an unchanged baseline from the same evaluation setup.':'A matching local baseline is needed before comparing performance.'));
+  const recorded=['recorded-verified','verified-cache','cached-verified'].includes(result.mode)||result.cache?.hit===true;resultMode=recorded?'recorded-verified':'fresh';
+  const date=result.provenance?.completedAt;const when=date?new Date(date).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'previously';
+  show('result-source');$('result-source').classList.toggle('live',!recorded);text('result-source',recorded?'RECORDED ENERGYPLUS RUN · '+when+' · Not a new calculation':'NEW ENERGYPLUS RUN · Completed '+when);
+  text('result-intro',(recorded?'Recorded result for these exact inputs (v':'Fresh Grasshopper calculation (v')+submittedRevision+'). '+(matching?'Compared with the same unchanged baseline.':'A matching local baseline is needed before comparing performance.'));
   show('comparison');text('version-label','v'+submittedRevision);
   const fields=[['score','scoreKh',1],['peak','peakOperativeC',2],['hours','occupiedHoursAbove28',0]];
   for(const [label,key,d]of fields){text('compare-base-'+label,b?number(b[key],d):'—');text('compare-new-'+label,number(m[key],d));$('compare-new-'+label).style.color=b&&m[key]>b[key]?'#b44737':b&&m[key]<b[key]?'#327352':'#34443a';}
   const details=result.limitations||[];text('result-provenance','EVAL '+(evalId||'reported in export')+' · fixed atrium · '+(Array.isArray(details)?details.join(' '):String(details)));
-  addHistory('Calculation finished for v'+submittedRevision);history[history.length-1].result=result;text('analysis-status','Fresh calculation · Version '+submittedRevision+' · fixed atrium');
+  addHistory((recorded?'Loaded recorded result for v':'Calculation finished for v')+submittedRevision);history[history.length-1].result=result;text('analysis-status',(recorded?'Recorded run · Not a new calculation':'Fresh calculation')+' · Version '+submittedRevision+' · fixed atrium');
 }
 async function analyse(){
   if(!viewer)return;
+  viewer.finishDrag();
   for(const id of Object.values(parameterFields)){if(!$(id).checkValidity()){$(id).reportValidity();return;}}
-  if(!bridge){dialog('connection-dialog');text('connection-status','Connect the local engine, then press Resume & analyse again.');return;}
+  if(!bridge){dialog('connection-dialog');text('connection-status','For an immediate presentation, close this window and choose Load verified example. A new calculation needs the local launcher.');return;}
   const submittedRevision=revision,serial=++requestSerial;
   const payload={caseId:'geoffrey-manton',modelSha256:manifest.sourceSha256,revision:submittedRevision,transforms:viewer.getTransforms(),parameters:parameters()};
-  setPhase('compare');show('calculation-state');show('result-state',false);text('calculation-message','Sending version '+submittedRevision+' to Rhino / Grasshopper…');text('analysis-status','Calculating version '+submittedRevision);$('resume-analysis').disabled=true;
+  setPhase('compare');show('calculation-state');show('result-state',false);text('calculation-message','Sending version '+submittedRevision+' to the local calculation bridge…');text('analysis-status','Calculating version '+submittedRevision);$('resume-analysis').disabled=true;
+  const start=Date.now();const tick=()=>{if(serial===requestSerial)text('calculation-elapsed',Math.floor((Date.now()-start)/1000)+' seconds elapsed · New runs stop after 120 seconds.');};tick();const timer=setInterval(tick,1000);
   try{
-    const response=await fetch(bridge.url+'/api/analyse',{method:'POST',headers:{'Content-Type':'application/json','X-Heat-Detective-Token':bridge.token},body:JSON.stringify(payload),signal:AbortSignal.timeout(20000)});
-    const started=await response.json();if(!response.ok)throw Error(started.error||started.message||'Could not start the calculation ('+response.status+').');
-    addHistory('Submitted v'+submittedRevision+' to Grasshopper');
-    const deadline=Date.now()+15*60*1000;
+    const response=await fetch(bridge.url+'/api/analyse',{method:'POST',headers:{'Content-Type':'application/json','X-Heat-Detective-Token':bridge.token},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
+    const started=await response.json();if(serial!==requestSerial)return;if(!response.ok)throw Error(started.error||started.message||'Could not start the calculation ('+response.status+').');
+    addHistory('Submitted v'+submittedRevision+' to Grasshopper');history[history.length-1].submittedDesign=payload;
+    const deadline=start+130000;
     while(Date.now()<deadline&&serial===requestSerial){
-      const r=await fetch(bridge.url+'/api/jobs/'+encodeURIComponent(started.jobId),{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('The calculation status is unavailable.');const job=await r.json();
-      text('calculation-message',typeof job.message==='string'?job.message:(job.stage||job.progress?.message||'Rhino / Grasshopper is calculating. You can continue orbiting the model.'));
+      const r=await fetch(bridge.url+'/api/jobs/'+encodeURIComponent(started.jobId),{signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('The calculation status is unavailable.');const job=await r.json();if(serial!==requestSerial)return;
+      text('calculation-message',typeof job.message==='string'?job.message:(job.stage||job.progress?.message||'Rhino / Grasshopper is calculating. The viewer remains interactive.'));
       if(['completed','complete','succeeded','success'].includes(job.status)){
-        const h=await fetch(bridge.url+'/api/health').then(r=>r.json()).catch(()=>bridge.health);if(serial!==requestSerial)return;
+        const h=await fetch(bridge.url+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).catch(()=>bridge.health);if(serial!==requestSerial)return;
         if(job.revision!==submittedRevision||job.result?.revision!==submittedRevision||job.result?.provenance?.modelSha256!==manifest.sourceSha256)throw Error('The returned result does not match the submitted model version.');
+        const identity=await designHash(payload.modelSha256,job.result.provenance.definitionSha256,payload.parameters,payload.transforms);if(serial!==requestSerial)return;if(identity!==job.result.provenance.inputSha256)throw Error('The returned result does not match the exact submitted inputs.');
         showResult(job.result,submittedRevision,h);return;
       }
       if(['failed','error','cancelled'].includes(job.status))throw Error(job.error||job.message||job.result?.error||'The simulation failed. No new result was generated.');
-      await new Promise(resolve=>setTimeout(resolve,2000));
+      await new Promise(resolve=>setTimeout(resolve,1500));
     }
-    if(serial===requestSerial)throw Error('This run is taking longer than expected. Check the local launcher for its status.');
-  }catch(e){if(serial!==requestSerial)return;show('calculation-state',false);show('result-state');show('comparison',false);text('result-intro','Calculation unavailable. '+e.message);text('result-provenance','Your edits are preserved. No reference values have been substituted for this failed calculation.');text('analysis-status','No new result · Edits preserved');}
-  finally{if(serial===requestSerial)$('resume-analysis').disabled=false;}
+    if(serial===requestSerial)throw Error('The calculation exceeded its time limit. Use Load verified example to continue the presentation immediately.');
+  }catch(e){if(serial!==requestSerial)return;show('calculation-state',false);show('result-state');show('comparison',false);show('result-source',false);text('result-intro','Calculation unavailable. '+e.message);text('result-provenance','Your edits are preserved. No reference values have been substituted. Load verified example is a separate recorded design, ready for presentation.');text('analysis-status','No new result · Edits preserved');}
+  finally{clearInterval(timer);if(serial===requestSerial)$('resume-analysis').disabled=false;}
 }
+async function loadVerifiedExample(){
+  if(!viewer)return;
+  viewer.finishDrag();const startedRevision=revision,startedSerial=requestSerial;
+  $('load-verified-example').disabled=true;show('presentation-status');text('presentation-status','Loading the recorded evidence…');
+  try{
+    const demo=await recordedDemo;if(demo.error)throw Error(demo.error);
+    const run=demo.runs?.night6,reference=demo.runs?.baseline;
+    if(!run||!reference||[run,reference].some(r=>r.mode!=='recorded-verified'||r.provenance?.modelSha256!==manifest.sourceSha256||r.transforms?.length!==0||r.hourly?.operativeC?.length!==168||r.hourly.operativeC.some(v=>!Number.isFinite(v)))||run.evalId!==reference.evalId||['definitionSha256','engineConfigSha256','weatherSha256','futureWeatherSha256'].some(k=>!run.provenance[k]||run.provenance[k]!==reference.provenance[k]))throw Error('The recorded evidence does not match this case study. No result was applied.');
+    const expected={...defaultParameters(),nightACH:6};if(Object.keys(expected).some(k=>run.parameters[k]!==expected[k]||reference.parameters[k]!==defaultParameters()[k]))throw Error('The recorded example inputs do not match.');
+    for(const entry of [run,reference]){const hash=await designHash(manifest.sourceSha256,entry.provenance.definitionSha256,entry.parameters,entry.transforms);if(hash!==entry.provenance.inputSha256)throw Error('The recorded evidence input checksum does not match.');}
+    if(revision!==startedRevision||requestSerial!==startedSerial)throw Error('Your design changed while the example loaded. Click Load verified example again when ready.');
+    addHistory('Saved design before loading verified example');history[history.length-1].design={revision,parameters:parameters(),transforms:viewer.getTransforms(),calculationState:completedRevision===revision?'completed':'not-calculated'};
+    requestSerial++;$('resume-analysis').disabled=false;setPhase('edit');viewer.reset();setParameters(run.parameters);viewer.select(null);updateChanges();
+    const result={...run,revision,baseline:reference};setPhase('compare');showResult(result,revision,null);
+    text('presentation-status','Original geometry · 6 ACH night ventilation.');show('presentation-status',false);
+  }catch(e){text('presentation-status',e.message);}finally{$('load-verified-example').disabled=false;}
+}
+$('load-verified-example').onclick=loadVerifiedExample;
 $('resume-analysis').onclick=analyse;
 $('stop-waiting').onclick=()=>{requestSerial++;show('calculation-state',false);show('result-state');$('resume-analysis').disabled=false;setPhase('edit');message('Editing resumed. The submitted run may still finish locally; it will not be attached to a newer design.');};
 
@@ -166,4 +192,4 @@ function openIdea(idea){
   if(idea.parameters.screen_opacity===0){const apply=make('button','Try these inputs in a paused version →','primary full');apply.onclick=()=>{setPhase('edit');const p=idea.parameters;setParameters({g:p.g,U:p.u,dayACH:p.ach_day,nightACH:p.ach_night,screenOpacity:0});revision++;addHistory('Applied '+idea.title+' inputs');updateChanges();$('idea-dialog').close();message('Inputs applied. Resume to calculate; the preview image is not added as geometry.');};body.append(apply);}else body.append(make('p','This screen requires explicit shading geometry. Its stored comparison is available for discussion; the current bridge has no live screen-opacity input.','small-note'));
   dialog('idea-dialog');
 }
-$('export-design').onclick=()=>{if(!viewer)return;const record={schemaVersion:1,project:'Heat Detective',owner:'Group 1',caseId:'geoffrey-manton',sourceFile:manifest.sourceFileName,modelSha256:manifest.sourceSha256,revision,exportedAt:new Date().toISOString(),parameters:parameters(),transforms:viewer.getTransforms(),reference:{evalId:baseline.evalId,mode:'stored-reference'},history,calculationState:completedRevision===revision?'completed':'not-calculated-for-current-version',scope:'Fixed reference atrium. Completed live runs are identified in history by mode and input provenance.',referenceLimitations:baseline.limitations};const blob=new Blob([JSON.stringify(record,null,2)],{type:'application/json'});const a=make('a');a.href=URL.createObjectURL(blob);a.download='Heat-Detective-v'+revision+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+$('export-design').onclick=()=>{if(!viewer)return;const record={schemaVersion:1,project:'Heat Detective',owner:'Group 1',caseId:'geoffrey-manton',sourceFile:manifest.sourceFileName,modelSha256:manifest.sourceSha256,revision,exportedAt:new Date().toISOString(),parameters:parameters(),transforms:viewer.getTransforms(),reference:{evalId:baseline.evalId,mode:'stored-reference'},history,calculationState:completedRevision===revision?'completed':'not-calculated-for-current-version',resultMode:completedRevision===revision?resultMode:null,scope:'Fixed reference atrium. Completed live runs are identified in history by mode and input provenance.',referenceLimitations:baseline.limitations};const blob=new Blob([JSON.stringify(record,null,2)],{type:'application/json'});const a=make('a');a.href=URL.createObjectURL(blob);a.download='Heat-Detective-v'+revision+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};

@@ -61,13 +61,7 @@ export class BuildingViewer {
     this.gizmo.addEventListener('objectChange',()=>{
       if(this.selected && this.dragging) this.applyTranslation(this.selected.id,this.proxy.position.clone().sub(this.selectionCenter).toArray().map(v=>Math.max(-30,Math.min(30,this.snap?Math.round(v/this.snap)*this.snap:v))),false);
     });
-    this.gizmo.addEventListener('mouseUp',()=>{
-      if(this.selected && this.beforeDrag) {
-        const after=this.getTranslation(this.selected.id);
-        if(after.some((x,i)=>Math.abs(x-this.beforeDrag[i])>1e-5)) this.record(this.selected.id,this.beforeDrag,after);
-        this.beforeDrag=null;
-      }
-    });
+    this.gizmo.addEventListener('mouseUp',()=>this.finishDrag());
     this.raycaster=new THREE.Raycaster(); this.pointer=new THREE.Vector2();
     this.renderer.domElement.addEventListener('pointerdown',e=>{ this.pointerStart={x:e.clientX,y:e.clientY,gizmo:!!this.gizmo.axis}; });
     this.renderer.domElement.addEventListener('pointerup',e=>{
@@ -89,9 +83,10 @@ export class BuildingViewer {
   fit(){this.controls.target.copy(this.center);if(this.viewMode==='plan'){this.camera.position.copy(this.center).add(new THREE.Vector3(0,0,250));this.camera.zoom=Math.min(1,this.perspective.aspect);this.camera.updateProjectionMatrix();}else{this.camera.position.copy(this.center).add(new THREE.Vector3(-1,-1,.75).normalize().multiplyScalar(this.radius*2.9*Math.max(1,1.2/this.perspective.aspect)));}this.camera.lookAt(this.center);this.controls.update();}
   setView(mode){this.viewMode=mode;this.camera=mode==='plan'?this.orthographic:this.perspective;this.controls.object=this.camera;this.controls.enableRotate=mode!=='plan';this.gizmo.camera=this.camera;this.gizmo.showZ=mode!=='plan';for(const g of this.groups.filter(g=>g.layer==='structural')){const c=g.mesh.geometry.attributes.color;for(const o of g.objects){const floor=/Floor/.test(o.originalCategory);const col=new THREE.Color(mode==='plan'&&floor?0xecd8d2:colour.structural);for(let i=o.vertexStart;i<o.vertexStart+o.vertexCount;i++)c.setXYZ(i,col.r,col.g,col.b);}c.needsUpdate=true;}this.resize();this.fit();}
   orient(direction){if(direction==='top'){this.setView('plan');return;}this.setView('3d');const vectors={west:[-1,0,.05],east:[1,0,.05],north:[0,1,.05],iso:[-1,-1,.75]};this.camera.position.copy(this.center).add(new THREE.Vector3(...vectors[direction]).normalize().multiplyScalar(this.radius*2.9));this.camera.lookAt(this.center);this.controls.update();}
-  setEditable(value){this.editable=value;this.gizmo.detach();if(value&&this.selected?.editable)this.gizmo.attach(this.proxy);}
+  finishDrag(){const before=this.beforeDrag,id=this.selected?.id;this.beforeDrag=null;if(before&&id){const after=this.getTranslation(id);if(after.some((v,i)=>Math.abs(v-before[i])>1e-5))this.record(id,before,after);}if(this.dragging){this.gizmo.dragging=false;this.dragging=false;this.controls.enabled=true;}}
+  setEditable(value){this.finishDrag();this.editable=value;this.gizmo.detach();if(value&&this.selected?.editable)this.gizmo.attach(this.proxy);}
   select(id){
-    this.gizmo.detach(); if(this.highlight){this.scene.remove(this.highlight);this.highlight.geometry.dispose();this.highlight.material.dispose();this.highlight=null;}
+    this.finishDrag();this.gizmo.detach(); if(this.highlight){this.scene.remove(this.highlight);this.highlight.geometry.dispose();this.highlight.material.dispose();this.highlight=null;}
     this.selected=this.objects.get(id)||null;
     if(this.selected?.vertexCount){const o=this.selected,g=this.groups[o.groupIndex], start=o.vertexStart*3,end=start+o.vertexCount*3;
       const position=g.base.slice(start,end);const box=new THREE.Box3().setFromBufferAttribute(new THREE.BufferAttribute(position,3));
