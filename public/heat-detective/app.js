@@ -1,4 +1,4 @@
-import { BuildingViewer } from './viewer.js?v=20261016-phase3map1';
+import { BuildingViewer } from './viewer.js?v=20261016-editedsolar1';
 
 const $ = id => document.getElementById(id);
 const number = (v,d=1) => Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-GB',{maximumFractionDigits:d,minimumFractionDigits:d}) : '—';
@@ -8,6 +8,14 @@ const make = (tag,content,className) => {const el=document.createElement(tag);if
 let manifest,baseline,ideas,viewer,phase='baseline',revision=0,bridge=null,requestSerial=0,loaded=false,loading=false,completedRevision=null,resultMode=null;
 const history=[];
 let solarData=null,solarError=null,lastHeatmapStudy='hot_week';
+let editedSolarData=null,editedSolarRevision=null,editedSolarError=null,solarPending=false;
+let recalculatedSolarBaseline=null;
+const recalculatedSolarReady=fetch('./data/ladybug-recalculated-baseline.json?v=20261016-editedsolar1',{signal:AbortSignal.timeout(15000)}).then(async response=>{
+  if(!response.ok)throw Error('The matching solar baseline could not be loaded.');
+  const data=await response.json();const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+  if(hash!=='77af6290681ee1da6ab4c2c527abbe89edeaf6036b0531533fa38f601c7e201f'||data.kind!=='ladybug-recalculated-baseline-radiation'||!Array.isArray(data.transforms)||data.transforms.length)throw Error('The matching solar baseline failed its evidence check.');
+  recalculatedSolarBaseline=data;updateHeatmap();return data;
+}).catch(()=>null);
 const solarReady=fetch('./data/ladybug-radiation.json?v=20261016-dark1',{signal:AbortSignal.timeout(15000)}).then(async response=>{
   if(!response.ok)throw Error('The Ladybug solar map could not be loaded.');
   const data=await response.json();const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
@@ -68,19 +76,21 @@ async function upload(file){
 }
 const numberRaw=v=>Math.round(v*1000)/1000;
 function showHeatmapState(state){
+  const period=state.period==='6/14 to 6/20 between 0 and 23 @1'?'14–20 June · 168 hours':state.period;
   show('heatmap-legend',!!state.visible);show('structure-legend',!state.visible);
-  text('viewport-label',state.visible?(phase==='compare'?'BASELINE SOLAR REFERENCE':'BASELINE SOLAR EXPOSURE'):revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');
-  $('compare-map').setAttribute('aria-pressed',String(!!state.visible));$('compare-design').setAttribute('aria-pressed',String(!state.visible));
-  text('compare-map-note',state.visible?'Original envelope · saved Ladybug solar results. The thermal outcome below is separate; this map is not recalculated for your edits.':'Your edited geometry. Switch to the saved Ladybug baseline map for a solar reference; your edits are kept.');
+  text('viewport-label',state.visible?(state.edited?'VERSION '+revision+' · SOLAR EXPOSURE':state.recalculatedBaseline?'RECALCULATED BASELINE':phase==='compare'?'BASELINE SOLAR REFERENCE':'BASELINE SOLAR EXPOSURE'):revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');
+  const selected=$('heatmap-study').value;
+  $('compare-map').setAttribute('aria-pressed',String(selected==='edited_hot_week'));$('compare-baseline').setAttribute('aria-pressed',String(selected!=='edited_hot_week'&&selected!=='off'));$('compare-design').setAttribute('aria-pressed',String(selected==='off'));
+  const note=state.visible?(state.edited?'Ladybug solar radiation recalculated on this version’s geometry.'+(state.sharedScale?' Compare with the recalculated baseline using the same engine and colour scale.':' The supplied baseline is a separate saved reference.'):state.recalculatedBaseline?'Recalculated original geometry with the same engine, weather and colour scale as this version. Your edits are preserved.':'Supplied Ladybug map on the original envelope. Saved reference only; a matching comparison is unavailable for this study.'):selected==='edited_hot_week'?(solarPending?'Calculating the edited solar map with this version.':editedSolarError||'Resume & analyse to calculate a solar map for this version.'):'Your edited geometry. Switch to Updated solar map to view its calculated radiation.';
+  text('compare-map-note',note);
   if(!state.visible){show('heatmap-tooltip',false);return;}
-  const study=solarData.studies[state.study];
-  text('heatmap-title',state.study==='annual'?'Annual solar radiation':'Hot-week solar radiation');
-  text('heatmap-min',number(study.min));text('heatmap-mid',number((study.min+study.max)/2));text('heatmap-max',number(study.max));
-  text('heatmap-note','Ladybug baseline · '+study.period+' · original envelope'+(phase==='compare'?' · edits preserved':''));
+  text('heatmap-title',state.edited?'Updated hot-week solar radiation':state.recalculatedBaseline?'Recalculated baseline solar radiation':state.study==='annual'?'Annual solar radiation':'Hot-week solar radiation');
+  text('heatmap-min',number(state.min));text('heatmap-mid',number((state.min+state.max)/2));text('heatmap-max',number(state.max));
+  text('heatmap-note',state.edited?'Ladybug calculated · version '+revision+' · '+period+(state.sharedScale?' · shared colour scale':''):state.recalculatedBaseline?'Same-engine baseline · '+period+' · shared colour scale':'Ladybug supplied baseline · '+period+' · original envelope'+(phase==='compare'?' · reference only':''));
 }
 function showHeatmapHover(hit){
   show('heatmap-tooltip',!!hit);if(!hit)return;
-  text('heatmap-tooltip',number(hit.value)+' '+hit.unit+' · baseline surface');
+  text('heatmap-tooltip',number(hit.value)+' '+hit.unit+(hit.edited?' · calculated v'+revision:' · baseline surface'));
   const bounds=$('canvas-area').getBoundingClientRect();
   $('heatmap-tooltip').style.left=Math.max(8,Math.min(hit.x+14,bounds.width-225))+'px';
   $('heatmap-tooltip').style.top=Math.max(8,Math.min(hit.y+14,bounds.height-45))+'px';
@@ -88,22 +98,39 @@ function showHeatmapHover(hit){
 function updateHeatmap(){
   if(!viewer)return;
   const selected=$('heatmap-study').value;
+  const edited=selected==='edited_hot_week';
   $('heatmap-study').disabled=phase==='edit';show('heatmap-unavailable',false);
+  $('edited-solar-option').hidden=phase!=='compare';
   if(selected==='off'||phase==='edit'){viewer.clearHeatmap();showHeatmapState({visible:false});return;}
-  if(viewer.getTransforms().length&&phase!=='compare'){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable','Solar map: original geometry only. View the baseline reference in Phase 3, or reset geometry.');show('heatmap-unavailable');return;}
-  if(!solarData){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable',solarError||'Loading the Ladybug solar map…');show('heatmap-unavailable');return;}
+  if(!edited&&viewer.getTransforms().length&&phase!=='compare'){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable','Solar map: original geometry only. View the baseline reference in Phase 3, or reset geometry.');show('heatmap-unavailable');return;}
+  const comparison=matchingSolarBaseline();
+  const matchedBaseline=!edited&&selected==='hot_week'&&phase==='compare'&&comparison;
+  const data=edited?editedSolarData:matchedBaseline||solarData;
+  if(!data||(edited&&(editedSolarRevision!==revision||phase!=='compare'))){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable',edited?(solarPending?'Calculating solar radiation for this edited version…':editedSolarError||'Resume & analyse to calculate this version’s solar map.'):(solarError||'Loading the Ladybug solar map…'));show('heatmap-unavailable');return;}
   try{
-    if(solarData.modelSha256!==manifest.sourceSha256)throw Error('Solar map and building identity do not match.');
-    lastHeatmapStudy=selected;
+    if(data.modelSha256!==manifest.sourceSha256)throw Error('Solar map and building identity do not match.');
+    if(!edited)lastHeatmapStudy=selected;
     for(const layer of ['structural','changable'])viewer.setVisibility(layer,true);viewer.setOpacity(1);
     $('show-structural').checked=true;$('show-changeable').checked=true;$('opacity').value=1;
     $('tool-structure').setAttribute('aria-pressed','false');$('tool-transparent').setAttribute('aria-pressed','false');
-    const state=viewer.setHeatmap(solarData,selected,{baselineReference:phase==='compare'});showHeatmapState(state);
+    const comparisonScale=comparison&&(edited||matchedBaseline)?[Math.min(comparison.studies.hot_week.min,editedSolarData.studies.hot_week.min),Math.max(comparison.studies.hot_week.max,editedSolarData.studies.hot_week.max)]:null;
+    const state=viewer.setHeatmap(data,edited?'hot_week':selected,{baselineReference:!edited&&phase==='compare',designInputSha256:edited?data.inputSha256:null,comparisonScale});showHeatmapState(state);
   }catch(error){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable',error.message);show('heatmap-unavailable');}
+}
+function matchingSolarBaseline(){
+  if(phase!=='compare'||editedSolarRevision!==revision||!editedSolarData||!recalculatedSolarBaseline)return null;
+  const original=recalculatedSolarBaseline,current=editedSolarData;
+  if(original.modelSha256!==current.modelSha256||original.modelSha256!==manifest.sourceSha256)return null;
+  const a=original.provenance,b=current.provenance;
+  const keys=['solverFingerprint','weatherSha256','definitionSha256'];
+  if(!keys.every(k=>typeof a?.[k]==='string'&&a[k].length>0&&a[k]===b?.[k]))return null;
+  const range=[original.studies?.hot_week?.min,original.studies?.hot_week?.max,current.studies?.hot_week?.min,current.studies?.hot_week?.max];
+  return range.every(Number.isFinite)?original:null;
 }
 function showStructureColours(){if($('heatmap-study').value!=='off'){$('heatmap-study').value='off';updateHeatmap();}}
 $('heatmap-study').onchange=updateHeatmap;
-$('compare-map').onclick=()=>{$('heatmap-study').value=lastHeatmapStudy;updateHeatmap();};
+$('compare-map').onclick=()=>{$('heatmap-study').value='edited_hot_week';updateHeatmap();};
+$('compare-baseline').onclick=()=>{$('heatmap-study').value='hot_week';updateHeatmap();};
 $('compare-design').onclick=()=>{$('heatmap-study').value='off';updateHeatmap();};
 $('model-file').addEventListener('change',e=>upload(e.target.files[0]));
 ['dragenter','dragover'].forEach(name=>$('drop-zone').addEventListener(name,e=>{e.preventDefault();$('drop-zone').classList.add('dragging');}));
@@ -111,7 +138,8 @@ $('model-file').addEventListener('change',e=>upload(e.target.files[0]));
 
 function setPhase(value){
   if(!viewer)return;phase=value;document.querySelector('.sidebar').scrollTop=0;
-  if(value==='compare')$('heatmap-study').value=lastHeatmapStudy;
+  if(value==='compare')$('heatmap-study').value='edited_hot_week';
+  else if(value==='baseline'&&$('heatmap-study').value==='edited_hot_week')$('heatmap-study').value=lastHeatmapStudy;
   document.querySelectorAll('[data-phase]').forEach(el=>{if(el.dataset.phase===value)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   ['baseline','edit','compare'].forEach(p=>show(p+'-panel',p===value));
   const labels={baseline:['01 / BASELINE','Know where you start.','Existing building'],edit:['02 / PAUSE & EDIT','Make room for change.','Ⅱ Analysis paused'],compare:['03 / COMPARE & IDEAS','See what changes.','Review this version']};
@@ -176,9 +204,22 @@ async function connect(){
 }
 $('connect-bridge').onclick=async()=>{if(await connect())$('connection-dialog').close();};
 function canonicalMetrics(result){const m=result?.metrics||result||{};return {scoreKh:m.scoreKh??m.score,peakOperativeC:m.peakOperativeC??m.peak,occupiedHoursAbove28:m.occupiedHoursAbove28??m.hotHours};}
+function acceptSolarOutcome(result,submittedRevision,recorded){
+  editedSolarData=null;editedSolarRevision=null;editedSolarError=null;solarPending=false;
+  const data=result.solarRadiation;
+  if(data){
+    const p=result.provenance,s=data.provenance;
+    if(data.kind!=='ladybug-edited-radiation'||data.modelSha256!==manifest.sourceSha256||!/^[a-f0-9]{64}$/.test(data.inputSha256||'')||data.inputSha256!==p?.inputSha256||s?.inputSha256!==p?.inputSha256||s?.definitionSha256!==p?.definitionSha256||!Array.isArray(data.transforms))editedSolarError='The returned solar study does not match this calculated version.';
+    else {editedSolarData=data;editedSolarRevision=submittedRevision;}
+  }else editedSolarError=result.solarRadiationError?.message||(typeof result.solarRadiationError==='string'?result.solarRadiationError:'This result has no updated solar study. Connect the updated local engine and resume to calculate it.');
+  // The original recorded demo remains a baseline reference, never an edited solar result.
+  if(recorded&&!data&&viewer.getTransforms().length===0)$('heatmap-study').value=lastHeatmapStudy;
+  else $('heatmap-study').value='edited_hot_week';
+  updateHeatmap();
+}
 async function designHash(modelSha256,definitionSha256,p,transforms){const normalized={g:p.g,U:p.U,dayACH:p.dayACH,nightACH:p.nightACH,screenOpacity:p.screenOpacity};const moved=transforms.filter(t=>t.translationM.some(v=>v!==0)).map(t=>({id:t.id,translationM:t.translationM})).sort((a,b)=>a.id.localeCompare(b.id));const raw=JSON.stringify({modelSha256,definitionSha256,parameters:normalized,transforms:moved});const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
 function showResult(result,submittedRevision,health){
-  const current=submittedRevision===revision;show('calculation-state',false);show('result-state');
+  solarPending=false;const current=submittedRevision===revision;show('calculation-state',false);show('result-state');
   if(!current){text('result-intro','Version '+submittedRevision+' finished, but your model is now version '+revision+'. Resume again to calculate the current edits.');show('comparison',false);return;}
   const m=canonicalMetrics(result);const wrappedReference=result.baseline||health?.baseline;const reference=wrappedReference?.result||wrappedReference;
   const evalId=result.evalId||result.provenance?.evalId;const referenceEval=reference?.evalId||reference?.provenance?.evalId;
@@ -191,15 +232,18 @@ function showResult(result,submittedRevision,health){
   const fields=[['score','scoreKh',1],['peak','peakOperativeC',2],['hours','occupiedHoursAbove28',0]];
   for(const [label,key,d]of fields){text('compare-base-'+label,b?number(b[key],d):'—');text('compare-new-'+label,number(m[key],d));$('compare-new-'+label).style.color=b&&m[key]>b[key]?'#ff9b92':b&&m[key]<b[key]?'#8fdaa9':'#eeedf4';}
   const details=result.limitations||[];text('result-provenance','EVAL '+(evalId||'reported in export')+' · fixed atrium · '+(Array.isArray(details)?details.join(' '):String(details)));
-  addHistory((recorded?'Loaded recorded result for v':'Calculation finished for v')+submittedRevision);history[history.length-1].result=result;text('analysis-status',(recorded?'Recorded run · Not a new calculation':'Fresh calculation')+' · Version '+submittedRevision+' · fixed atrium');
+  acceptSolarOutcome(result,submittedRevision,recorded);
+  addHistory((recorded?'Loaded recorded result for v':'Calculation finished for v')+submittedRevision);history[history.length-1].result=result;text('analysis-status',(recorded?'Recorded run · Not a new calculation':'Fresh calculation')+' · Version '+submittedRevision+' · fixed atrium'+(editedSolarData?' · updated solar map':''));
 }
 async function analyse(){
   if(!viewer)return;
   viewer.finishDrag();
   for(const id of Object.values(parameterFields)){if(!$(id).checkValidity()){$(id).reportValidity();return;}}
   if(!bridge){dialog('connection-dialog');text('connection-status','For an immediate presentation, close this window and choose Load verified example. A new calculation needs the local launcher.');return;}
+  if(!bridge.health.capabilities?.editedSolar){dialog('connection-dialog');text('connection-status','This connection uses the earlier thermal-only engine. Start the updated Heat Detective launcher, then reconnect to calculate the edited solar map.');return;}
   const submittedRevision=revision,serial=++requestSerial;
-  const payload={caseId:'geoffrey-manton',modelSha256:manifest.sourceSha256,revision:submittedRevision,transforms:viewer.getTransforms(),parameters:parameters()};
+  const payload={caseId:'geoffrey-manton',modelSha256:manifest.sourceSha256,revision:submittedRevision,transforms:viewer.getTransforms(),parameters:parameters(),includeSolar:true};
+  editedSolarData=null;editedSolarRevision=null;editedSolarError=null;solarPending=true;
   setPhase('compare');show('calculation-state');show('result-state',false);text('calculation-message','Sending version '+submittedRevision+' to the local calculation bridge…');text('analysis-status','Calculating version '+submittedRevision);$('resume-analysis').disabled=true;
   const start=Date.now();const tick=()=>{if(serial===requestSerial)text('calculation-elapsed',Math.floor((Date.now()-start)/1000)+' seconds elapsed · New runs stop after 120 seconds.');};tick();const timer=setInterval(tick,1000);
   try{
@@ -222,7 +266,7 @@ async function analyse(){
     }
     if(serial===requestSerial)throw Error('The calculation exceeded its time limit. Use Load verified example to continue the presentation immediately.');
   }catch(e){if(serial!==requestSerial)return;show('calculation-state',false);show('result-state');show('comparison',false);show('result-source',false);text('result-intro','Calculation unavailable. '+e.message);text('result-provenance','Your edits are preserved. No reference values have been substituted. Load verified example is a separate recorded design, ready for presentation.');text('analysis-status','No new result · Edits preserved');}
-  finally{clearInterval(timer);if(serial===requestSerial)$('resume-analysis').disabled=false;if(bridge?.health.warmWorker)void prepareEngine(bridge,false);}
+  finally{clearInterval(timer);if(serial===requestSerial){solarPending=false;$('resume-analysis').disabled=false;updateHeatmap();}if(bridge?.health.warmWorker)void prepareEngine(bridge,false);}
 }
 async function loadVerifiedExample(){
   if(!viewer)return;
@@ -243,7 +287,7 @@ async function loadVerifiedExample(){
 }
 $('load-verified-example').onclick=loadVerifiedExample;
 $('resume-analysis').onclick=analyse;
-$('stop-waiting').onclick=()=>{requestSerial++;show('calculation-state',false);show('result-state');$('resume-analysis').disabled=false;setPhase('edit');message('Editing resumed. The submitted run may still finish locally; it will not be attached to a newer design.');};
+$('stop-waiting').onclick=()=>{requestSerial++;solarPending=false;show('calculation-state',false);show('result-state');$('resume-analysis').disabled=false;setPhase('edit');message('Editing resumed. The submitted run may still finish locally; it will not be attached to a newer design.');};
 
 function openIdea(idea){
   text('idea-title',idea.title);const body=$('idea-content');body.replaceChildren();

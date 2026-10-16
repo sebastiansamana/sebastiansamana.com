@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn, execFileSync } from 'node:child_process';
 import { inputHash, cacheKey, verifiedResult, cachedResult, verifiedFreshEnvelope } from './reliability.mjs';
 import { WarmWorker } from './warm-worker.mjs';
+import { verifiedSolarRadiation, solarSolverFingerprint, sanitizeSolarResult } from './solar-reliability.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const runtime = path.join(root, 'runtime');
@@ -31,9 +32,15 @@ const readJSON = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFE
 const writeJSON = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2));
 const engineConfigPath = path.join(runtime,'engine-config.json');
 const currentEngineHash = () => fs.existsSync(engineConfigPath) ? sha(fs.readFileSync(engineConfigPath)) : null;
+const solarEngineRoot=fs.existsSync(path.join(runtime,'engine','radiance6','bin','gendaymtx.exe'))?path.join(runtime,'engine','radiance6'):path.join(root,'radiance6');
+const currentSolarFingerprint=()=>{try{return solarSolverFingerprint(sha(fs.readFileSync(path.join(solarEngineRoot,'bin','gendaymtx.exe'))));}catch{return null;}};
 const fingerprints = () => ({modelSha256:modelHash,definitionSha256:ghHash,weatherSha256:weatherHash,engineConfigSha256:currentEngineHash()});
 const baselineRequest={modelSha256:modelHash,definitionSha256:ghHash,parameters:{g:.6,U:2.8,dayACH:4,nightACH:1,screenOpacity:0},transforms:[]};
-const validatedBaseline=()=>ownBaseline && verifiedResult(ownBaseline.result,baselineRequest,fingerprints()) ? ownBaseline : null;
+const validatedBaseline=()=>{
+  if(!ownBaseline || !verifiedResult(ownBaseline.result,baselineRequest,fingerprints()))return null;
+  ownBaseline.result=sanitizeSolarResult(ownBaseline.result,baselineRequest,fingerprints(),currentSolarFingerprint());
+  return ownBaseline;
+};
 function normalizeResult(result) {
   const values=result?.hourly?.operativeC;
   if (Array.isArray(values) && values.length===168 && values.every(Number.isFinite)) {
@@ -47,7 +54,7 @@ fs.mkdirSync(path.join(runtime, 'jobs'), { recursive: true });
 try {
   const cached=readJSON(path.join(runtime,'baseline.json'));
   if (verifiedResult(cached.result,baselineRequest,fingerprints())) {
-    cached.result=normalizeResult(cached.result); ownBaseline=cached;
+    cached.result=normalizeResult(sanitizeSolarResult(cached.result,baselineRequest,fingerprints(),currentSolarFingerprint())); ownBaseline=cached;
     writeJSON(path.join(runtime,'baseline.json'),cached);
   }
 } catch {}
@@ -62,7 +69,12 @@ try {
 } catch (e) { configurationError = e.message; }
 
 function rememberResult(request, result, sourceJobId) {
-  if (verifiedResult(result, request, fingerprints())) verifiedCache.set(cacheKey(request,fingerprints()),{result:normalizeResult(result),sourceJobId});
+  result=sanitizeSolarResult(result,request,fingerprints(),currentSolarFingerprint());
+  if (verifiedResult(result, request, fingerprints())) {
+    const key=cacheKey(request,fingerprints()),previous=verifiedCache.get(key),solver=currentSolarFingerprint();
+    if(previous && verifiedSolarRadiation(previous.result.solarRadiation,request,fingerprints(),solver) && !verifiedSolarRadiation(result.solarRadiation,request,fingerprints(),solver))return;
+    verifiedCache.set(key,{result:normalizeResult(result),sourceJobId});
+  }
 }
 // Reuse only completed physical executions whose exact input and engine hashes match.
 for (const entry of fs.readdirSync(path.join(runtime,'jobs'),{withFileTypes:true})) {
@@ -103,7 +115,7 @@ function validate(input) {
     if (!Array.isArray(t.translationM) || t.translationM.length !== 3 || t.translationM.some(v => typeof v !== 'number' || !Number.isFinite(v) || Math.abs(v) > 100)) throw new Error('Translation must be three finite metre values in ±100 m.');
     return { id, translationM:t.translationM };
   }).filter(t => t.translationM.some(v => v !== 0)).sort((a,b) => a.id.localeCompare(b.id));
-  return { caseId:'geoffrey-manton', modelSha256:modelHash, definitionSha256:ghHash, revision:input.revision, parameters, transforms:normalized };
+  return { caseId:'geoffrey-manton', modelSha256:modelHash, definitionSha256:ghHash, revision:input.revision, parameters, transforms:normalized, includeSolar:input.includeSolar===true };
 }
 
 function launch(request) {
@@ -155,7 +167,7 @@ function launch(request) {
     }
     try {
       const result = readJSON(path.join(directory,'result.json'));
-      if (result.status==='completed') result.result=normalizeResult(result.result);
+      if (result.status==='completed') result.result=normalizeResult(sanitizeSolarResult(result.result,request,fingerprints(),currentSolarFingerprint()));
       Object.assign(job, result);
       if(result.status==='completed')rememberResult(request,result.result,jobId);
       if (result.status === 'completed' && request.transforms.length === 0 && request.parameters.g === 0.6 && request.parameters.U === 2.8 && request.parameters.dayACH === 4 && request.parameters.nightACH === 1) {
@@ -174,7 +186,9 @@ function launch(request) {
 function cachedJob(request) {
   const match=verifiedCache.get(cacheKey(request,fingerprints()));
   if(!match || !verifiedResult(match.result,request,fingerprints()))return null;
-  const job={jobId:crypto.randomUUID(),status:'completed',stage:'Previously verified result reused',revision:request.revision,cacheHit:true,elapsedSeconds:0,timeoutSeconds,cleanupPending:false,result:cachedResult(match.result,request.revision,match.sourceJobId)};
+  if(request.includeSolar && !verifiedSolarRadiation(match.result.solarRadiation,request,fingerprints(),currentSolarFingerprint()))return null;
+  const cached=sanitizeSolarResult(cachedResult(match.result,request.revision,match.sourceJobId),request,fingerprints(),currentSolarFingerprint());
+  const job={jobId:crypto.randomUUID(),status:'completed',stage:'Previously verified result reused',revision:request.revision,cacheHit:true,elapsedSeconds:0,timeoutSeconds,cleanupPending:false,result:cached};
   jobs.set(job.jobId,job);return job;
 }
 
@@ -200,6 +214,7 @@ function launchWarm(request){
     let stored;try{stored=readJSON(path.join(directory,'result.json'));}catch{return false;}
     if(stored.status!=='completed')return false;
     if(!verifiedFreshEnvelope(stored,request,fingerprints()))return false;
+    stored.result=sanitizeSolarResult(stored.result,request,fingerprints(),currentSolarFingerprint());
     if(fileSha('source.gh')!==ghHash||fileSha('source.3dm')!==modelHash||fileSha('weather/present.epw')!==weatherHash)return false;
     Object.assign(job,stored);job.result=normalizeResult(stored.result);job.finishedMs=Date.now();job.cleanupPending=true;
     job.stage='Fresh result ready; private worker resetting';
@@ -219,7 +234,7 @@ function launchWarm(request){
     const result=readJSON(path.join(directory,'result.json'));
     if(result.status==='completed'){
       if(!verifiedFreshEnvelope(result,request,fingerprints()))throw new Error('Fresh result revision, provenance or hourly values did not validate');
-      result.result=normalizeResult(result.result);rememberResult(request,result.result,jobId);
+      result.result=normalizeResult(sanitizeSolarResult(result.result,request,fingerprints(),currentSolarFingerprint()));rememberResult(request,result.result,jobId);
       if(inputHash(request)===inputHash(baselineRequest)){ownBaseline={jobId,result:result.result};writeJSON(path.join(runtime,'baseline.json'),ownBaseline);}
     }
     Object.assign(job,result);job.stage=job.status==='completed'?'Completed fresh calculation':'Calculation failed';
@@ -253,7 +268,7 @@ const server = http.createServer(async (req, res) => {
   try { pathname = decodeURIComponent(new URL(req.url,`http://127.0.0.1:${port}`).pathname); } catch { return send(res,400,{error:'Invalid URL.'}); }
   if (pathname === '/api/health' && req.method === 'GET') {
     let probe = {}, engineConfig={}; try { probe=readJSON(path.join(runtime,'probe.json')); } catch {} try { engineConfig=readJSON(engineConfigPath); } catch {}
-    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!validatedBaseline(),message:configurationError || 'Prepare the private engine once; each changed design still runs a fresh calculation.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:validatedBaseline(),timeoutSeconds,verifiedResultCount:verifiedCache.size,warmWorker:warmWorker.status(),capabilities:{translations:true,screenOpacity:false,verifiedCache:true,warmWorker:true,thermalDomain:'fixed reference atrium'}});
+    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!validatedBaseline(),message:configurationError || 'Prepare the private engine once; each changed design still runs a fresh calculation.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:validatedBaseline(),timeoutSeconds,verifiedResultCount:verifiedCache.size,warmWorker:warmWorker.status(),capabilities:{translations:true,screenOpacity:false,verifiedCache:true,warmWorker:true,editedSolar:!!currentSolarFingerprint(),thermalDomain:'fixed reference atrium'}});
   }
   if(pathname==='/api/warmup'&&req.method==='POST'){
     if(req.headers['x-heat-detective-token']!==token)return send(res,403,{error:'Connect first; session token missing or incorrect.'});

@@ -43,8 +43,10 @@ between fresh analyses. Preparation retains only the application and libraries.
 
 The original Grasshopper file is loaded. Its FF component code and locked
 evaluation inputs remain unchanged. The weather download is replaced by a
-byte-identical local EPW input. Unneeded radiation/visual components are not
-solved. The official EnergyPlus component and its original dependency graph
+byte-identical local EPW input. With includeSolar:true, the hot-week Ladybug
+Incident Radiation dependency graph also runs on the transformed model.
+Annual radiation and other unnecessary visual branches remain disabled.
+The official EnergyPlus component and its original dependency graph
 are actually solved, then its new 168-hour output is read. Each job has its
 own weather and simulation output folder. No 3dm or gh source is saved.
 
@@ -165,3 +167,37 @@ HTTP guardrail requests were rejected without starting any simulation.
 Those earlier per-run workers closed; original user Rhino PID 36596 remained.
 The protected original repository's 507 tracked files still matched the saved
 SHA256 manifest, including both pre-existing user edits.
+
+EDITED SOLAR MAP — 16 OCTOBER 2026
+Resume now requests both the thermal result and the actual hot-week mesh/face
+values from LB Incident Radiation 1.10.0. The coloured mesh follows current
+transformed envelope geometry. A solar failure is reported separately from a
+valid thermal result; no old colours are substituted as an updated result.
+
+The private solar dependency is official Radiance 6.0.2 in
+runtime/engine/radiance6. Only the owned process receives its RAYPATH and
+Ladybug configuration. No global Rhino settings or source GH code are edited.
+Distribution: LBNL-ETA/Radiance, rad6R0P2, Radiance_c1700d56_Windows.zip.
+SHA256: c4f02efcb4a33f4a43b7ce0ba58100544abc317a1be61f7b0425a64a66eb8a09.
+Runtime binaries remain local and ignored by Git. Keep the prepared runtime
+with this launcher; the source-only checkpoint does not bundle dependencies.
+
+Validation: unchanged building returned 5,531 analysed faces. Roof object
+486218b6-a4c4-45d2-a333-cb93a3080b22 translated +5 m on Z returned 5,547 faces.
+Nineteen original roof faces were found at their translated coordinates;
+18 changed by over 0.11 kWh/m2. Another 254 unchanged-position faces changed
+by over 0.11 kWh/m2, confirming recalculated shading rather than moved colours.
+Matched warm-worker timings: 36.2 seconds thermal-only, 41.9 seconds with solar
+(+5.7 seconds); the Ladybug component itself took 4.612 seconds. These are
+observations, not a duration guarantee. Preparation is separate.
+
+Phase 1 retains the supplied organiser map. For a like-for-like Phase 3 solar
+comparison, the frontend loads a cached freshly calculated unchanged baseline
+once and verifies matching solver/definition/weather fingerprints. Both maps
+use a shared colour scale. The old organiser map differs from the fresh engine
+baseline and must not be used to attribute numerical differences to edits.
+Solar exposure is kWh/m2, not indoor temperature; thermal figures are separate.
+
+Solar cache validation checks exact submitted transforms, input/source hashes,
+solver fingerprint, finite mesh coordinates, face indices and matching values.
+Thermal-only cached results cannot satisfy a request that includes solar.

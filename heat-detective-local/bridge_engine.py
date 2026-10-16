@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Execute the supplied GH definition in our own automation Rhino process.
 
 The definition's FF component source and locked inputs are never changed.
@@ -12,6 +13,7 @@ import datetime
 import re
 import sys
 import time
+import math
 import System
 import Rhino
 
@@ -232,6 +234,9 @@ def run(job_dir):
         climate = by_name['FF Climate Morph']
         evaluation = by_name['FF Evaluation ID']
         params = request['parameters']
+        include_solar = request.get('includeSolar', False)
+        solar_component = None
+        solar_setup_error = None
         for name, key in [('Glazing g-value','g'), ('Glazing U W/m2K','U'),
                           ('Day ventilation ACH','dayACH'), ('Night ventilation ACH','nightACH')]:
             by_name[name].SetSliderValue(System.Decimal(params[key]))
@@ -239,6 +244,28 @@ def run(job_dir):
                 raise RuntimeError('Requested slider value cannot be represented: ' + key)
         for name in ['RUN envelope studies', 'RUN atrium study', 'Auto-refresh team design']:
             by_name[name].Value = False
+        if include_solar:
+            try:
+                # Configure only this private process, retaining original source code.
+                radiance_root = os.path.join(os.path.dirname(engine_config['ladybugToolsFolder']), 'engine', 'radiance6')
+                if not os.path.isfile(os.path.join(radiance_root, 'bin', 'gendaymtx.exe')):
+                    radiance_root = os.path.join(ROOT, 'radiance6')
+                os.environ['RAYPATH'] = '.' + os.pathsep + os.path.join(radiance_root, 'lib')
+                from ladybug_radiance.config import folders as lr_folders
+                from honeybee_radiance.config import folders as hr_folders
+                lr_folders.radiance_path = radiance_root
+                hr_folders.radiance_path = radiance_root
+                import ladybug_radiance.skymatrix as sm_module
+                sm_module.GENDAYMTX_EXE = os.path.join(radiance_root, 'bin', 'gendaymtx.exe')
+                if not os.path.isfile(sm_module.GENDAYMTX_EXE):
+                    raise RuntimeError('Private gendaymtx executable missing')
+                solar_component = ghdoc.FindObject(System.Guid('df8c45bd-26d1-41e8-b61f-228bcfbe2a14'), True)
+                if solar_component is None:
+                    raise RuntimeError('Source hot-week Ladybug component missing')
+                by_name['RUN envelope studies'].Value = True
+            except Exception as solar_error:
+                solar_setup_error = str(solar_error)
+                solar_component = None
         by_name['RUN EnergyPlus'].Value = True
         by_name['Write future EPW'].Value = True
         # Supply the exact local EPW bytes via a panel; bypass download component.
@@ -269,10 +296,25 @@ def run(job_dir):
                     need(source.Attributes.GetTopLevel.DocObject)
         need(energy)
         need(climate)
+        energy_required = set(required)
+        if solar_component is not None:
+            sky = ghdoc.FindObject(System.Guid('a908ad6e-df93-4ce4-bf29-1365ef3068e1'), True)
+            folder_panel = GH_Panel()
+            folder_panel.CreateAttributes()
+            folder_panel.NickName = 'Private solar calculation folder'
+            solar_sky_folder = os.path.join(job_dir, 'solar-sky')
+            if not os.path.isdir(solar_sky_folder):
+                os.makedirs(solar_sky_folder)
+            folder_panel.UserText = solar_sky_folder
+            ghdoc.AddObject(folder_panel, False)
+            sky_folder_input = next(p for p in sky.Params.Input if p.Name == '_folder_')
+            sky_folder_input.RemoveAllSources()
+            sky_folder_input.AddSource(folder_panel)
+            need(solar_component)
         for obj in ghdoc.Objects:
             if hasattr(obj, 'Locked') and str(obj.InstanceGuid) not in required:
                 obj.Locked = True
-        progress('Running supplied Grasshopper definition and EnergyPlus')
+        progress('Running supplied Grasshopper definition, EnergyPlus and Ladybug solar' if solar_component is not None else 'Running supplied Grasshopper definition and EnergyPlus')
         # Observe the original FF subprocess call without changing its source,
         # arguments, model, weather or solver settings. Preserve discarded output.
         import subprocess
@@ -324,7 +366,7 @@ def run(job_dir):
             return value.ScriptVariable() if hasattr(value, 'ScriptVariable') else value
         errors = []
         for obj in ghdoc.Objects:
-            if str(obj.InstanceGuid) in required and hasattr(obj, 'RuntimeMessages'):
+            if str(obj.InstanceGuid) in energy_required and hasattr(obj, 'RuntimeMessages'):
                 errors += [obj.NickName + ': ' + str(m) for m in obj.RuntimeMessages(GH_RuntimeMessageLevel.Error)]
         write_json(os.path.join(job_dir, 'solve-diagnostics.json'),
                    {'errors':errors, 'requiredCount':len(required),
@@ -386,6 +428,69 @@ def run(job_dir):
                                 'transformedObjectCount':len(request['transforms']),
                                 'semanticLayersRestored':True, 'definitionFFCodeUnmodified':True},
                   'report':str(report), 'limitations':limitations}
+        if include_solar:
+            solar_started = time.time()
+            try:
+                if solar_setup_error:
+                    raise RuntimeError(solar_setup_error)
+                solar_errors = []
+                for obj in ghdoc.Objects:
+                    if str(obj.InstanceGuid) in required and str(obj.InstanceGuid) not in energy_required and hasattr(obj, 'RuntimeMessages'):
+                        solar_errors += [obj.NickName + ': ' + str(m) for m in obj.RuntimeMessages(GH_RuntimeMessageLevel.Error)]
+                if solar_errors:
+                    raise RuntimeError('\n'.join(solar_errors))
+                solar_mesh = output(solar_component, 'mesh')
+                values_param = next(p for p in solar_component.Params.Output if p.Name == 'results')
+                solar_values = [float(v.ScriptVariable() if hasattr(v, 'ScriptVariable') else v) for v in values_param.VolatileData.AllData(True)]
+                if solar_mesh is None or solar_mesh.Faces.Count != len(solar_values) or not solar_values:
+                    raise RuntimeError('Ladybug solar mesh and values are empty or misaligned')
+                if any(math.isnan(v) or math.isinf(v) or v < 0 for v in solar_values):
+                    raise RuntimeError('Ladybug solar values must be finite and non-negative')
+                to_m = Rhino.RhinoMath.UnitScale(doc.ModelUnitSystem, Rhino.UnitSystem.Meters)
+                solar_mesh.FaceNormals.ComputeFaceNormals()
+                vertices = [[float(v.X)*to_m,float(v.Y)*to_m,float(v.Z)*to_m] for v in solar_mesh.Vertices]
+                faces, areas, categories = [], [], []
+                for face in solar_mesh.Faces:
+                    indices = [face.A,face.B,face.C] + ([face.D] if face.IsQuad else [])
+                    faces.append(indices)
+                    pts = [solar_mesh.Vertices[k] for k in indices]
+                    area = sum(Rhino.Geometry.Vector3d.CrossProduct(Rhino.Geometry.Vector3d(pts[k]-pts[0]),Rhino.Geometry.Vector3d(pts[k+1]-pts[0])).Length / 2.0 for k in range(1,len(pts)-1))
+                    areas.append(float(area)*to_m*to_m)
+                    n = solar_mesh.FaceNormals[len(faces)-1]
+                    categories.append('roof' if n.Z>0.7 else 'facade')
+                solar_provenance = {'component':'LB Incident Radiation','componentVersion':'1.10.0','componentGuid':'df8c45bd-26d1-41e8-b61f-228bcfbe2a14',
+                    'definitionSha256':request['definitionSha256'],'modelSha256':request['modelSha256'],'inputSha256':request['inputSha256'],
+                    'revision':request['revision'],'completedAt':stamp(),'gridSizeM':float(by_name['Envelope grid mm'].CurrentValue)*to_m,
+                    'northDegrees':float(by_name['North deg'].CurrentValue),'geometry':'current-transformed-model','transforms':request['transforms'],
+                    'sourceCodeUnmodified':True,'geometryOffsetM':0.15,'sensorOffsetM':0.1,'skyPatches':145,
+                    'radiancePath':radiance_root,'weatherSha256':digest(weather)}
+                solar_provenance['gendaymtxSha256'] = digest(sm_module.GENDAYMTX_EXE)
+                solar_provenance['radianceVersion'] = str(lr_folders.radiance_version_str)
+                solar_provenance['solverFingerprint'] = hashlib.sha256(('|'.join([
+                    'ladybug-incident-radiation-1.10.0-envelope-grid-v1',
+                    'c4f02efcb4a33f4a43b7ce0ba58100544abc317a1be61f7b0425a64a66eb8a09',
+                    solar_provenance['gendaymtxSha256']])).encode('utf-8')).hexdigest()
+                try:
+                    solar_provenance['componentSeconds'] = float(solar_component.ProcessorTime.TotalSeconds)
+                except Exception:
+                    pass
+                result['solarRadiation'] = {'schemaVersion':1,'kind':'ladybug-edited-radiation','modelSha256':request['modelSha256'],
+                    'revision':request['revision'],'inputSha256':request['inputSha256'],'transforms':request['transforms'],
+                    'mesh':{'vertices':vertices,'faces':faces,'units':'m','upAxis':'Z','category':categories,'areaM2':areas},
+                    'studies':{'hot_week':{'values':solar_values,'min':min(solar_values),'max':max(solar_values),'unit':'kWh/m2',
+                        'label':'Edited-design incident solar radiation','period':str(output(climate,'hot_week')),
+                        'meaning':'Incident solar energy per square metre of current envelope; not indoor temperature.'}},
+                    'provenance':solar_provenance,
+                    'limitations':['Original Ladybug component: no inter-surface solar reflections.','Exterior envelope only; not indoor thermal comfort.']}
+                # Validate serialization while inside the solar-only error boundary.
+                json.dumps(result['solarRadiation'])
+                result['provenance']['solarExportSeconds'] = round(time.time()-solar_started,3)
+            except Exception as solar_error:
+                result.pop('solarRadiation', None)
+                result['solarRadiationError'] = {'code':'SOLAR_UNAVAILABLE','message':str(solar_error),'details':traceback.format_exc(),'inputSha256':request['inputSha256'],'revision':request['revision']}
+            write_json(os.path.join(job_dir,'solar-diagnostics.json'),{'available':'solarRadiation' in result,'error':result.get('solarRadiationError'),
+                'requiredCount':len(required),'energyRequiredCount':len(energy_required),'exportSeconds':round(time.time()-solar_started,3),
+                'outputs':[{'name':p.Name,'count':p.VolatileDataCount} for p in solar_component.Params.Output] if solar_component is not None else []})
         write_json(result_path, {'status':'completed','revision':request['revision'],'result':result})
         progress('Completed real Grasshopper and EnergyPlus run')
     except Exception as error:
