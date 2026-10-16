@@ -88,7 +88,7 @@ export class BuildingViewer {
   setView(mode){this.viewMode=mode;this.camera=mode==='plan'?this.orthographic:this.perspective;this.controls.object=this.camera;this.controls.enableRotate=mode!=='plan';this.gizmo.camera=this.camera;this.gizmo.showZ=mode!=='plan';for(const g of this.groups.filter(g=>g.layer==='structural')){const c=g.mesh.geometry.attributes.color;for(const o of g.objects){const floor=/Floor/.test(o.originalCategory);const col=new THREE.Color(mode==='plan'&&floor?0x9a6869:colour.structural);for(let i=o.vertexStart;i<o.vertexStart+o.vertexCount;i++)c.setXYZ(i,col.r,col.g,col.b);}c.needsUpdate=true;}this.resize();this.fit();}
   orient(direction){if(direction==='top'){this.setView('plan');return;}this.setView('3d');const vectors={west:[-1,0,.05],east:[1,0,.05],north:[0,1,.05],iso:[-1,-1,.75]};this.camera.position.copy(this.center).add(new THREE.Vector3(...vectors[direction]).normalize().multiplyScalar(this.radius*2.9));this.camera.lookAt(this.center);this.controls.update();}
   finishDrag(){const before=this.beforeDrag,id=this.selected?.id;this.beforeDrag=null;if(before&&id){const after=this.getTranslation(id);if(after.some((v,i)=>Math.abs(v-before[i])>1e-5))this.record(id,before,after);}if(this.dragging){this.gizmo.dragging=false;this.dragging=false;this.controls.enabled=true;}}
-  setEditable(value){this.finishDrag();this.editable=value;this.gizmo.detach();if(value&&this.selected?.editable)this.gizmo.attach(this.proxy);this.updateHeatmapVisibility();}
+  setEditable(value){this.finishDrag();this.editable=value;this.gizmo.detach();this.updateHeatmapVisibility();if(value&&this.selected?.editable)this.gizmo.attach(this.proxy);}
   select(id){
     this.finishDrag();this.gizmo.detach(); if(this.highlight){this.scene.remove(this.highlight);this.highlight.geometry.dispose();this.highlight.material.dispose();this.highlight=null;}
     this.selected=this.objects.get(id)||null;
@@ -128,10 +128,10 @@ export class BuildingViewer {
   setOpacity(value){this.groups.filter(g=>g.layer==='changable').forEach(g=>{g.mesh.material.opacity=value;g.mesh.material.transparent=value<1;g.mesh.material.depthWrite=value===1;g.mesh.material.needsUpdate=true;});}
   setClipping(value,height=this.clip.constant){this.cut=value;this.clip.constant=height;this.groups.forEach(g=>{g.mesh.material.clippingPlanes=value?[this.clip]:[];g.mesh.material.needsUpdate=true;});if(this.highlight)this.highlight.material.clippingPlanes=value?[this.clip]:[];if(this.heatmap){this.heatmap.mesh.material.clippingPlanes=value?[this.clip]:[];this.heatmap.mesh.material.needsUpdate=true;}this.callbacks.onHeatmapHover?.(null);}
   setSnap(value){this.snap=value?.25:null;this.gizmo.setTranslationSnap(this.snap);}
-  setHeatmap(data,study='hot_week'){
+  setHeatmap(data,study='hot_week',{baselineReference=false}={}){
     const source=data?.mesh,field=data?.studies?.[study];
     if(data?.kind!=='ladybug-baseline-radiation'||data.modelSha256!==this.manifest.sourceSha256||source?.units!=='m'||source?.upAxis!=='Z'||!Array.isArray(source.vertices)||!Array.isArray(source.faces)||!Array.isArray(field?.values)||field.unit!=='kWh/m²')throw Error('A compatible baseline Ladybug radiation study is required.');
-    if(this.heatmap?.data===data&&this.heatmap.study===study)return this.updateHeatmapVisibility(true);
+    if(this.heatmap?.data===data&&this.heatmap.study===study){this.heatmap.baselineReference=baselineReference;return this.updateHeatmapVisibility(true);}
     const vertices=source.vertices,faces=source.faces,values=field.values;
     if(!faces.length||values.length!==faces.length||vertices.some(v=>!Array.isArray(v)||v.length!==3||!v.every(Number.isFinite))||values.some(v=>!Number.isFinite(v)))throw Error('Radiation mesh or face values are incomplete.');
     let triangleCount=0,min=Infinity,max=-Infinity;
@@ -155,11 +155,23 @@ export class BuildingViewer {
     geometry.computeBoundingSphere();geometry.computeBoundingBox();
     const material=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,toneMapped:false,clippingPlanes:this.cut?[this.clip]:[]});
     const mesh=new THREE.Mesh(geometry,material);mesh.name='Original envelope · Ladybug incident radiation';mesh.visible=false;
-    this.clearHeatmap();this.heatmap={data,study,mesh,faceIndices,values,min,max,unit:field.unit,label:field.label||study,period:field.period,faceCount:faces.length};this.scene.add(mesh);
+    this.clearHeatmap();this.heatmap={data,study,mesh,faceIndices,values,min,max,unit:field.unit,label:field.label||study,period:field.period,faceCount:faces.length,baselineReference};this.scene.add(mesh);
     return this.updateHeatmapVisibility(true);
   }
+  displayOriginalGeometry(value){
+    if(!!this.baselineView===value)return;
+    this.baselineView=value;const changed=new Set();
+    // This changes only displayed positions. The submitted design and edit history stay intact.
+    for(const [id,delta]of this.transforms){
+      const o=this.objects.get(id);if(!o)continue;const g=this.groups[o.groupIndex],p=g.mesh.geometry.attributes.position;
+      for(let i=o.vertexStart;i<o.vertexStart+o.vertexCount;i++)for(let a=0;a<3;a++)p.array[i*3+a]=g.base[i*3+a]+(value?0:delta[a]);
+      p.needsUpdate=true;changed.add(g);
+    }
+    for(const g of changed){g.mesh.geometry.computeBoundingSphere();g.mesh.geometry.computeBoundingBox();}
+  }
   updateHeatmapVisibility(force=false){
-    const layer=this.heatmap,visible=!!layer&&!this.editable&&this.transforms.size===0;
+    const layer=this.heatmap,visible=!!layer&&!this.editable&&(this.transforms.size===0||layer.baselineReference===true);
+    this.displayOriginalGeometry(visible&&layer.baselineReference===true);
     if(layer)layer.mesh.visible=visible;
     if(this.heatmapVisible!==visible){
       this.heatmapVisible=visible;
@@ -167,7 +179,7 @@ export class BuildingViewer {
       if(this.highlight)this.highlight.visible=!visible;
       this.callbacks.onHeatmapHover?.(null);force=true;
     }
-    const state={visible,study:layer?.study||null,min:layer?.min??null,max:layer?.max??null,unit:layer?.unit||'kWh/m²',label:layer?.label||'',period:layer?.period||null,faceCount:layer?.faceCount||0,palette:heatmapPalette.map(hex=>'#'+hex.toString(16).padStart(6,'0')),reason:visible?'original-geometry':this.transforms.size?'geometry-edited':this.editable?'editing':'cleared'};
+    const state={visible,baselineReference:visible&&layer.baselineReference===true,study:layer?.study||null,min:layer?.min??null,max:layer?.max??null,unit:layer?.unit||'kWh/m²',label:layer?.label||'',period:layer?.period||null,faceCount:layer?.faceCount||0,palette:heatmapPalette.map(hex=>'#'+hex.toString(16).padStart(6,'0')),reason:visible?'original-geometry':this.transforms.size?'geometry-edited':this.editable?'editing':'cleared'};
     if(force)this.callbacks.onHeatmapState?.(state);return state;
   }
   clearHeatmap(){

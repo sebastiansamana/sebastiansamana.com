@@ -1,4 +1,4 @@
-import { BuildingViewer } from './viewer.js?v=20261016-dark1';
+import { BuildingViewer } from './viewer.js?v=20261016-phase3map1';
 
 const $ = id => document.getElementById(id);
 const number = (v,d=1) => Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-GB',{maximumFractionDigits:d,minimumFractionDigits:d}) : '—';
@@ -7,7 +7,7 @@ const show = (id,value=true) => { $(id).hidden=!value; };
 const make = (tag,content,className) => {const el=document.createElement(tag);if(content!==undefined)el.textContent=content;if(className)el.className=className;return el;};
 let manifest,baseline,ideas,viewer,phase='baseline',revision=0,bridge=null,requestSerial=0,loaded=false,loading=false,completedRevision=null,resultMode=null;
 const history=[];
-let solarData=null,solarError=null;
+let solarData=null,solarError=null,lastHeatmapStudy='hot_week';
 const solarReady=fetch('./data/ladybug-radiation.json?v=20261016-dark1',{signal:AbortSignal.timeout(15000)}).then(async response=>{
   if(!response.ok)throw Error('The Ladybug solar map could not be loaded.');
   const data=await response.json();const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(data)));const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
@@ -69,12 +69,14 @@ async function upload(file){
 const numberRaw=v=>Math.round(v*1000)/1000;
 function showHeatmapState(state){
   show('heatmap-legend',!!state.visible);show('structure-legend',!state.visible);
-  text('viewport-label',state.visible?'BASELINE SOLAR EXPOSURE':revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');
+  text('viewport-label',state.visible?(phase==='compare'?'BASELINE SOLAR REFERENCE':'BASELINE SOLAR EXPOSURE'):revision?'DESIGN VERSION '+revision:'EXISTING BUILDING');
+  $('compare-map').setAttribute('aria-pressed',String(!!state.visible));$('compare-design').setAttribute('aria-pressed',String(!state.visible));
+  text('compare-map-note',state.visible?'Original envelope · saved Ladybug solar results. The thermal outcome below is separate; this map is not recalculated for your edits.':'Your edited geometry. Switch to the saved Ladybug baseline map for a solar reference; your edits are kept.');
   if(!state.visible){show('heatmap-tooltip',false);return;}
   const study=solarData.studies[state.study];
   text('heatmap-title',state.study==='annual'?'Annual solar radiation':'Hot-week solar radiation');
   text('heatmap-min',number(study.min));text('heatmap-mid',number((study.min+study.max)/2));text('heatmap-max',number(study.max));
-  text('heatmap-note','Ladybug baseline · '+study.period+' · original envelope');
+  text('heatmap-note','Ladybug baseline · '+study.period+' · original envelope'+(phase==='compare'?' · edits preserved':''));
 }
 function showHeatmapHover(hit){
   show('heatmap-tooltip',!!hit);if(!hit)return;
@@ -88,21 +90,28 @@ function updateHeatmap(){
   const selected=$('heatmap-study').value;
   $('heatmap-study').disabled=phase==='edit';show('heatmap-unavailable',false);
   if(selected==='off'||phase==='edit'){viewer.clearHeatmap();showHeatmapState({visible:false});return;}
-  if(viewer.getTransforms().length){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable','Solar map: original geometry only. Reset geometry to view the baseline.');show('heatmap-unavailable');return;}
+  if(viewer.getTransforms().length&&phase!=='compare'){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable','Solar map: original geometry only. View the baseline reference in Phase 3, or reset geometry.');show('heatmap-unavailable');return;}
   if(!solarData){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable',solarError||'Loading the Ladybug solar map…');show('heatmap-unavailable');return;}
   try{
     if(solarData.modelSha256!==manifest.sourceSha256)throw Error('Solar map and building identity do not match.');
-    const state=viewer.setHeatmap(solarData,selected);showHeatmapState(state);
+    lastHeatmapStudy=selected;
+    for(const layer of ['structural','changable'])viewer.setVisibility(layer,true);viewer.setOpacity(1);
+    $('show-structural').checked=true;$('show-changeable').checked=true;$('opacity').value=1;
+    $('tool-structure').setAttribute('aria-pressed','false');$('tool-transparent').setAttribute('aria-pressed','false');
+    const state=viewer.setHeatmap(solarData,selected,{baselineReference:phase==='compare'});showHeatmapState(state);
   }catch(error){viewer.clearHeatmap();showHeatmapState({visible:false});text('heatmap-unavailable',error.message);show('heatmap-unavailable');}
 }
 function showStructureColours(){if($('heatmap-study').value!=='off'){$('heatmap-study').value='off';updateHeatmap();}}
 $('heatmap-study').onchange=updateHeatmap;
+$('compare-map').onclick=()=>{$('heatmap-study').value=lastHeatmapStudy;updateHeatmap();};
+$('compare-design').onclick=()=>{$('heatmap-study').value='off';updateHeatmap();};
 $('model-file').addEventListener('change',e=>upload(e.target.files[0]));
 ['dragenter','dragover'].forEach(name=>$('drop-zone').addEventListener(name,e=>{e.preventDefault();$('drop-zone').classList.add('dragging');}));
 ['dragleave','drop'].forEach(name=>$('drop-zone').addEventListener(name,e=>{e.preventDefault();$('drop-zone').classList.remove('dragging');}));$('drop-zone').addEventListener('drop',e=>upload(e.dataTransfer.files[0]));
 
 function setPhase(value){
   if(!viewer)return;phase=value;document.querySelector('.sidebar').scrollTop=0;
+  if(value==='compare')$('heatmap-study').value=lastHeatmapStudy;
   document.querySelectorAll('[data-phase]').forEach(el=>{if(el.dataset.phase===value)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   ['baseline','edit','compare'].forEach(p=>show(p+'-panel',p===value));
   const labels={baseline:['01 / BASELINE','Know where you start.','Existing building'],edit:['02 / PAUSE & EDIT','Make room for change.','Ⅱ Analysis paused'],compare:['03 / COMPARE & IDEAS','See what changes.','Review this version']};
