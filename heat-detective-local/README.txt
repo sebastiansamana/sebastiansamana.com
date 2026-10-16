@@ -69,3 +69,22 @@ the bridge never substitutes the supplied lookup data for a failed live run.
 
 All source and backend additions belong only to the separate Hackathon clone.
 The protected original Samana repository is not opened or changed here.
+
+VERIFIED DEMO RUNS — 16 OCTOBER 2026
+Three fresh runs of the supplied definition completed with EVAL ID EC2F526D:
+* Unchanged case: score 320.6 K.h; peak 40.466707 C; 46 occupied hours >28 C.
+* One editable roof object translated +5 m in Z: score 320.2 K.h;
+  peak 40.462118 C; 46 occupied hours >28 C.
+* Geometry reset, night ventilation changed from 1 to 6 ACH: score 235.9 K.h;
+  peak 39.270930 C; 39 occupied hours >28 C.
+Each result contains 168 freshly calculated hourly values. The two design
+changes were submitted through the browser demo, not a lookup-table endpoint.
+These are model-specific results, not a universal claim about moving roofs.
+
+Peak metrics use the maximum of the actual hourly output before rounding.
+The original GH card's one-decimal peak is retained as ghReportedPeakOperativeC.
+Cached baseline reload after bridge restart was verified. Fifteen independent
+HTTP guardrail requests were rejected without starting any simulation.
+All worker Rhino processes closed; original user Rhino PID 36596 remained.
+The protected original repository's 507 tracked files still matched the saved
+SHA256 manifest, including both pre-existing user edits.
