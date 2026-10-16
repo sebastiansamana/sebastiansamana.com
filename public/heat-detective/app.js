@@ -56,7 +56,7 @@ async function upload(file){
     viewer=new BuildingViewer($('viewer'),manifest,buffer,{onSelect:updateSelection,onMove:(_,delta)=>{['x','y','z'].forEach((a,i)=>$('move-'+a).value=numberRaw(delta[i]));},onCommit:event=>{revision++;addHistory(event.action==='reset'?'Reset geometry':event.action==='undo'?'Undid element move':event.action==='redo'?'Restored element move':'Moved '+(viewer.objects.get(event.id)?.originalCategory.split('::').pop()||'element'));updateChanges();}});
     loaded=true;text('header-project','Geoffrey Manton / Group 1');text('model-status','10,325 Rhino elements · Identity verified');
     $('cut-height').min=Math.floor(viewer.bounds.min.z);$('cut-height').max=Math.ceil(viewer.bounds.max.z);$('cut-height').value=8;text('cut-output','8 m');
-    setPhase('baseline');updateChanges();if(['127.0.0.1','localhost'].includes(location.hostname)&&location.port==='8767')void connect();
+    setPhase('baseline');updateChanges();if(['127.0.0.1','localhost'].includes(location.hostname)&&['8767','8780'].includes(location.port))void connect();
   }catch(e){text('upload-error',e.message);show('welcome');show('workspace',false);show('upload-progress',false);$('model-file').disabled=false;}finally{loading=false;}
 }
 const numberRaw=v=>Math.round(v*1000)/1000;
@@ -101,16 +101,34 @@ function dialog(id){$(id).showModal();}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 [['connection-button','connection-dialog'],['help-button','help-dialog'],['details-toggle','model-dialog']].forEach(([b,d])=>$(b).onclick=()=>dialog(d));
 $('help-connect').onclick=()=>{$('help-dialog').close();dialog('connection-dialog');};
-if(location.hostname==='127.0.0.1'&&location.port==='8767')$('bridge-url').value=location.origin;
+if(['127.0.0.1','localhost'].includes(location.hostname)&&['8767','8780'].includes(location.port))$('bridge-url').value=location.origin;
+async function prepareEngine(connection,startWorker=true){
+  const monitor=(connection.monitor||0)+1;connection.monitor=monitor;
+  const current=()=>bridge===connection&&connection.monitor===monitor;
+  const label=document.querySelector('.connection-label');
+  const update=worker=>{if(!current())return;const state=worker?.state;const preparing=state==='starting';$('connection-dot').classList.toggle('warming',preparing||state==='busy');label.textContent=preparing?'Engine preparing':state==='ready'?'Engine ready':state==='busy'?'Engine running':'Analysis engine';text('connection-status',worker?.message||'Local calculation bridge connected.');if(preparing)text('resume-note','Preparing Rhino once in the background. You can edit now. Wait for Engine ready before starting a timed demonstration.');else if(state==='ready')text('resume-note','Engine ready. New designs use the prepared worker; exact verified inputs can reuse a recorded result.');else if(state==='busy')text('resume-note','The engine is calculating or resetting. You can edit now; wait for Engine ready before submitting again.');};
+  try{
+    if(startWorker){update({state:'starting',message:'Preparing the private Rhino / Grasshopper worker.'});
+      const response=await fetch(connection.url+'/api/warmup',{method:'POST',headers:{'X-Heat-Detective-Token':connection.token},signal:AbortSignal.timeout(10000)});const start=await response.json();if(!response.ok)throw Error(start.error||'Engine preparation could not start.');if(!current())return;update(start.warmWorker);}
+    const deadline=Date.now()+130000;
+    while(Date.now()<deadline&&current()){
+      const response=await fetch(connection.url+'/api/health',{signal:AbortSignal.timeout(5000)});if(!response.ok)throw Error('Engine preparation status is unavailable.');const health=await response.json();if(!current())return;connection.health=health;update(health.warmWorker);
+      if(health.warmWorker?.state==='ready')return;
+      if(['failed','stopped'].includes(health.warmWorker?.state))throw Error(health.warmWorker.message||'Engine preparation stopped.');
+      await new Promise(resolve=>setTimeout(resolve,2000));
+    }
+    if(current())throw Error('The engine is taking longer than expected. Reconnect to check its status.');
+  }catch(error){if(!current())return;$('connection-dot').classList.remove('warming','connected');label.textContent='Check engine';text('connection-status',error.message);text('resume-note','Engine preparation unavailable. '+error.message);}
+}
 async function connect(){
   text('connection-status','Connecting to the local calculation bridge…');$('connect-bridge').disabled=true;
   try{const url=new URL($('bridge-url').value);if(!['127.0.0.1','localhost'].includes(url.hostname))throw Error('Use the local bridge on 127.0.0.1 or localhost.');
     const r=await fetch(url.origin+'/api/health',{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('The bridge returned '+r.status);const h=await r.json();if(!h.ready)throw Error(h.message||'The engine is not ready.');
     bridge={url:url.origin,token:h.authToken||$('bridge-token').value,health:h};if(!bridge.token){show('bridge-token-row');throw Error('Enter the token from the local launcher.');}
-    $('connection-dot').classList.add('connected');text('connection-status',h.message||'Connected. Resume will submit one version to the local engine.');text('resume-note','Connected. Resume opens an isolated Rhino worker. A new run is limited to two minutes; exact verified inputs can reuse a recorded result.');return true;
-  }catch(e){bridge=null;$('connection-dot').classList.remove('connected');text('connection-status','Connection unavailable. Start the launcher, then use Open local presentation demo if this browser blocks the connection. '+e.message);return false;}finally{$('connect-bridge').disabled=false;}
+    $('connection-dot').classList.add('connected');text('connection-status',h.message||'Connected. Resume will submit one version to the local engine.');text('resume-note','Connected. A new run is limited to two minutes; exact verified inputs can reuse a recorded result.');if(h.warmWorker)void prepareEngine(bridge);return true;
+  }catch(e){bridge=null;$('connection-dot').classList.remove('connected','warming');document.querySelector('.connection-label').textContent='Check engine';text('connection-status','Connection unavailable. Start the launcher, then use Open local presentation demo if this browser blocks the connection. '+e.message);return false;}finally{$('connect-bridge').disabled=false;}
 }
-$('connect-bridge').onclick=connect;
+$('connect-bridge').onclick=async()=>{if(await connect())$('connection-dialog').close();};
 function canonicalMetrics(result){const m=result?.metrics||result||{};return {scoreKh:m.scoreKh??m.score,peakOperativeC:m.peakOperativeC??m.peak,occupiedHoursAbove28:m.occupiedHoursAbove28??m.hotHours};}
 async function designHash(modelSha256,definitionSha256,p,transforms){const normalized={g:p.g,U:p.U,dayACH:p.dayACH,nightACH:p.nightACH,screenOpacity:p.screenOpacity};const moved=transforms.filter(t=>t.translationM.some(v=>v!==0)).map(t=>({id:t.id,translationM:t.translationM})).sort((a,b)=>a.id.localeCompare(b.id));const raw=JSON.stringify({modelSha256,definitionSha256,parameters:normalized,transforms:moved});const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
 function showResult(result,submittedRevision,health){
@@ -141,6 +159,7 @@ async function analyse(){
   try{
     const response=await fetch(bridge.url+'/api/analyse',{method:'POST',headers:{'Content-Type':'application/json','X-Heat-Detective-Token':bridge.token},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
     const started=await response.json();if(serial!==requestSerial)return;if(!response.ok)throw Error(started.error||started.message||'Could not start the calculation ('+response.status+').');
+    if(bridge.health.warmWorker&&!started.cacheHit){bridge.monitor=(bridge.monitor||0)+1;document.querySelector('.connection-label').textContent='Engine running';$('connection-dot').classList.add('warming');}
     addHistory('Submitted v'+submittedRevision+' to Grasshopper');history[history.length-1].submittedDesign=payload;
     const deadline=start+130000;
     while(Date.now()<deadline&&serial===requestSerial){
@@ -157,7 +176,7 @@ async function analyse(){
     }
     if(serial===requestSerial)throw Error('The calculation exceeded its time limit. Use Load verified example to continue the presentation immediately.');
   }catch(e){if(serial!==requestSerial)return;show('calculation-state',false);show('result-state');show('comparison',false);show('result-source',false);text('result-intro','Calculation unavailable. '+e.message);text('result-provenance','Your edits are preserved. No reference values have been substituted. Load verified example is a separate recorded design, ready for presentation.');text('analysis-status','No new result · Edits preserved');}
-  finally{clearInterval(timer);if(serial===requestSerial)$('resume-analysis').disabled=false;}
+  finally{clearInterval(timer);if(serial===requestSerial)$('resume-analysis').disabled=false;if(bridge?.health.warmWorker)void prepareEngine(bridge,false);}
 }
 async function loadVerifiedExample(){
   if(!viewer)return;

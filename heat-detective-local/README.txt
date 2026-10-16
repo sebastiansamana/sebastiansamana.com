@@ -2,10 +2,11 @@ HEAT DETECTIVE — LOCAL SIMULATION BRIDGE
 
 Double-click START_LOCAL.cmd with Node.js installed. It reuses a healthy local
 bridge, otherwise starts one hidden, checks readiness, and opens the demo at:
-http://127.0.0.1:8767/heat-detective/
+http://127.0.0.1:8780/heat-detective/
 
 PowerShell alternative: START_LOCAL.ps1. Add -NoBrowser for a readiness check
-without opening another browser tab. The launcher never starts a simulation.
+without opening another browser tab. The launcher prepares the private engine;
+it never starts a simulation. The previous port 8767 service is left untouched.
 
 The local page connects automatically after the prepared model is uploaded;
 the public page uses its explicit Connect control. GET /api/health returns
@@ -21,11 +22,24 @@ are local copies under runtime/. Their known hashes are checked by the server.
 No installation-wide settings or packages are changed by the bridge.
 
 HOW A LIVE RUN WORKS
-Each uncached request starts a new Rhino.Application.8 automation process. It does not
-attach to the user's current Rhino. Process IDs that existed at job submission
-are recorded and explicitly refused. The source copy is opened in that new
-process. Object GUIDs restore the original analysis layer categories; only
-objects marked editable on the supplied changable layer may be translated.
+POST /api/warmup prepares one new Rhino.Application.8 automation process.
+It never attaches to the user's current Rhino. Its random worker identity,
+PID and process-start timestamp are checked before every dispatch; all other
+existing Rhino processes remain protected. The engine stays prepared for up
+to 60 idle minutes, then closes. It also closes if its bridge heartbeat ends.
+Health reports warmWorker.state as starting, ready, busy, stopped or failed.
+
+Every uncached request still copies the exact source model into its own job,
+opens a fresh document, restores semantic layers, applies absolute edits and
+loads a fresh Grasshopper document. Object GUIDs restore the original analysis
+layer categories; only objects marked editable on the supplied changable layer
+may be translated. A full fresh EnergyPlus calculation is performed.
+
+After each run the GH document is disposed and the owned Rhino document is
+reset to a new empty document with a different serial. Source bytes are checked
+again. Reuse requires a successful cleanup receipt; failures quarantine and
+close only that worker. No geometry, simulation SQL or model output is reused
+between fresh analyses. Preparation retains only the application and libraries.
 
 The original Grasshopper file is loaded. Its FF component code and locked
 evaluation inputs remain unchanged. The weather download is replaced by a
@@ -68,7 +82,8 @@ input SHA256 fingerprints, Rhino process ID, actual EVAL ID, engine version,
 timestamps and changed object count. A failure is returned as a failure.
 
 PRESENTATION RELIABILITY
-Production fresh runs have a 120-second total deadline from submission,
+Engine preparation and production fresh runs each have a 120-second deadline.
+Fresh-run time is measured from submission,
 including Rhino startup. Timeout is status failed with errorCode TIME_LIMIT;
 it never becomes a calculated result. The presenter should use the separately
 labelled recorded example instead of waiting for a long startup.
@@ -93,7 +108,28 @@ Local diagnostics now include ownership.json, simulation-cli.json (CLI exit,
 stdout/stderr), native-process-*.json (native exits), timing.json, and optional
 watchdog.json. Instrumentation does not edit FF source or solver inputs.
 For a controlled cleanup test only, a separate loopback port can use
-HEAT_DETECTIVE_DIAGNOSTIC_TIMEOUT_SECONDS=1..120. Port 8767 always uses 120 s.
+HEAT_DETECTIVE_DIAGNOSTIC_TIMEOUT_SECONDS=1..120; normal launch uses 120 s.
+Authenticated forceFresh:true on /api/analyse explicitly bypasses verified
+result reuse for measurement; all normal source/input validation still applies.
+
+WARM WORKER VALIDATION
+Measured preparation took 33.995 s and 58.085 s in two sessions; allow about
+one minute for this once per session. Four forced fresh analyses on the same owned
+worker completed in 35.599 / 39.568 / 44.110 / 45.003 s including reset. They
+were baseline, night ventilation 5 ACH, roof +5 m, then baseline reset. All
+168 operative, air and outdoor hourly values matched the respective earlier
+cold calculations exactly. Four new native EnergyPlus executions were verified.
+The final baseline reset reproduced 320.6 K.h, proving no roof edit carried over.
+The API exposes a fresh result as soon as its complete output, revision and
+source fingerprints validate. cleanupPending remains true while the private
+worker resets, and its active slot remains locked. Only a verified successful
+reset admits the result to the cache/baseline. A separate 30 s cleanup deadline
+retires a stuck worker without relabelling a completed physical result.
+The final browser test (a new night ventilation 4 ACH setting) displayed a
+fresh live result at 43.095 s; worker reset finished at 55.041 s. Its score
+was 248.7 K.h, peak 39.453849 C and 39 occupied hours above 28 C. SQL verified
+all 168 hourly values. Actual times vary with machine load; no subsecond fresh
+simulation is claimed. Verified exact repeats remain a separate cache path.
 
 The reported failure 92d8fc286701 had no SQL and an empty native error file,
 after unusually slow Rhino startup. Its exact request subsequently completed
@@ -126,6 +162,6 @@ Peak metrics use the maximum of the actual hourly output before rounding.
 The original GH card's one-decimal peak is retained as ghReportedPeakOperativeC.
 Cached baseline reload after bridge restart was verified. Fifteen independent
 HTTP guardrail requests were rejected without starting any simulation.
-All worker Rhino processes closed; original user Rhino PID 36596 remained.
+Those earlier per-run workers closed; original user Rhino PID 36596 remained.
 The protected original repository's 507 tracked files still matched the saved
 SHA256 manifest, including both pre-existing user edits.

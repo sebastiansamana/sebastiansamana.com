@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inputHash,cacheKey,verifiedResult,cachedResult} from './reliability.mjs';
+import {inputHash,cacheKey,verifiedResult,cachedResult,verifiedFreshEnvelope} from './reliability.mjs';
 const request={modelSha256:'model',definitionSha256:'definition',revision:1,parameters:{g:.6,U:2.8,dayACH:4,nightACH:1,screenOpacity:0},transforms:[]};
 const fingerprints={modelSha256:'model',definitionSha256:'definition',weatherSha256:'weather',engineConfigSha256:'engine'};
 const result={mode:'live',calculationState:'completed',revision:1,evalId:'EC2F526D',metrics:{scoreKh:320.6},hourly:{operativeC:Array(168).fill(26)},provenance:{...fingerprints,inputSha256:inputHash(request),evalId:'EC2F526D',completedAt:'2026-10-16T12:00:00Z'}};
@@ -28,4 +28,10 @@ test('cache response preserves execution evidence and explicitly changes deliver
   assert.equal(reused.provenance.cache.originalRevision,1);assert.equal(reused.provenance.cache.sourceJobId,'original-job');
   assert.equal(result.mode,'live');assert.equal(result.revision,1);
   assert.equal(cacheKey({...request,revision:99},fingerprints),cacheKey(request,fingerprints));
+});
+test('fresh completion requires both envelope and result revisions to match',()=>{
+  const envelope={status:'completed',revision:1,result};
+  assert.ok(verifiedFreshEnvelope(envelope,request,fingerprints));
+  assert.equal(verifiedFreshEnvelope({...envelope,revision:2},request,fingerprints),false);
+  assert.equal(verifiedFreshEnvelope({...envelope,result:{...result,revision:2}},request,fingerprints),false);
 });

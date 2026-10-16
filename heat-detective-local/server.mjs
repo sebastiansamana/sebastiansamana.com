@@ -4,17 +4,18 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { spawn, execFileSync } from 'node:child_process';
-import { inputHash, cacheKey, verifiedResult, cachedResult } from './reliability.mjs';
+import { inputHash, cacheKey, verifiedResult, cachedResult, verifiedFreshEnvelope } from './reliability.mjs';
+import { WarmWorker } from './warm-worker.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const runtime = path.join(root, 'runtime');
 const publicRoot = path.resolve(root, '../public/heat-detective');
-const port = Number(process.env.HEAT_DETECTIVE_PORT || 8767);
+const port = Number(process.env.HEAT_DETECTIVE_PORT || 8780);
 const token = crypto.randomBytes(32).toString('hex');
 const ghHash = 'af44e228c1c78fc65cb913749720906f96147f9a6c5c51adbc182a165d2d64d7';
 const modelHash = '53aa21467ee80479c45d0cc523f4d19bce3d8898b674de66cc22a82172a66ea6';
 const weatherHash = '65787a077176d2cc1ae9a281e8b1d0bf618bb6b58e83dfc7ca6989516e0aa6d6';
-const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, 'https://sebastiansamana.com', 'https://www.sebastiansamana.com']);
+const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, 'http://127.0.0.1:8767','http://localhost:8767','http://127.0.0.1:8780','http://localhost:8780','https://sebastiansamana.com', 'https://www.sebastiansamana.com']);
 const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
 const jobs = new Map();
 const verifiedCache = new Map();
@@ -23,6 +24,7 @@ const diagnosticLimit=Number(process.env.HEAT_DETECTIVE_DIAGNOSTIC_TIMEOUT_SECON
 const timeoutSeconds = port!==8767 && Number.isInteger(diagnosticLimit) && diagnosticLimit>=1 && diagnosticLimit<=120 ? diagnosticLimit : 120;
 let activeJob = null;
 let ownBaseline = null;
+const warmWorker=new WarmWorker(root);
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const fileSha = name => sha(fs.readFileSync(path.join(runtime, name)));
 const readJSON = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
@@ -68,7 +70,12 @@ for (const entry of fs.readdirSync(path.join(runtime,'jobs'),{withFileTypes:true
   try {
     const directory=path.join(runtime,'jobs',entry.name), stored=readJSON(path.join(directory,'result.json'));
     const request=validate(readJSON(path.join(directory,'request.json')));
-    if (stored.status==='completed' && !fs.existsSync(path.join(directory,'cancel.flag'))) rememberResult(request,stored.result,entry.name);
+    let resetVerified=true;
+    if(stored.result?.provenance?.workerMode==='warm-isolated'){
+      const cleanup=readJSON(path.join(directory,'cleanup.json'));
+      resetVerified=cleanup.readyForReuse===true&&cleanup.sourceModelSha256===modelHash&&cleanup.previousDocumentSerial===stored.result.provenance.analysisDocumentSerial&&cleanup.activeDocumentSerial!==cleanup.previousDocumentSerial;
+    }
+    if (stored.status==='completed' && resetVerified && !fs.existsSync(path.join(directory,'cancel.flag'))) rememberResult(request,stored.result,entry.name);
   } catch {}
 }
 
@@ -171,6 +178,64 @@ function cachedJob(request) {
   jobs.set(job.jobId,job);return job;
 }
 
+function launchWarm(request){
+  const jobId=crypto.randomUUID(),jobDirName=jobId.replaceAll('-','').slice(0,12),directory=path.join(runtime,'jobs',jobDirName),submittedMs=Date.now();
+  fs.mkdirSync(directory);
+  Object.assign(request,{inputSha256:inputHash(request),submittedAt:new Date(submittedMs).toISOString(),deadlineAt:new Date(submittedMs+timeoutSeconds*1000).toISOString()});
+  writeJSON(path.join(directory,'request.json'),request);
+  fs.writeFileSync(path.join(directory,'run.py'),`import sys\nsys.path.insert(0, ${JSON.stringify(root)})\nimport bridge_engine\nbridge_engine.run(${JSON.stringify(directory)})\n`);
+  const job={jobId,status:'running',revision:request.revision,stage:warmWorker.status().state==='ready'?'Starting fresh calculation in prepared worker':'Waiting for private engine warmup',request,directory,submittedMs,timeoutSeconds,cacheHit:false,cleanupPending:false};
+  jobs.set(jobId,job);activeJob=jobId;
+  const watchdog=setTimeout(()=>{
+    if(job.status!=='running')return;
+    Object.assign(job,{status:'failed',errorCode:'TIME_LIMIT',stage:'Time limit reached',finishedMs:Date.now(),cleanupPending:true,message:`Fresh analysis exceeded ${timeoutSeconds} seconds; no result is substituted. The private worker is being safely closed.`});
+    fs.writeFileSync(path.join(directory,'cancel.flag'),new Date().toISOString());
+    writeJSON(path.join(directory,'watchdog.json'),{status:job.status,errorCode:job.errorCode,elapsedSeconds:(job.finishedMs-submittedMs)/1000});
+    warmWorker.stop('Calculation deadline reached',true);
+  },timeoutSeconds*1000);
+  let cleanupDeadline=null;
+  const exposeVerifiedResult=()=>{
+    try{
+    if(job.status!=='running')return false;
+    let stored;try{stored=readJSON(path.join(directory,'result.json'));}catch{return false;}
+    if(stored.status!=='completed')return false;
+    if(!verifiedFreshEnvelope(stored,request,fingerprints()))return false;
+    if(fileSha('source.gh')!==ghHash||fileSha('source.3dm')!==modelHash||fileSha('weather/present.epw')!==weatherHash)return false;
+    Object.assign(job,stored);job.result=normalizeResult(stored.result);job.finishedMs=Date.now();job.cleanupPending=true;
+    job.stage='Fresh result ready; private worker resetting';
+    clearTimeout(watchdog);
+    // A valid physical result is available; retain the active slot until reset.
+    // This result enters neither the cache nor baseline until reset is verified.
+    cleanupDeadline=setTimeout(()=>warmWorker.stop('Private worker reset exceeded 30 seconds',true),30000);
+    return true;
+    }catch(error){
+      Object.assign(job,{status:'failed',errorCode:'RESULT_VALIDATION',stage:'Result validation failed',finishedMs:Date.now(),cleanupPending:true,message:error.message});
+      clearTimeout(watchdog);warmWorker.stop('Result validation failed; retiring private worker',true);return false;
+    }
+  };
+  const resultPoll=setInterval(exposeVerifiedResult,200);
+  Promise.resolve().then(()=>warmWorker.run(jobDirName,request)).then(()=>{
+    if(job.errorCode)return;
+    const result=readJSON(path.join(directory,'result.json'));
+    if(result.status==='completed'){
+      if(!verifiedFreshEnvelope(result,request,fingerprints()))throw new Error('Fresh result revision, provenance or hourly values did not validate');
+      result.result=normalizeResult(result.result);rememberResult(request,result.result,jobId);
+      if(inputHash(request)===inputHash(baselineRequest)){ownBaseline={jobId,result:result.result};writeJSON(path.join(runtime,'baseline.json'),ownBaseline);}
+    }
+    Object.assign(job,result);job.stage=job.status==='completed'?'Completed fresh calculation':'Calculation failed';
+  }).catch(error=>{
+    if(job.errorCode)return;
+    if(job.status==='completed'){job.message='Calculation completed, but its private worker was retired: '+error.message;return;}
+    Object.assign(job,{status:'failed',stage:'Private worker stopped',errorCode:'WORKER_FAILURE',message:error.message});
+  }).finally(()=>{
+    clearTimeout(watchdog);clearInterval(resultPoll);clearTimeout(cleanupDeadline);job.cleanupPending=false;job.finishedMs??=Date.now();
+    const workerReadyMs=Date.now();
+    writeJSON(path.join(directory,'timing.json'),{submittedAt:request.submittedAt,finishedAt:new Date(job.finishedMs).toISOString(),elapsedSeconds:(job.finishedMs-submittedMs)/1000,workerReleasedAt:new Date(workerReadyMs).toISOString(),workerReleasedElapsedSeconds:(workerReadyMs-submittedMs)/1000,status:job.status,timeoutSeconds,workerMode:'warm-isolated'});
+    if(activeJob===jobId)activeJob=null;
+  });
+  return job;
+}
+
 const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.bin':'application/octet-stream', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.woff2':'font/woff2' };
 const server = http.createServer(async (req, res) => {
   if (!allowedHosts.has(req.headers.host)) return send(res,403,{error:'Host is not allowed.'});
@@ -188,7 +253,12 @@ const server = http.createServer(async (req, res) => {
   try { pathname = decodeURIComponent(new URL(req.url,`http://127.0.0.1:${port}`).pathname); } catch { return send(res,400,{error:'Invalid URL.'}); }
   if (pathname === '/api/health' && req.method === 'GET') {
     let probe = {}, engineConfig={}; try { probe=readJSON(path.join(runtime,'probe.json')); } catch {} try { engineConfig=readJSON(engineConfigPath); } catch {}
-    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!validatedBaseline(),message:configurationError || 'Matching verified results return immediately; fresh runs have a 120-second limit.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:validatedBaseline(),timeoutSeconds,verifiedResultCount:verifiedCache.size,capabilities:{translations:true,screenOpacity:false,verifiedCache:true,thermalDomain:'fixed reference atrium'}});
+    return send(res,200,{ready:!configurationError,engine:'Rhino 8 / supplied Grasshopper / Honeybee / EnergyPlus',engineVersion:engineConfig.versions?.energyplus || probe.energyPlusVersion?.join('.'),libraryVersions:engineConfig.versions,engineValidated:!!validatedBaseline(),message:configurationError || 'Prepare the private engine once; each changed design still runs a fresh calculation.',authToken:token,modelSha256:modelHash,definitionSha256:ghHash,activeJobId:activeJob,baseline:validatedBaseline(),timeoutSeconds,verifiedResultCount:verifiedCache.size,warmWorker:warmWorker.status(),capabilities:{translations:true,screenOpacity:false,verifiedCache:true,warmWorker:true,thermalDomain:'fixed reference atrium'}});
+  }
+  if(pathname==='/api/warmup'&&req.method==='POST'){
+    if(req.headers['x-heat-detective-token']!==token)return send(res,403,{error:'Connect first; session token missing or incorrect.'});
+    if(configurationError)return send(res,503,{error:configurationError});
+    try{return send(res,202,{warmWorker:warmWorker.prepare()});}catch(error){return send(res,503,{error:error.message});}
   }
   if (pathname === '/api/analyse' && req.method === 'POST') {
     if (req.headers['x-heat-detective-token'] !== token) return send(res,403,{error:'Connect the local bridge first; session token missing or incorrect.'});
@@ -197,12 +267,14 @@ const server = http.createServer(async (req, res) => {
     try {
       let size=0; const chunks=[];
       for await (const chunk of req) { size+=chunk.length; if (size>4*1024*1024) throw new Error('Request is too large.'); chunks.push(chunk); }
-      const request = validate(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if(input.forceFresh!==undefined&&typeof input.forceFresh!=='boolean')throw new Error('forceFresh must be boolean.');
+      const request = validate(input);
       if(fileSha('source.gh')!==ghHash || fileSha('source.3dm')!==modelHash || fileSha('weather/present.epw')!==weatherHash) return send(res,503,{error:'Source bytes changed since bridge startup; cached and fresh analyses are refused.'});
-      const cached=cachedJob(request);
+      const cached=input.forceFresh?null:cachedJob(request);
       if(cached)return send(res,202,{jobId:cached.jobId,status:cached.status,revision:cached.revision,cacheHit:true});
       if (activeJob) return send(res,409,{error:'A simulation is already running.',jobId:activeJob});
-      const job=launch(request); return send(res,202,{jobId:job.jobId,status:job.status,revision:job.revision,cacheHit:false,timeoutSeconds});
+      const job=launchWarm(request); return send(res,202,{jobId:job.jobId,status:job.status,revision:job.revision,cacheHit:false,timeoutSeconds});
     } catch(e) { return send(res,400,{error:e.message}); }
   }
   if (pathname.startsWith('/api/jobs/') && req.method === 'GET') {

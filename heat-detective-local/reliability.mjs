@@ -24,3 +24,6 @@ export function cachedResult(source, revision, sourceJobId) {
   result.provenance.cache={sourceJobId,servedAt:new Date().toISOString(),originalRevision:source.revision};
   return result;
 }
+export function verifiedFreshEnvelope(envelope,request,fingerprints){
+  return envelope?.status==='completed'&&envelope.revision===request.revision&&envelope.result?.revision===request.revision&&verifiedResult(envelope.result,request,fingerprints);
+}

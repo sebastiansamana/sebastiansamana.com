@@ -17,6 +17,7 @@ import Rhino
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 RUNTIME = os.path.join(ROOT, 'runtime')
+_WORKER = None
 
 def stamp():
     return datetime.datetime.utcnow().isoformat() + 'Z'
@@ -32,6 +33,57 @@ def write_json(path, value):
     with open(path, 'w') as f:
         json.dump(value, f, indent=2)
 
+def assert_blank_document():
+    blank = Rhino.RhinoDoc.ActiveDoc
+    if blank is not None and (blank.Modified or blank.Path or
+            len(list(blank.Objects.GetObjectList(Rhino.DocObjects.ObjectType.AnyObject))) > 0):
+        raise RuntimeError('Private instance has an unexpected populated or modified document')
+    return blank
+
+def prepare_worker(worker_dir):
+    """Warm only a newly created, explicitly owned Rhino; do not run an analysis."""
+    global _WORKER
+    started = stamp()
+    try:
+        with open(os.path.join(worker_dir, 'safety.json')) as stream:
+            safety = json.load(stream)
+        process = System.Diagnostics.Process.GetCurrentProcess()
+        if process.Id in safety['protectedRhinoPids']:
+            raise RuntimeError('Refusing an existing protected Rhino process')
+        identity = {'pid':process.Id, 'processStartTicksUtc':str(process.StartTime.ToUniversalTime().Ticks),
+                    'workerId':safety['workerId'], 'recordedAt':stamp()}
+        write_json(os.path.join(worker_dir, 'ownership.json'), identity)
+        if os.path.isfile(os.path.join(worker_dir, 'stop.flag')):
+            raise RuntimeError('Warmup cancelled')
+        assert_blank_document()
+        engine_path = os.path.join(RUNTIME, 'engine-config.json')
+        if digest(engine_path) != safety['engineConfigSha256'] or digest(__file__) != safety['bridgeCodeSha256']:
+            raise RuntimeError('Worker configuration changed before preparation')
+        with open(engine_path) as stream:
+            cfg = json.load(stream)
+        sys.path.insert(0, cfg['pythonPackagePath'])
+        import ladybug.config as lc
+        lc.folders.ladybug_tools_folder = cfg['ladybugToolsFolder']
+        import honeybee_energy.config as ec
+        ec.folders.openstudio_path = cfg['openstudioPath']
+        ec.folders.energyplus_path = cfg['energyplusPath']
+        gh = Rhino.RhinoApp.GetPlugInObject('Grasshopper')
+        gh.DisableSolver()
+        gh.LoadEditor()
+        gh.HideEditor()
+        import clr
+        clr.AddReference('Grasshopper')
+        import Grasshopper
+        Grasshopper.Kernel.GH_Document.EnableSolutions = False
+        assert_blank_document()
+        if os.path.isfile(os.path.join(worker_dir, 'stop.flag')):
+            raise RuntimeError('Warmup cancelled')
+        _WORKER = {'identity':identity, 'safety':safety, 'directory':worker_dir, 'gh':gh}
+        write_json(os.path.join(worker_dir,'prepared.json'), {'ready':True, 'startedAt':started,'readyAt':stamp(),'identity':identity})
+    except Exception as error:
+        _WORKER = None
+        write_json(os.path.join(worker_dir,'prepared.json'), {'ready':False,'message':str(error),'details':traceback.format_exc()})
+
 def run(job_dir):
     started = stamp()
     started_clock = time.time()
@@ -45,11 +97,22 @@ def run(job_dir):
         write_json(status_path, {'status': 'running', 'stage': stage, 'updatedAt': stamp(), 'stages':stages})
     doc = None
     ghdoc = None
+    request = None
+    warm = False
+    owned_doc_serial = None
     try:
         with open(os.path.join(job_dir, 'request.json')) as f:
             request = json.load(f)
         process = System.Diagnostics.Process.GetCurrentProcess()
         pid = process.Id
+        warm = bool(request.get('workerIdentity'))
+        if warm:
+            if _WORKER is None or request['workerIdentity'] != _WORKER['identity']:
+                raise RuntimeError('Warm worker ownership does not match this private process')
+            if digest(os.path.join(RUNTIME,'engine-config.json')) != _WORKER['safety']['engineConfigSha256'] or digest(__file__) != _WORKER['safety']['bridgeCodeSha256']:
+                raise RuntimeError('Loaded worker configuration changed; worker must be recreated')
+            if str(process.StartTime.ToUniversalTime().Ticks) != _WORKER['identity']['processStartTicksUtc']:
+                raise RuntimeError('Warm process identity changed')
         if pid in request['protectedRhinoPids']:
             raise RuntimeError('Refusing an existing user Rhino process')
         write_json(os.path.join(job_dir, 'ownership.json'),
@@ -74,10 +137,11 @@ def run(job_dir):
             import honeybee_energy.config as energy_config
             energy_config.folders.openstudio_path = engine_config['openstudioPath']
             energy_config.folders.energyplus_path = engine_config['energyplusPath']
-        gh = Rhino.RhinoApp.GetPlugInObject('Grasshopper')
+        gh = _WORKER['gh'] if warm else Rhino.RhinoApp.GetPlugInObject('Grasshopper')
         gh.DisableSolver()
-        gh.LoadEditor()
-        gh.HideEditor()
+        if not warm:
+            gh.LoadEditor()
+            gh.HideEditor()
         import clr
         clr.AddReference('Grasshopper')
         import Grasshopper
@@ -89,15 +153,18 @@ def run(job_dir):
         GH_Document.EnableSolutions = False
         # Loading GH creates a blank document in a new automation instance.
         # Refuse any populated/named/modified document, even in our new process.
-        blank = Rhino.RhinoDoc.ActiveDoc
-        if blank is not None and (blank.Modified or blank.Path or
-                len(list(blank.Objects.GetObjectList(Rhino.DocObjects.ObjectType.AnyObject))) > 0):
-            raise RuntimeError('Automation instance has a non-empty document; refusing to replace it')
+        blank = assert_blank_document()
         progress('Reading copied building and restoring semantic layers')
+        if warm:
+            # Even an unexpected save during document reset cannot change the
+            # immutable source: only this job's disposable copy is opened.
+            model_file = os.path.join(job_dir,'analysis.3dm')
+            shutil.copyfile(os.path.join(RUNTIME,'source.3dm'),model_file)
         opened = Rhino.RhinoDoc.Open(model_file)
         doc = Rhino.RhinoDoc.ActiveDoc
         if doc is None:
             raise RuntimeError('Could not open the copied 3dm')
+        owned_doc_serial = int(doc.RuntimeSerialNumber)
         with open(os.path.join(RUNTIME, 'object-manifest.json')) as f:
             manifest = json.load(f)
         if manifest['sourceSha256'] != request['modelSha256']:
@@ -310,6 +377,9 @@ def run(job_dir):
                                 'engineConfigSha256':digest(engine_config_path) if engine_config else None,
                                 'metricDerivations':{'peakOperativeC':'Maximum of the 168 calculated operative-temperature values, before display rounding'},
                                 'rhinoVersion':str(Rhino.RhinoApp.Version), 'isolatedProcessId':pid,
+                                'workerMode':'warm-isolated' if warm else 'new-isolated',
+                                'workerId':_WORKER['identity']['workerId'] if warm else None,
+                                'analysisDocumentSerial':owned_doc_serial,
                                 'diagnostics':'CLI stdout/stderr and native exit codes captured without modifying FF source or solver inputs',
                                 'ghElapsedSeconds':round(time.time()-started_clock,3),
                                 'evalId':eval_id, 'referenceComparable':eval_id == 'EC2F526D',
@@ -321,13 +391,52 @@ def run(job_dir):
     except Exception as error:
         write_json(result_path, {'status':'failed', 'errorCode':'ENGINE_FAILURE', 'message':str(error), 'details':traceback.format_exc(), 'elapsedSeconds':round(time.time()-started_clock,3)})
     finally:
+        cleanup_errors = []
+        try:
+            import Grasshopper
+            Grasshopper.Kernel.GH_Document.EnableSolutions = False
+            if warm:
+                _WORKER['gh'].DisableSolver()
+        except Exception as error:
+            if warm:
+                cleanup_errors.append('Disable solver: '+str(error))
         if ghdoc is not None:
             try:
                 ghdoc.Enabled = False
                 ghdoc.IsModified = False
                 Grasshopper.Instances.DocumentServer.RemoveDocument(ghdoc)
                 ghdoc.Dispose()
-            except Exception:
-                pass
+                if warm and any(item is ghdoc for item in Grasshopper.Instances.DocumentServer):
+                    raise RuntimeError('Owned GH document remains registered')
+            except Exception as error:
+                if warm:
+                    cleanup_errors.append('GH disposal: '+str(error))
         if doc is not None:
             doc.Modified = False
+        if warm:
+            try:
+                if doc is not None:
+                    active = Rhino.RhinoDoc.ActiveDoc
+                    if active is None or int(active.RuntimeSerialNumber) != owned_doc_serial:
+                        raise RuntimeError('Unexpected active document; refusing reset')
+                    # This is only our job copy, never the user's document.
+                    fresh = Rhino.RhinoDoc.Create(None)
+                    active = assert_blank_document()
+                    if active is None or int(active.RuntimeSerialNumber) == owned_doc_serial:
+                        raise RuntimeError('Fresh empty document was not made active')
+                    if any(int(item.RuntimeSerialNumber) == owned_doc_serial for item in Rhino.RhinoDoc.OpenDocuments()):
+                        raise RuntimeError('Previous private analysis document remains open')
+                else:
+                    assert_blank_document()
+                if digest(os.path.join(RUNTIME,'source.3dm')) != request['modelSha256'] or digest(os.path.join(RUNTIME,'source.gh')) != request['definitionSha256']:
+                    raise RuntimeError('Immutable source hash changed')
+                if os.path.isfile(os.path.join(job_dir,'analysis.3dm')):
+                    # Delete only the exact disposable file in this known job.
+                    os.remove(os.path.join(job_dir,'analysis.3dm'))
+            except Exception as error:
+                cleanup_errors.append('Rhino reset/source verification: '+str(error))
+            write_json(os.path.join(job_dir,'cleanup.json'),
+                       {'readyForReuse':not cleanup_errors,'message':'; '.join(cleanup_errors),
+                        'at':stamp(),'previousDocumentSerial':owned_doc_serial,
+                        'activeDocumentSerial':int(Rhino.RhinoDoc.ActiveDoc.RuntimeSerialNumber) if Rhino.RhinoDoc.ActiveDoc else None,
+                        'sourceModelSha256':digest(os.path.join(RUNTIME,'source.3dm'))})
