@@ -107,7 +107,7 @@ async function connect(){
     const r=await fetch(url.origin+'/api/health',{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('The bridge returned '+r.status);const h=await r.json();if(!h.ready)throw Error(h.message||'The engine is not ready.');
     bridge={url:url.origin,token:h.authToken||$('bridge-token').value,health:h};if(!bridge.token){show('bridge-token-row');throw Error('Enter the token from the local launcher.');}
     $('connection-dot').classList.add('connected');text('connection-status',h.message||'Connected. Resume will submit one version to the local engine.');text('resume-note','Connected to local Rhino / Grasshopper. Edits are submitted only when you resume.');return true;
-  }catch(e){bridge=null;$('connection-dot').classList.remove('connected');text('connection-status','Connection unavailable. Start START_LOCAL.ps1, then try again. '+e.message);return false;}finally{$('connect-bridge').disabled=false;}
+  }catch(e){bridge=null;$('connection-dot').classList.remove('connected');text('connection-status','Connection unavailable. Start the launcher, then use Open local presentation demo if this browser blocks the connection. '+e.message);return false;}finally{$('connect-bridge').disabled=false;}
 }
 $('connect-bridge').onclick=connect;
 function canonicalMetrics(result){const m=result?.metrics||result||{};return {scoreKh:m.scoreKh??m.score,peakOperativeC:m.peakOperativeC??m.peak,occupiedHoursAbove28:m.occupiedHoursAbove28??m.hotHours};}
