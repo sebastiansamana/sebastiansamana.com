@@ -291,7 +291,7 @@ Responsive behavior:
 
 - Return/Volver links are fixed by the localized route.
 - Enquiries are generated mailto links to `sebastian.samana@icloud.com` with localized greeting, subject, title, and visible metadata.
-- Back-to-top is derived, not configured. It remains hidden when the content endpoint fits within the initial viewport and appears for a longer page; scrolling is smooth unless reduced motion is preferred.
+- Back-to-top is derived, not configured. It appears only when reaching the enquiry requires scrolling more than half a viewport beyond the initial fold, so negligible overflow does not show it. Visibility updates after fonts/images load and on resize; scrolling is smooth unless reduced motion is preferred.
 - Archive/detail reveal behavior is provided by `data-varelism-route-reveal` and the global transition code. Do not modify it.
 
 ### Existing-item trace

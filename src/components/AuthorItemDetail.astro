@@ -127,7 +127,8 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 
         const syncVisibility = () => {
           const contentBottom = contentEnd.getBoundingClientRect().bottom + window.scrollY;
-          button.hidden = contentBottom <= window.innerHeight + 1;
+          const scrollToContentEnd = contentBottom - window.innerHeight;
+          button.hidden = scrollToContentEnd <= window.innerHeight * 0.5;
         };
 
         button.addEventListener('click', () => {
