@@ -13,6 +13,9 @@ interface Props {
 const { backHref, backLabel, item, locale = 'en' } = Astro.props;
 const metadata = getAuthorItemDetailMetadata(item, locale);
 const title = getAuthorItemTitle(item, locale);
+const imageAlt = locale === 'es'
+  ? item.data.spanishImageAlt ?? `Imagen que acompaña a ${title}`
+  : item.data.imageAlt ?? `Image accompanying ${title}`;
 const { Content } = await render(item);
 const spanishParagraphs = (item.data.spanishBody ?? '')
   .split(/\n{2,}/)
@@ -38,52 +41,75 @@ const enquiryHref = `mailto:${enquiryEmail}?subject=${encodeURIComponent(
 const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 ---
 
-<article class="author-item-detail" data-author-item-detail data-varelism-route-reveal>
+<article
+  class:list={['author-item-detail', { 'author-item-detail--with-image': Boolean(item.data.image) }]}
+  data-author-item-detail
+  data-varelism-route-reveal
+>
   <a class="author-item-back" href={backHref}>{backLabel}</a>
 
-  <header class="author-item-header">
-    <h1>{title}</h1>
-    {
-      metadata.length > 0 && (
-        <dl>
-          {
-            metadata.map((item) => (
-              <div>
-                <dt>{item.label}</dt>
-                <dd>{item.value}</dd>
-              </div>
-            ))
-          }
-        </dl>
-      )
-    }
-  </header>
+  <div class="author-item-layout">
+    <header class="author-item-header">
+      <h1>{title}</h1>
+      {
+        metadata.length > 0 && (
+          <dl>
+            {
+              metadata.map((item) => (
+                <div>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        )
+      }
+    </header>
 
-  <section class="author-item-body" data-content-guard="text">
-    {
-      locale === 'es'
-        ? spanishParagraphs.map((paragraph) => (
-            <p>
-              {
-                paragraph.split(/\r?\n/).map((line, index) => (
-                  <>
-                    {index > 0 && <br />}
-                    {line}
-                  </>
-                ))
-              }
-            </p>
-          ))
-        : <Content />
-    }
-  </section>
+    <div class="author-item-content">
+      {
+        item.data.image && (
+          <img
+            class:list={['author-item-image', { 'author-item-image--outlined': item.data.imageOutline }]}
+            src={item.data.image}
+            width={item.data.imageWidth}
+            height={item.data.imageHeight}
+            alt={imageAlt}
+            decoding="async"
+            draggable="false"
+            data-content-guard="image"
+          />
+        )
+      }
 
-  <footer class="author-item-footer">
-    <a class="author-item-enquiry" href={enquiryHref} data-author-item-content-end>{enquiryLabel}</a>
-    <button class="author-item-top" type="button" data-author-back-to-top hidden>
-      {locale === 'es' ? 'Volver arriba' : 'Back to top'}
-    </button>
-  </footer>
+      <section class="author-item-body" data-content-guard="text">
+        {
+          locale === 'es'
+            ? spanishParagraphs.map((paragraph) => (
+                <p>
+                  {
+                    paragraph.split(/\r?\n/).map((line, index) => (
+                      <>
+                        {index > 0 && <br />}
+                        {line}
+                      </>
+                    ))
+                  }
+                </p>
+              ))
+            : <Content />
+        }
+      </section>
+    </div>
+
+    <footer class="author-item-footer">
+      <a class="author-item-enquiry" href={enquiryHref} data-author-item-content-end>{enquiryLabel}</a>
+      <button class="author-item-top" type="button" data-author-back-to-top hidden>
+        {locale === 'es' ? 'Volver arriba' : 'Back to top'}
+      </button>
+    </footer>
+  </div>
 </article>
 
 <script>
@@ -113,6 +139,11 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
           });
         });
         window.addEventListener('resize', syncVisibility, { passive: true });
+        detail.querySelectorAll('img').forEach((image) => {
+          if (image.complete) return;
+          image.addEventListener('load', syncVisibility, { once: true });
+          image.addEventListener('error', syncVisibility, { once: true });
+        });
         document.fonts?.ready.then(syncVisibility);
         syncVisibility();
       });
@@ -125,8 +156,9 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
 
 <style>
   :global(.site-shell > main) {
+    --author-item-top-offset: clamp(7rem, 13vh, 8.5rem);
     max-width: none;
-    padding: clamp(7rem, 13vh, 8.5rem) clamp(1rem, 4vw, 3rem) 0;
+    padding: var(--author-item-top-offset) clamp(1rem, 4vw, 3rem) 0;
     width: 100%;
   }
 
@@ -208,6 +240,23 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     margin: 0;
   }
 
+  .author-item-layout,
+  .author-item-content {
+    display: contents;
+  }
+
+  .author-item-image {
+    display: block;
+    height: auto;
+    margin-top: clamp(1.6rem, 4vw, 2.8rem);
+    max-width: 100%;
+    width: min(100%, 32rem);
+  }
+
+  .author-item-image--outlined {
+    outline: 1px solid #f2f2f2;
+  }
+
   .author-item-body {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -271,9 +320,75 @@ const enquiryLabel = locale === 'es' ? 'Consultar más' : 'Enquire further';
     display: none;
   }
 
+  @media (min-width: 960px) and (orientation: landscape), (min-width: 1200px) {
+    .author-item-detail--with-image {
+      --author-item-viewport-height: 100vh;
+      --author-item-image-max-height: calc(
+        var(--author-item-viewport-height) - var(--author-item-top-offset) -
+          var(--varelism-body-font-size) - var(--author-item-back-gap) - 1rem
+      );
+      max-width: 76rem;
+    }
+
+    .author-item-detail--with-image .author-item-layout {
+      column-gap: clamp(1.5rem, 4vw, 3rem);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      grid-template-rows: auto auto minmax(min-content, 1fr);
+    }
+
+    .author-item-detail--with-image .author-item-header {
+      align-self: start;
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+    }
+
+    .author-item-detail--with-image .author-item-header h1,
+    .author-item-detail--with-image .author-item-header dt,
+    .author-item-detail--with-image .author-item-header dd,
+    .author-item-detail--with-image .author-item-enquiry {
+      font-family: 'SF Pro Display Latin', var(--font-sans);
+    }
+
+    .author-item-detail--with-image .author-item-image {
+      align-self: start;
+      grid-column: 1;
+      grid-row: 1 / 4;
+      justify-self: start;
+      margin-top: 0;
+      max-height: var(--author-item-image-max-height);
+      max-width: 100%;
+      width: auto;
+    }
+
+    .author-item-detail--with-image .author-item-body {
+      align-self: start;
+      grid-column: 2;
+      grid-row: 2;
+      margin-top: clamp(1.6rem, 4vw, 2.8rem);
+      min-width: 0;
+    }
+
+    .author-item-detail--with-image .author-item-footer {
+      align-self: end;
+      flex-wrap: wrap;
+      grid-column: 2;
+      grid-row: 3;
+      margin-top: 1.5rem;
+    }
+
+    @supports (height: 100svh) {
+      .author-item-detail--with-image {
+        --author-item-viewport-height: 100svh;
+      }
+    }
+  }
+
   @media (max-width: 760px) {
     :global(.site-shell > main) {
-      padding-top: 6.5rem;
+      --author-item-top-offset: 6.5rem;
+      padding-top: var(--author-item-top-offset);
     }
 
     .author-item-header h1 {

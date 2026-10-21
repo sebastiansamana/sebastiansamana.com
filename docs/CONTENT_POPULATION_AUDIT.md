@@ -8,6 +8,7 @@
 - Portfolio native-viewer navigation and content-copy deterrents updated: 30 September 2026.
 - Legacy CV cleanup and Writer word-count maintenance updated: 3 October 2026.
 - Dependency toolchain maintenance updated: 3 October 2026 (Astro 7 and Node 24 CI).
+- Writer responsive manuscript-and-text composition aligned with Painter detail spacing, with the poem below metadata in the right column and an optional image outline, updated: 22 October 2026.
 - Purpose: authoritative hand-off for future Writer, Architect portfolio, and Painter population work.
 
 This document records the current implementation. It is not a redesign brief. Routine population must preserve the routes, data architecture, visual identity, layouts, breakpoints, navigation, transitions, animations, PDF quality, and existing content.
@@ -31,7 +32,7 @@ If the implementation later changes, update this document in the same change. Un
 
 | Population target | Files normally allowed to change | Files not to change during routine population |
 |---|---|---|
-| Writer | One new or updated `src/content/authorItems/<slug>.md` record | Archive/detail routes, `AuthorIndexArchive.astro`, `AuthorItemDetail.astro`, schemas, layout, styles |
+| Writer | One new or updated `src/content/authorItems/<slug>.md` record plus any explicitly supplied image under `public/images/writer/` | Archive/detail routes, `AuthorIndexArchive.astro`, `AuthorItemDetail.astro`, schemas, layout, styles |
 | Architect portfolio | `src/data/portfolios.ts` plus supplied files under `public/pdfs/` and `public/images/portfolios/` | Portfolio archive/detail/PDF components, routes, layout, PDF.js support files, styles |
 | Painter | One record in `src/data/artworks/<slug>.md` plus supplied files under `public/images/artworks/` | `ArtworkArchive.astro`, detail routes, language dictionaries, schemas, layout, styles |
 
@@ -89,7 +90,7 @@ The site uses Astro 7 static output. All Markdown collections use explicit glob 
 
 | System | Source | Visibility step | Ordering step | Outputs |
 |---|---|---|---|---|
-| Writer | one bilingual Markdown file | exact `status === 'public'` | shared date-priority sorter | EN archive/detail and ES archive/detail |
+| Writer | one bilingual Markdown file plus an optional shared image | exact `status === 'public'` | shared date-priority sorter | EN archive/detail and ES archive/detail |
 | Painter | one shared Markdown record plus images | exact `status === 'public'` | shared date-priority sorter | EN grid/index/detail and ES grid/index/detail |
 | Portfolio | one object in a TypeScript array plus PDF/images | none; every array item is public | literal array order | EN grid/index/detail/PDF and ES grid/index/detail/PDF |
 
@@ -101,7 +102,7 @@ Writer and Painter use Astro content collections defined in `src/content.config.
 
 There is no translation-pair identifier:
 
-- Writer: one record contains the English and Spanish versions.
+- Writer: one record contains the English and Spanish versions, plus an optional image source shared by both.
 - Painter: one record is reused by both languages.
 - Portfolio: one object is reused by both languages.
 
@@ -121,7 +122,7 @@ The global body/content size is `1.08rem` above 720px and `0.98rem` at 720px and
 | `private` / `unpublished` / password | Invalid or unsupported | Invalid or unsupported | Unsupported |
 | public in only one language | Unsupported | Unsupported | Unsupported by current shared object |
 
-Important: `public/` is copied independently of record status. A draft artwork whose image is under `public/images/artworks/` has no archive/detail route, but its raw image URL is still deployable. A PDF under `public/pdfs/` is likewise public even before it is referenced by the portfolio registry. Truly confidential assets must remain outside `public/`, `dist/`, and any public repository.
+Important: `public/` is copied independently of record status. A draft artwork whose image is under `public/images/artworks/`, or a draft Writer item whose image is under `public/images/writer/`, has no archive/detail route, but its raw image URL is still deployable. A PDF under `public/pdfs/` is likewise public even before it is referenced by the portfolio registry. Truly confidential assets must remain outside `public/`, `dist/`, and any public repository.
 
 ### Casual-copy deterrents
 
@@ -192,8 +193,9 @@ matrices below are therefore mandatory.
 
 ### Files and lifecycle
 
-- Schema: `src/content.config.ts:70-87`
+- Schema: the `authorItems` collection in `src/content.config.ts`
 - Records: `src/content/authorItems/*.md`
+- Optional supplied images: `public/images/writer/`
 - Filtering, sorting, metadata: `src/lib/authorItems.ts`
 - Date localization: `src/lib/dateLabels.ts`
 - Archive component: `src/components/AuthorIndexArchive.astro`
@@ -224,16 +226,34 @@ Optional strings and integers use the blank preprocessors at `src/content.config
 | `spanishTextType` | optional | Spanish | ES category/type |
 | `wordCount` | optional display string | English | manual, e.g. `436 words`; never runtime-derived |
 | `spanishWordCount` | optional display string | Spanish | manual, e.g. `467 palabras` |
+| `image` | optional | shared | local `/images/writer/<file>` URL; when present, renders once before the typed body in document order on both detail routes; displayed in the left column beside a combined title/metadata/poem column in the wide layout, and above the text in the stacked layout |
+| `imageWidth` / `imageHeight` | required when `image` is present | shared | positive integers matching the supplied image's intrinsic pixel dimensions; reserve its natural aspect ratio |
+| `imageAlt` | optional | English | supplied factual alternative text; blank uses a neutral localized title-based fallback |
+| `spanishImageAlt` | optional | Spanish | supplied factual alternative text; blank uses a neutral localized title-based fallback |
+| `imageOutline` | optional boolean, default `false` | shared | when explicitly requested, adds a thin `1px solid #f2f2f2` outline matching the portfolio thumbnails; does not change image dimensions |
 | Markdown after frontmatter | technically optional | English | rendered with Astro Markdown |
 | `spanishBody` | technically optional string | Spanish | split on two or more newlines into `<p>` elements; single newlines inside each piece render as `<br>` line breaks |
 
 Operationally, a meaningful public item requires a unique slug, both exact titles, and both final bodies. If the Spanish body is not ready, keep the shared record draft: a public record with blank `spanishBody` still generates an empty Spanish detail page.
 
-Fields that do not exist: internal frontmatter ID, pair ID, original language, per-language status, publication-date type, private/unpublished state, image/thumbnail, SEO title, SEO description, canonical URL, external-reference metadata, enquiry URL, and a back-to-top option.
+Fields that do not exist: internal frontmatter ID, pair ID, original language, per-language status, publication-date type, private/unpublished state, thumbnail, image caption, image gallery, separate Spanish image, SEO title, SEO description, canonical URL, external-reference metadata, enquiry URL, and a back-to-top option.
+
+### Optional manuscript, typed text, and metadata composition
+
+- An explicitly supplied Writer image, including a handwritten poem sketch, precedes the typed body in document order. The wide composition has two columns: manuscript on the left; title, vertically stacked metadata, typed poem, and enquiry in sequence on the right. Phones and portrait tablets below 1200px keep the existing title/metadata, image, then typed-body sequence. Support is optional for every Writer category, not inferred from `textType`.
+- The wide composition applies only to entries with an image, at `(min-width: 960px) and (orientation: landscape)` or `(min-width: 1200px)`. It follows the Painter detail composition exemplified by `/painter/everything/chequered-forest/`: maximum width `76rem`; grid columns `minmax(0, 1fr) 20rem`; column gap `clamp(1.5rem, 4vw, 3rem)`; main top offset `clamp(7rem, 13vh, 8.5rem)`; Return-to-content gap `clamp(2rem, 5vw, 4rem)`. The right column is `20rem` (320px at the default root size), 32px wider than Painter's maximum rail, to preserve the supplied Spanish poem's longest lines. The grid rows are `auto auto minmax(min-content, 1fr)`: the image spans all three, and the right column places the header, poem, and footer in successive rows. The poem retains its `clamp(1.6rem, 4vw, 2.8rem)` top gap below metadata.
+- The right-column title, metadata, and enquiry use Painter's Latin subset face with the shared fallback, `'SF Pro Display Latin', var(--font-sans)`: title size `clamp(1.35rem, 2.1vw, 2.15rem)`, weight `300`, and line-height `1`; metadata labels `0.68rem`, values `var(--varelism-body-font-size)`, both weight `200` and `#919191`. Metadata remains vertically stacked with `0.65rem` between entries and `0.1rem` between label and value. Title-to-metadata spacing repeats the Return gap, reaching `4rem` (64px) on desktop.
+- The uncropped image height uses the same viewport budget as Painter: viewport height minus main top offset, Return font size, Return gap, and `1rem`. Use `100svh` where supported with the existing viewport fallback. Its width follows its natural aspect ratio within the left grid column. The typed poem keeps its existing font size, line-height, and stanza breaks. The right column scrolls naturally with the page when it exceeds the viewport, including on short landscape iPad screens; do not compress or clip it to fit.
+- The image keeps its natural aspect ratio and is displayed uncropped. There is no visible caption. Without `image`, no image element or reserved empty image space is rendered, and the existing text-only composition remains.
+- Set `imageOutline: true` only when an outline is requested for the supplied image, such as a white handwritten page against the white site background. Leave it absent otherwise; do not alter the source image to draw the outline.
+- Both language details use the same original image, with localized alternative text and the existing localized typed body. Do not create a translated manuscript or a second image unless a separately authorized implementation supports it.
+- Keep the supplied asset byte-for-byte under `public/images/writer/`; do not resize, recompress, crop, or replace it during population. Derive `imageWidth` and `imageHeight` from the asset rather than asking the user or guessing.
+- The Everything archives remain text indexes with their existing title and metadata rows. An optional detail image does not add an archive thumbnail or metadata label.
+- Use the shared image fields for this composition rather than embedding an image in the English Markdown body. An English-only Markdown image would not appear in the Spanish body renderer.
 
 ### English and Spanish formatting
 
-- The English body is Markdown-rendered (`AuthorItemDetail.astro:16,62-67`). Normal Markdown links can hold external references, but unusual headings, lists, images, code, or embeds require visual review because the component specifically styles paragraphs only.
+- The English body is Markdown-rendered in `AuthorItemDetail.astro`. Normal Markdown links can hold external references, but unusual headings, lists, code, or embeds require visual review because the component specifically styles paragraphs only. Use the shared image fields for the supported responsive image-and-text composition.
 - `spanishBody` is not Markdown. Use a YAML literal block (`|-`) with single newlines for line breaks and blank lines for multiple paragraphs. Markdown/HTML text will be escaped rather than rendered.
 - Spanish inline links are unsupported. Do not change the component during routine population to add them.
 
@@ -261,7 +281,9 @@ Detail date selection is localized `sortMonth + sortYear`, then raw `date`, then
 Responsive behavior:
 
 - Archive alignment follows a four-column content width, becomes the three-column equivalent at 1312px, and stacks each row vertically at 720px. Archive titles use the shared body/content scale; right-hand metadata uses the intermediate `0.82rem`/`0.72rem` scale.
-- Detail maximum width is 58rem. Body copy, metadata values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; metadata labels retain their compact `0.68rem`/`0.6rem` sizing. The title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
+- Stacked and text-only detail maximum width remains `58rem`; only wide image-bearing details expand to `76rem`. Body copy, metadata values, and red action links match the About pages at 1.08rem above 720px and 0.98rem at 720px and below in both languages; metadata labels retain their compact `0.68rem`/`0.6rem` sizing. In the original stacked and text-only compositions, the title-to-metadata gap repeats the Return/Volver-to-title gap; title/top padding changes at 760px.
+- Only image-bearing entries switch to the two-column composition at `(min-width: 960px) and (orientation: landscape)` or `(min-width: 1200px)`: image left, with title/metadata, poem, and footer stacked in a `20rem` right column. The overall width, Return spacing, column gap, title/metadata typography, and image viewport budget match the Painter detail values documented above. Phones and portrait tablets below 1200px retain the original stacked image-above-text composition; text-only pages keep their existing layout at every width.
+- Verify the full image fits without cropping or horizontal overflow, and the poem's font size, line-height, and line/stanza breaks remain intact. The lower part of the right column may require page scrolling on short viewports; verify all text and the enquiry remain accessible without reducing text size or clipping content.
 - Live audit: at 1440px the record row rendered as two equal grid columns; at 390px it rendered as a vertical flex row.
 
 ### Detail-derived behavior
@@ -299,7 +321,7 @@ The stored word-count strings were recounted on 3 October 2026 after the August 
 > 6. Exact displayed word-count strings, or authorize Codex to count the final approved text and write `N words` / `N palabras`.
 > 7. Preferred stable lowercase kebab-case slug, or authorization to derive it from the English title.
 
-Do not ask for unsupported IDs, pair keys, original language, SEO fields, canonical, enquiry link, thumbnails, or images.
+Do not ask for unsupported IDs, pair keys, original language, SEO fields, canonical, enquiry link, or thumbnails. Do not request an image for ordinary text-only population. If the user explicitly supplies an image for the text, use the shared optional image fields, derive its dimensions, and use supplied localized alt text or the neutral title-based fallback. No caption is needed.
 
 ### Safe Writer procedure
 
@@ -308,11 +330,11 @@ Do not ask for unsupported IDs, pair keys, original language, SEO fields, canoni
 3. Inspect `src/content/authorItems/` and both prospective routes for collisions.
 4. Create exactly one `src/content/authorItems/<slug>.md` record. Put English metadata/body in it.
 5. Add Spanish title, type, word count, and `spanishBody` to that same record. Never create a parallel Spanish file.
-6. Add no asset fields. Embedded English Markdown media is an explicit exception requiring approval and visual QA.
+6. Only when an image is explicitly supplied, preserve its original bytes under `public/images/writer/`, set `image` to its exact local URL, derive positive intrinsic `imageWidth`/`imageHeight`, and use supplied `imageAlt`/`spanishImageAlt` or leave them blank for the neutral localized fallback. Confirm the file exists with exact case. Otherwise leave all image fields absent; do not add a placeholder. Embedded English-only Markdown media remains outside this shared composition and requires a separately authorized change and visual QA.
 7. Validate real calendar values and compare the new tuple against all existing public records. Do not alter existing order fields.
 8. Verify both archives have identical item order, localized title/metadata, and correct links.
-9. Verify both details, Return/Volver, language switch, enquiry, formatting, and conditional back-to-top.
-10. Check 1440, 1024, about 700, and 390px widths.
+9. Verify both details, Return/Volver, language switch, enquiry, formatting, and conditional back-to-top. For supplied images, check the same image precedes each localized body in document order, occupies the left column beside title/metadata with the poem below in the wide layout, and appears above the poem in the stacked layout. Check Painter-matched Return/column/title-to-metadata spacing, vertically stacked metadata, the preserved gap before the poem, and the enquiry below it. Confirm no caption or cropping and the correct localized alt text. Preserve poem font size, line-height, and line/stanza breaks. Check a text-only record has no empty image space or layout change.
+10. Check 1440, 1024, about 700, and 390px widths. For image-bearing records, include landscape and portrait tablet viewports, the 960px landscape threshold, and the 1200px wide-layout threshold; verify the full manuscript remains uncropped and the right column scrolls naturally on short viewports with all text and enquiry accessible.
 11. Run the common completion gate below.
 12. Review fresh `dist/`: a public item needs both detail files; a draft needs neither and neither archive row.
 
@@ -707,6 +729,13 @@ For each new public Writer/Painter slug:
 - language links preserve the slug;
 - no draft slug gets either detail or an archive row.
 
+For each public Writer image:
+
+- the exact source asset exists under `public/images/writer/` and its copied file exists in `dist/images/writer/`;
+- source/build SHA-256 values match the original supplied asset;
+- both detail files use the same image URL before the typed body in document order, with intrinsic width/height and localized alt text;
+- no caption or archive thumbnail is emitted, and records without an image retain their text-only composition.
+
 For each public Painter image:
 
 - both archive and detail manifest checks pass;
@@ -742,6 +771,7 @@ Across applicable routes verify:
 - grid/index mode and reset-on-load behavior;
 - long title/metadata wrapping;
 - image/PDF load with no console errors;
+- Writer manuscript-left/title-metadata-poem-right composition at the wide/landscape breakpoints, Painter-matched spacing and metadata typography with enquiry below the poem, natural page scrolling on short viewports, image-above-text composition on phones and narrower portrait tablets, uncropped natural aspect ratio, no horizontal overflow or image-loading layout shift, unchanged poem font size, line-height, and line/stanza breaks, and unchanged layout with no image placeholder on text-only records;
 - Painter detail placeholder visibility before full-image decode, sharp-image crossfade, and no layout shift;
 - keyboard focus and fine/coarse pointer state;
 - enquiry subject/body;
@@ -767,6 +797,7 @@ Do not call population complete if:
 - public approval is ambiguous;
 - a requested Spanish-specific artwork field is unsupported;
 - a Writer Spanish body is missing for a public item;
+- a supplied Writer image's source bytes, intrinsic dimensions, shared EN/ES rendering, or localized alternative text are unverified;
 - a portfolio would expose an unacceptable English PDF on the Spanish route;
 - a PDF count/order/ratio is unverified;
 - an asset path is missing or case-mismatched;
@@ -797,7 +828,7 @@ Do not call population complete if:
 
 When the user says “Let’s populate …”, ask the full consolidated questionnaire in the relevant section above. In short:
 
-- **Writer:** shared publication state; exact EN/ES titles and bodies; exact known date/precision and same-day order; EN/ES type; word-count handling; slug.
+- **Writer:** shared publication state; exact EN/ES titles and bodies; exact known date/precision and same-day order; EN/ES type; word-count handling; slug. Only when an image is explicitly supplied, preserve its original bytes, derive intrinsic dimensions, and set the shared image fields with supplied EN/ES alt text or neutral localized fallbacks. Wide/landscape composition places manuscript left and the poem below title/metadata in the right column using Painter detail spacing; phone/narrower portrait composition keeps the image above the poem. Page scrolling accommodates the right column on short viewports. No caption is shown. Do not request images for text-only population.
 - **Architect:** final original English PDF; exact title; ID; array placement; public-in-both-languages consequence; optional subtitle/covers/preview; do not request the unfinished Spanish PDF.
 - **Painter:** original image and optional supplied red hover; exact shared title; known date; medium; physical dimensions; draft/public; optional known location/description; only conditional tie order/slug/alt.
 

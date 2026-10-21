@@ -84,6 +84,24 @@ const authorItems = defineCollection({
     wordCount: blankableString,
     spanishWordCount: blankableString,
     spanishBody: blankableString,
+    image: blankableString,
+    imageWidth: blankableInteger,
+    imageHeight: blankableInteger,
+    imageAlt: blankableString,
+    spanishImageAlt: blankableString,
+    imageOutline: z.boolean().default(false),
+  }).superRefine((item, context) => {
+    if (!item.image) return;
+
+    for (const dimension of ['imageWidth', 'imageHeight'] as const) {
+      if (item[dimension] === undefined || item[dimension] <= 0) {
+        context.addIssue({
+          code: 'custom',
+          path: [dimension],
+          message: 'An attached Writer image requires its positive intrinsic pixel dimensions.',
+        });
+      }
+    }
   }),
 });
 
