@@ -1,5 +1,5 @@
 ---
-title: "The in between."
+title: "The in between"
 spanishTitle: "El espacio intermedio."
 status: public
 year: "2026"
